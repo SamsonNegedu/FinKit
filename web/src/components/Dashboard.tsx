@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileUp, Filter, Loader2 } from 'lucide-react';
 import FileUpload from './FileUpload';
 import DateRangePicker from './DateRangePicker';
@@ -7,6 +7,7 @@ import AnalysisSummary from './AnalysisSummary';
 import MerchantBreakdown from './MerchantBreakdown';
 import { Transaction, DateRange, AnalysisSummary as AnalysisSummaryType } from '../types';
 import { filterByDateRange, generateAnalysisSummary, isTransferBetweenAccounts } from '../utils/analysis';
+import KeywordFilter from './KeywordFilter';
 
 const Dashboard: React.FC = () => {
     const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
@@ -17,6 +18,16 @@ const Dashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'analytics' | 'transactions' | 'merchants'>('transactions');
     const [includeTransfers, setIncludeTransfers] = useState<boolean>(false);
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
+    const [filterKeywords, setFilterKeywords] = useState<string[]>([]);
+
+    // Add useEffect to update filtered transactions when any filter changes
+    useEffect(() => {
+        if (allTransactions.length > 0) {
+            const filtered = filterTransactions(allTransactions, dateRange, includeTransfers);
+            setFilteredTransactions(filtered);
+            setAnalysisSummary(generateAnalysisSummary(filtered, dateRange || undefined, includeTransfers));
+        }
+    }, [allTransactions, dateRange, includeTransfers, filterKeywords]);
 
     const filterTransactions = (transactions: Transaction[], range: DateRange | null, includeTransfers: boolean) => {
         let filtered = transactions;
@@ -29,6 +40,13 @@ const Dashboard: React.FC = () => {
         // Then filter out transfers if needed
         if (!includeTransfers) {
             filtered = filtered.filter(t => !isTransferBetweenAccounts(t, transactions));
+        }
+
+        // Apply keyword filter
+        if (filterKeywords.length > 0) {
+            filtered = filtered.filter(t => !filterKeywords.some(keyword =>
+                t.description.toLowerCase().includes(keyword.toLowerCase())
+            ));
         }
 
         return filtered;
@@ -46,10 +64,7 @@ const Dashboard: React.FC = () => {
             const defaultRange = { startDate, endDate };
 
             setDateRange(defaultRange);
-            const filtered = filterTransactions(transactions, defaultRange, includeTransfers);
-            setFilteredTransactions(filtered);
             setErrorMessage(null);
-            setAnalysisSummary(generateAnalysisSummary(filtered, defaultRange, includeTransfers));
         } finally {
             setIsProcessing(false);
         }
@@ -59,9 +74,6 @@ const Dashboard: React.FC = () => {
         setIsProcessing(true);
         try {
             setDateRange(range);
-            const filtered = filterTransactions(allTransactions, range, includeTransfers);
-            setFilteredTransactions(filtered);
-            setAnalysisSummary(generateAnalysisSummary(filtered, range, includeTransfers));
         } finally {
             setIsProcessing(false);
         }
@@ -70,19 +82,21 @@ const Dashboard: React.FC = () => {
     const handleTransfersToggle = async () => {
         setIsProcessing(true);
         try {
-            const newIncludeTransfers = !includeTransfers;
-            setIncludeTransfers(newIncludeTransfers);
-            const filtered = filterTransactions(allTransactions, dateRange, newIncludeTransfers);
-            setFilteredTransactions(filtered);
-            setAnalysisSummary(generateAnalysisSummary(filtered, dateRange || undefined, newIncludeTransfers));
+            setIncludeTransfers(!includeTransfers);
         } finally {
             setIsProcessing(false);
         }
     };
 
+    const handleKeywordsChange = (keywords: string[]) => {
+        setFilterKeywords(keywords);
+    };
+
     const handleError = (message: string) => {
         setErrorMessage(message);
     };
+
+    console.log(filteredTransactions)
 
     return (
         <div className="w-full max-w-7xl mx-auto">
@@ -124,12 +138,21 @@ const Dashboard: React.FC = () => {
                                             {includeTransfers ? 'Including Transfers' : 'Excluding Transfers'}
                                         </button>
                                     </div>
-                                    <p className="text-sm font-medium">Select date range for analysis:</p>
-                                    <div className="mt-2">
-                                        <DateRangePicker
-                                            onChange={handleDateRangeChange}
-                                            disabled={allTransactions.length === 0 || isProcessing}
-                                        />
+                                    <div className="space-y-4">
+                                        <div>
+                                            <p className="text-sm font-medium mb-2">Select date range for analysis:</p>
+                                            <DateRangePicker
+                                                onChange={handleDateRangeChange}
+                                                disabled={allTransactions.length === 0 || isProcessing}
+                                            />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium mb-2">Keyword Filters</p>
+                                            <KeywordFilter
+                                                keywords={filterKeywords}
+                                                onKeywordsChange={handleKeywordsChange}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             )}
