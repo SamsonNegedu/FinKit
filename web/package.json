@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/react-datepicker": "^6.2.0",
     "@types/react-dropzone": "^4.2.2",
+    "@types/react-router-dom": "^5.3.3",
     "@types/react-select": "^5.0.0",
     "@types/recharts": "^1.8.29",
     "lucide-react": "^0.344.0",
@@ -20,6 +21,7 @@
     "react-datepicker": "^8.3.0",
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.3.8",
+    "react-router-dom": "^6.30.0",
     "react-select": "^5.10.1",
     "recharts": "^2.15.3",
     "xlsx": "^0.18.5"
