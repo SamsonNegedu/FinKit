@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { X, Plus, Trash2, Loader2, RefreshCw } from 'lucide-react'
 import { SheetConfig, CategoryMapping } from '../types'
 import { AVAILABLE_CATEGORIES } from '../lib/categorizer'

@@ -313,8 +313,8 @@ export async function parseExcel(file: File): Promise<RawTransaction[]> {
         const sheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[sheetName]
         
-        // Convert to JSON with headers
-        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { 
+        // Convert to JSON with headers (header: 1 returns array of arrays)
+        const rows = XLSX.utils.sheet_to_json(worksheet, { 
           header: 1,
           raw: false,
           dateNF: 'yyyy-mm-dd'
