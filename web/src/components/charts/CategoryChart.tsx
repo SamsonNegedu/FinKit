@@ -1,138 +1,100 @@
-import React, { useEffect, useRef } from 'react';
-import { CategorySummary } from '../../types';
-import { formatCurrency } from '../../utils/analysis';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { CategorySummary } from '../../types'
 
 interface CategoryChartProps {
-  categories: CategorySummary[];
-  currency: string;
+  categorySummary: CategorySummary[]
+  currency: string
 }
 
-const CategoryChart: React.FC<CategoryChartProps> = ({ categories, currency }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
 
-  useEffect(() => {
-    if (!canvasRef.current || categories.length === 0) return;
+export default function CategoryChart({ categorySummary, currency }: CategoryChartProps) {
+  // Take top 8 categories and group rest as "Other"
+  const topCategories = categorySummary.slice(0, 8)
+  const otherCategories = categorySummary.slice(8)
+  
+  const data = [...topCategories]
+  if (otherCategories.length > 0) {
+    const otherTotal = otherCategories.reduce((sum, c) => sum + c.total, 0)
+    const otherCount = otherCategories.reduce((sum, c) => sum + c.count, 0)
+    const otherPercentage = otherCategories.reduce((sum, c) => sum + c.percentage, 0)
+    data.push({
+      category: `Other (${otherCategories.length} categories)`,
+      total: otherTotal,
+      count: otherCount,
+      percentage: otherPercentage,
+      color: '#64748b',
+    })
+  }
 
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    const canvas = canvasRef.current;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Set canvas dimensions
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-
-    // Restore canvas size
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
-
-    // Calculate pie chart dimensions
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const radius = Math.min(centerX, centerY) - 20; // Reduced padding
-
-    // Draw pie chart
-    let startAngle = 0;
-    const total = categories.reduce((sum, cat) => sum + cat.total, 0);
-
-    // We'll only show the top 5 categories, and group the rest as "Other"
-    const topCategories = [...categories]
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
-
-    const otherTotal = categories.length > 5
-      ? categories
-        .sort((a, b) => b.total - a.total)
-        .slice(5)
-        .reduce((sum, cat) => sum + cat.total, 0)
-      : 0;
-
-    if (otherTotal > 0) {
-      topCategories.push({
-        category: 'Other',
-        total: otherTotal,
-        percentage: (otherTotal / total) * 100,
-        color: '#9CA3AF' // gray-400
-      });
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="bg-midnight-800 border border-midnight-600 rounded-lg px-3 py-2 shadow-xl">
+          <p className="font-medium text-white">{data.category}</p>
+          <p className="text-sm text-midnight-300">
+            {formatCurrency(data.total, currency)} ({data.percentage.toFixed(1)}%)
+          </p>
+          <p className="text-xs text-midnight-400">{data.count} transactions</p>
+        </div>
+      )
     }
-
-    // Draw pie slices
-    topCategories.forEach(category => {
-      const sliceAngle = (category.total / total) * 2 * Math.PI;
-
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-      ctx.closePath();
-
-      ctx.fillStyle = category.color;
-      ctx.fill();
-
-      // Add category label
-      if (sliceAngle > 0.2) { // Only add label if slice is large enough
-        const labelRadius = radius * 0.7;
-        const labelAngle = startAngle + sliceAngle / 2;
-        const labelX = centerX + Math.cos(labelAngle) * labelRadius;
-        const labelY = centerY + Math.sin(labelAngle) * labelRadius;
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(
-          `${Math.round(category.percentage)}%`,
-          labelX,
-          labelY
-        );
-      }
-
-      startAngle += sliceAngle;
-    });
-
-    // Draw center circle (donut hole)
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 0.4, 0, 2 * Math.PI);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fill();
-
-  }, [categories, currency]);
+    return null
+  }
 
   return (
-    <div className="flex h-full">
-      <div className="w-3/5 h-64 flex flex-col items-center justify-center">
-        <div className="text-sm font-medium text-gray-500 mb-2">Total Expenses</div>
-        <div className="text-xl font-bold text-gray-900 mb-4">
-          {formatCurrency(categories.reduce((sum, cat) => sum + cat.total, 0), currency)}
+    <div className="card">
+      <h3 className="text-lg font-semibold text-white mb-4">Spending by Category</h3>
+      
+      {data.length > 0 ? (
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                paddingAngle={2}
+                dataKey="total"
+                nameKey="category"
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
-        <div className="relative flex-1 w-full">
-          <canvas ref={canvasRef} className="w-full h-full" />
+      ) : (
+        <div className="h-[300px] flex items-center justify-center">
+          <p className="text-midnight-400">No expense data to display</p>
         </div>
-      </div>
-      <div className="w-2/5 pl-6 overflow-y-auto h-64">
-        <div className="space-y-2">
-          {categories.map((category) => (
-            <div key={category.category} className="flex items-center justify-between">
-              <div className="flex items-center min-w-0">
-                <div
-                  className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
-                  style={{ backgroundColor: category.color }}
-                />
-                <span className="text-sm truncate">{category.category}</span>
-              </div>
-              <div className="text-sm font-medium ml-2 flex-shrink-0">
-                {formatCurrency(category.total, currency)}
-              </div>
-            </div>
-          ))}
-        </div>
+      )}
+
+      {/* Legend */}
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {data.slice(0, 6).map((item) => (
+          <div key={item.category} className="flex items-center gap-2">
+            <span
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ backgroundColor: item.color }}
+            />
+            <span className="text-sm text-midnight-300 truncate">{item.category}</span>
+            <span className="text-sm text-midnight-500 ml-auto">{item.percentage.toFixed(0)}%</span>
+          </div>
+        ))}
       </div>
     </div>
-  );
-};
-
-export default CategoryChart;
+  )
+}

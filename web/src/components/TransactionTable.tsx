@@ -1,228 +1,302 @@
-import React, { useState, useMemo } from 'react';
-import { ArrowUpDown, Search, Filter } from 'lucide-react';
-import { Transaction } from '../types';
-import { formatCurrency } from '../utils/analysis';
-import { getCategoryColor } from '../utils/colors';
+import { useState, useRef, useEffect } from 'react'
+import { ChevronDown, Check, RefreshCw, ArrowUpDown, ArrowLeftRight } from 'lucide-react'
+import { Transaction } from '../types'
+import { AVAILABLE_CATEGORIES, CATEGORY_COLORS } from '../lib/categorizer'
+import RecurringBadge from './RecurringBadge'
+import BulkActionBar from './BulkActionBar'
 
 interface TransactionTableProps {
-  transactions: Transaction[];
+  transactions: Transaction[]
+  selectedIds: Set<string>
+  onSelectionChange: (ids: Set<string>) => void
+  onSelectAll: () => void
+  onUpdateTransaction: (id: string, updates: Partial<Transaction>) => void
+  onBulkCategoryChange: (category: string) => void
+  onBulkExclude: () => void
+  onBulkInclude: () => void
+  currency: string
 }
 
-type SortField = 'date' | 'description' | 'category' | 'amount';
-type SortDirection = 'asc' | 'desc';
+type SortField = 'date' | 'amount' | 'category' | 'description'
+type SortDirection = 'asc' | 'desc'
 
-const TransactionTable: React.FC<TransactionTableProps> = ({ transactions }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<SortField>('date');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [selectedType, setSelectedType] = useState<'all' | 'income' | 'expense'>('all');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount)
+}
 
-  // Get unique categories
-  const categories = useMemo(() => {
-    const uniqueCategories = new Set<string>();
-    transactions.forEach(t => uniqueCategories.add(t.category));
-    return Array.from(uniqueCategories).sort();
-  }, [transactions]);
+function formatDate(date: string): string {
+  return new Date(date).toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: 'short',
+  })
+}
 
-  // Filter and sort transactions
-  const filteredTransactions = useMemo(() => {
-    return transactions
-      .filter(transaction => {
-        // Filter by search term
-        const matchesSearch =
-          transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
+export default function TransactionTable({
+  transactions,
+  selectedIds,
+  onSelectionChange,
+  onSelectAll,
+  onUpdateTransaction,
+  onBulkCategoryChange,
+  onBulkExclude,
+  onBulkInclude,
+  currency,
+}: TransactionTableProps) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [sortField, setSortField] = useState<SortField>('date')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [categorySearch, setCategorySearch] = useState('')
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-        // Filter by type
-        const matchesType =
-          selectedType === 'all' ||
-          transaction.type === selectedType;
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setEditingId(null)
+        setCategorySearch('')
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
-        // Filter by category
-        const matchesCategory =
-          selectedCategory === 'all' ||
-          transaction.category === selectedCategory;
+  // Handle keyboard navigation
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setEditingId(null)
+        setCategorySearch('')
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
-        return matchesSearch && matchesType && matchesCategory;
-      })
-      .sort((a, b) => {
-        // Sort by field
-        let comparison = 0;
-
-        if (sortField === 'date') {
-          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
-        } else if (sortField === 'amount') {
-          comparison = a.amount - b.amount;
-        } else if (sortField === 'description') {
-          comparison = a.description.localeCompare(b.description);
-        } else if (sortField === 'category') {
-          comparison = a.category.localeCompare(b.category);
-        }
-
-        // Apply sort direction
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
-  }, [transactions, searchTerm, sortField, sortDirection, selectedType, selectedCategory]);
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    let comparison = 0
+    switch (sortField) {
+      case 'date':
+        comparison = new Date(a.date).getTime() - new Date(b.date).getTime()
+        break
+      case 'amount':
+        comparison = a.amount - b.amount
+        break
+      case 'category':
+        comparison = (a.category || '').localeCompare(b.category || '')
+        break
+      case 'description':
+        comparison = a.description.localeCompare(b.description)
+        break
+    }
+    return sortDirection === 'asc' ? comparison : -comparison
+  })
 
   const handleSort = (field: SortField) => {
-    if (field === sortField) {
-      // Toggle direction if same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    if (sortField === field) {
+      setSortDirection(d => d === 'asc' ? 'desc' : 'asc')
     } else {
-      // Set new field and default to desc
-      setSortField(field);
-      setSortDirection('desc');
+      setSortField(field)
+      setSortDirection('desc')
     }
-  };
+  }
 
-  const getSortIndicator = (field: SortField) => {
-    if (sortField !== field) return null;
-    return (
-      <span className="ml-1 inline-block text-xs">
-        {sortDirection === 'asc' ? '↑' : '↓'}
-      </span>
-    );
-  };
+  const handleToggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    onSelectionChange(newSelected)
+  }
+
+  const filteredCategories = AVAILABLE_CATEGORIES.filter(c =>
+    c.toLowerCase().includes(categorySearch.toLowerCase())
+  )
+
+  const SortButton = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <button
+      onClick={() => handleSort(field)}
+      className="flex items-center gap-1 hover:text-white transition-colors"
+    >
+      {children}
+      <ArrowUpDown className={`w-3 h-3 ${sortField === field ? 'text-accent' : 'text-midnight-500'}`} />
+    </button>
+  )
 
   return (
-    <div className="w-full overflow-hidden rounded-lg shadow">
-      <div className="p-4 bg-white border-b">
-        <div className="flex flex-col md:flex-row gap-3 justify-between">
-          <div className="relative w-full md:w-1/3">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Search transactions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+    <div className="relative">
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onClearSelection={() => onSelectionChange(new Set())}
+          onCategoryChange={onBulkCategoryChange}
+          onExclude={onBulkExclude}
+          onInclude={onBulkInclude}
+        />
+      )}
 
-          <div className="flex flex-wrap gap-2">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Filter className="h-4 w-4 text-gray-400" />
-              </div>
-              <select
-                className="pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value as 'all' | 'income' | 'expense')}
-              >
-                <option value="all">All Types</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-              </select>
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Filter className="h-4 w-4 text-gray-400" />
-              </div>
-              <select
-                className="pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                <option value="all">All Categories</option>
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-1/8"
-                onClick={() => handleSort('date')}
-              >
-                <div className="flex items-center">
-                  Date
-                  <ArrowUpDown className="ml-1 h-4 w-4" />
-                  {getSortIndicator('date')}
-                </div>
+      <div className="card overflow-hidden">
+        <table className="w-full table-fixed">
+          <thead>
+            <tr className="border-b border-midnight-700">
+              <th className="p-4 w-12">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === transactions.length && transactions.length > 0}
+                  onChange={onSelectAll}
+                  className="rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
+                />
               </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-4/8"
-                onClick={() => handleSort('description')}
-              >
-                <div className="flex items-center">
-                  Description
-                  <ArrowUpDown className="ml-1 h-4 w-4" />
-                  {getSortIndicator('description')}
-                </div>
+              <th className="p-4 w-20 text-left text-sm font-medium text-midnight-400">
+                <SortButton field="date">Date</SortButton>
               </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-2/8"
-                onClick={() => handleSort('category')}
-              >
-                <div className="flex items-center">
-                  Category
-                  <ArrowUpDown className="ml-1 h-4 w-4" />
-                  {getSortIndicator('category')}
-                </div>
+              <th className="p-4 text-left text-sm font-medium text-midnight-400">
+                <SortButton field="description">Description</SortButton>
               </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-1/8"
-                onClick={() => handleSort('amount')}
-              >
-                <div className="flex items-center">
-                  Amount
-                  <ArrowUpDown className="ml-1 h-4 w-4" />
-                  {getSortIndicator('amount')}
-                </div>
+              <th className="p-4 w-40 text-left text-sm font-medium text-midnight-400">
+                <SortButton field="category">Category</SortButton>
+              </th>
+              <th className="p-4 w-28 text-right text-sm font-medium text-midnight-400">
+                <SortButton field="amount">Amount</SortButton>
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredTransactions.length > 0 ? (
-              filteredTransactions.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-1/8">
-                    {new Date(transaction.date).toLocaleDateString()}
+            <tbody>
+              {sortedTransactions.map((tx) => (
+                <tr
+                  key={tx.id}
+                  className={`
+                    border-b border-midnight-800 hover:bg-midnight-800/50 transition-colors
+                    ${selectedIds.has(tx.id) ? 'bg-midnight-800/30' : ''}
+                    ${tx.isExcluded ? 'opacity-50' : ''}
+                  `}
+                >
+                  <td className="p-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(tx.id)}
+                      onChange={() => handleToggleSelect(tx.id)}
+                      className="rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
+                    />
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 w-4/8">
-                    {transaction.description}
+                  <td className="p-4">
+                    <span className="text-sm text-midnight-300">{formatDate(tx.date)}</span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 w-2/8">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full whitespace-nowrap ${getCategoryColor(transaction.category)}`}>
-                      {transaction.category}
+                  <td className="p-4 max-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <p className="text-sm text-white truncate" title={tx.merchant || tx.recipient || tx.description}>
+                          {tx.merchant || tx.recipient || tx.description.slice(0, 40)}
+                        </p>
+                        <p className="text-xs text-midnight-500 truncate" title={tx.description}>{tx.description}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {tx.isExcluded && !tx.doubleBookingMatch && (
+                          <span 
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                            title="Excluded from totals"
+                          >
+                            <span className="hidden sm:inline">Excluded</span>
+                          </span>
+                        )}
+                        {tx.doubleBookingMatch && (
+                          <span 
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            title={`Internal transfer - ${tx.isExcluded ? 'excluded from totals' : 'counted in totals'}`}
+                          >
+                            <ArrowLeftRight className="w-3 h-3" />
+                            <span className="hidden sm:inline">Transfer</span>
+                          </span>
+                        )}
+                        {tx.isRecurring && <RecurringBadge frequency={tx.recurringFrequency} />}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 relative">
+                    <button
+                      onClick={() => setEditingId(editingId === tx.id ? null : tx.id)}
+                      className={`
+                        flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all
+                        ${editingId === tx.id 
+                          ? 'bg-accent/20 ring-2 ring-accent' 
+                          : 'hover:bg-midnight-700'
+                        }
+                      `}
+                      style={{ 
+                        backgroundColor: editingId !== tx.id ? `${CATEGORY_COLORS[tx.category || 'Other']}20` : undefined
+                      }}
+                    >
+                      <span 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: CATEGORY_COLORS[tx.category || 'Other'] }}
+                      />
+                      <span className="text-midnight-100">{tx.category || 'Other'}</span>
+                      {tx.categorySource === 'ai' && (
+                        <RefreshCw className="w-3 h-3 text-accent" />
+                      )}
+                      <ChevronDown className="w-3 h-3 text-midnight-400" />
+                    </button>
+
+                    {editingId === tx.id && (
+                      <div
+                        ref={dropdownRef}
+                        className="absolute top-full left-0 mt-1 bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-50 min-w-[200px] max-h-[300px] overflow-hidden"
+                      >
+                        <input
+                          type="text"
+                          placeholder="Search categories..."
+                          value={categorySearch}
+                          onChange={(e) => setCategorySearch(e.target.value)}
+                          className="w-full px-3 py-2 bg-midnight-700 border-b border-midnight-600 text-sm focus:outline-none"
+                          autoFocus
+                        />
+                        <div className="max-h-[240px] overflow-y-auto">
+                          {filteredCategories.map((category) => (
+                            <button
+                              key={category}
+                              onClick={() => {
+                                onUpdateTransaction(tx.id, { category })
+                                setEditingId(null)
+                                setCategorySearch('')
+                              }}
+                              className="w-full flex items-center gap-3 px-3 py-2 hover:bg-midnight-700 text-left"
+                            >
+                              <span
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: CATEGORY_COLORS[category] }}
+                              />
+                              <span className="text-sm flex-1">{category}</span>
+                              {category === tx.category && (
+                                <Check className="w-4 h-4 text-accent" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-4 text-right">
+                    <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-income' : 'text-expense'}`}>
+                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, currency)}
                     </span>
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium w-1/8 ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                  </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                  No transactions found.
-                </td>
-              </tr>
-            )}
-          </tbody>
+              ))}
+            </tbody>
         </table>
-      </div>
 
-      <div className="p-4 bg-gray-50 border-t text-sm text-gray-500">
-        {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} found
+        {transactions.length === 0 && (
+          <div className="p-12 text-center">
+            <p className="text-midnight-400">No transactions match your filters</p>
+          </div>
+        )}
       </div>
     </div>
-  );
-};
-
-export default TransactionTable;
+  )
+}

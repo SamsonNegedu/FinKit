@@ -1,238 +1,272 @@
-import React, { useState, useEffect } from 'react';
-import { FileUp, Filter, Loader2 } from 'lucide-react';
-import FileUpload from './FileUpload';
-import DateRangePicker from './DateRangePicker';
-import TransactionTable from './TransactionTable';
-import AnalysisSummary from './AnalysisSummary';
-import MerchantBreakdown from './MerchantBreakdown';
-import { Transaction, DateRange, AnalysisSummary as AnalysisSummaryType } from '../types';
-import { filterByDateRange, generateAnalysisSummary, isTransferBetweenAccounts } from '../utils/analysis';
-import KeywordFilter from './KeywordFilter';
+import { useState, useMemo } from 'react'
+import { Transaction, DateRange, SheetConfig, AnalysisSummary } from '../types'
+import SummaryCards from './SummaryCards'
+import TransactionTable from './TransactionTable'
+import SearchFilter from './SearchFilter'
+import CategoryChart from './charts/CategoryChart'
+import SpendingTrend from './charts/SpendingTrend'
+import TopExpenses from './charts/TopExpenses'
+import SettingsPanel from './SettingsPanel'
+import ExportButton from './ExportButton'
+import IncomeReview from './IncomeReview'
+import { CATEGORY_COLORS } from '../lib/categorizer'
 
-const Dashboard: React.FC = () => {
-    const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-    const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
-    const [dateRange, setDateRange] = useState<DateRange | null>(null);
-    const [analysisSummary, setAnalysisSummary] = useState<AnalysisSummaryType | null>(null);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'analytics' | 'transactions' | 'merchants'>('transactions');
-    const [includeTransfers, setIncludeTransfers] = useState<boolean>(false);
-    const [isProcessing, setIsProcessing] = useState<boolean>(false);
-    const [filterKeywords, setFilterKeywords] = useState<string[]>([]);
+interface DashboardProps {
+  transactions: Transaction[]
+  dateRange: DateRange | null
+  onDateRangeChange: (range: DateRange | null) => void
+  onUpdateTransaction: (id: string, updates: Partial<Transaction>) => void
+  onBulkUpdate: (ids: string[], updates: Partial<Transaction>) => void
+  sheetConfig: SheetConfig | null
+  onSheetConfigChange: (config: SheetConfig | null) => void
+}
 
-    // Add useEffect to update filtered transactions when any filter changes
-    useEffect(() => {
-        if (allTransactions.length > 0) {
-            const filtered = filterTransactions(allTransactions, dateRange, includeTransfers);
-            setFilteredTransactions(filtered);
-            setAnalysisSummary(generateAnalysisSummary(filtered, dateRange || undefined, includeTransfers));
+type Tab = 'transactions' | 'income' | 'analytics' | 'trends'
+
+export default function Dashboard({
+  transactions,
+  dateRange,
+  onDateRangeChange,
+  onUpdateTransaction,
+  onBulkUpdate,
+  sheetConfig,
+  onSheetConfigChange,
+}: DashboardProps) {
+  const [activeTab, setActiveTab] = useState<Tab>('transactions')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [showTransfers, setShowTransfers] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Date-filtered transactions (used for Income Review - includes all income regardless of transfer status)
+  const dateFilteredTransactions = useMemo(() => {
+    if (!dateRange) return transactions
+    return transactions.filter(tx => {
+      const txDate = new Date(tx.date)
+      return txDate >= dateRange.startDate && txDate <= dateRange.endDate
+    })
+  }, [transactions, dateRange])
+
+  // Filter transactions based on date range, search, and categories
+  const filteredTransactions = useMemo(() => {
+    return dateFilteredTransactions.filter(tx => {
+      // Exclude transfers unless explicitly shown
+      if (!showTransfers && tx.category === 'Transfer') {
+        return false
+      }
+
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const searchableText = `${tx.description} ${tx.merchant || ''} ${tx.category || ''} ${tx.recipient || ''}`.toLowerCase()
+        if (!searchableText.includes(query)) {
+          return false
         }
-    }, [allTransactions, dateRange, includeTransfers, filterKeywords]);
+      }
 
-    const filterTransactions = (transactions: Transaction[], range: DateRange | null, includeTransfers: boolean) => {
-        let filtered = transactions;
+      // Category filter
+      if (selectedCategories.length > 0 && !selectedCategories.includes(tx.category || 'Other')) {
+        return false
+      }
 
-        // First filter by date range
-        if (range) {
-            filtered = filterByDateRange(transactions, range);
-        }
+      return true
+    })
+  }, [dateFilteredTransactions, searchQuery, selectedCategories, showTransfers])
 
-        // Then filter out transfers if needed
-        if (!includeTransfers) {
-            filtered = filtered.filter(t => !isTransferBetweenAccounts(t, transactions));
-        }
+  // Calculate summary
+  const summary: AnalysisSummary = useMemo(() => {
+    const expenses = filteredTransactions.filter(tx => tx.type === 'expense' && !tx.isExcluded)
+    const income = filteredTransactions.filter(tx => tx.type === 'income' && !tx.isExcluded)
 
-        // Apply keyword filter
-        if (filterKeywords.length > 0) {
-            filtered = filtered.filter(t => !filterKeywords.some(keyword =>
-                t.description.toLowerCase().includes(keyword.toLowerCase())
-            ));
-        }
+    const totalExpense = expenses.reduce((sum, tx) => sum + tx.amount, 0)
+    const totalIncome = income.reduce((sum, tx) => sum + tx.amount, 0)
 
-        return filtered;
-    };
+    // Category breakdown
+    const categoryMap = new Map<string, { total: number; count: number }>()
+    for (const tx of expenses) {
+      const cat = tx.category || 'Other'
+      const existing = categoryMap.get(cat) || { total: 0, count: 0 }
+      categoryMap.set(cat, {
+        total: existing.total + tx.amount,
+        count: existing.count + 1,
+      })
+    }
 
-    const handleTransactionsLoaded = async (transactions: Transaction[]) => {
-        setIsProcessing(true);
-        try {
-            setAllTransactions(transactions);
+    const categorySummary = Array.from(categoryMap.entries())
+      .map(([category, data]) => ({
+        category,
+        total: data.total,
+        count: data.count,
+        percentage: totalExpense > 0 ? (data.total / totalExpense) * 100 : 0,
+        color: CATEGORY_COLORS[category] || '#64748b',
+      }))
+      .sort((a, b) => b.total - a.total)
 
-            // Set default date range to last month
-            const now = new Date();
-            const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-            const defaultRange = { startDate, endDate };
+    // Top merchants
+    const merchantMap = new Map<string, { total: number; count: number }>()
+    for (const tx of expenses) {
+      const merchant = tx.merchant || tx.recipient || tx.description.slice(0, 20)
+      const existing = merchantMap.get(merchant) || { total: 0, count: 0 }
+      merchantMap.set(merchant, {
+        total: existing.total + tx.amount,
+        count: existing.count + 1,
+      })
+    }
 
-            setDateRange(defaultRange);
-            setErrorMessage(null);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
+    const topMerchants = Array.from(merchantMap.entries())
+      .map(([merchant, data]) => ({ merchant, ...data }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10)
 
-    const handleDateRangeChange = async (range: DateRange) => {
-        setIsProcessing(true);
-        try {
-            setDateRange(range);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
+    // Calculate average daily spend
+    const days = dateRange 
+      ? Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      : 30
+    const avgDailySpend = totalExpense / days
 
-    const handleTransfersToggle = async () => {
-        setIsProcessing(true);
-        try {
-            setIncludeTransfers(!includeTransfers);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
+    return {
+      totalIncome,
+      totalExpense,
+      balance: totalIncome - totalExpense,
+      avgDailySpend,
+      categorySummary,
+      topMerchants,
+      currency: transactions[0]?.currency || 'EUR',
+    }
+  }, [filteredTransactions, dateRange, transactions])
 
-    const handleKeywordsChange = (keywords: string[]) => {
-        setFilterKeywords(keywords);
-    };
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredTransactions.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filteredTransactions.map(tx => tx.id)))
+    }
+  }
 
-    const handleError = (message: string) => {
-        setErrorMessage(message);
-    };
+  const handleBulkCategoryChange = (category: string) => {
+    onBulkUpdate(Array.from(selectedIds), { category })
+    setSelectedIds(new Set())
+  }
 
-    console.log(filteredTransactions)
+  const handleBulkExclude = () => {
+    onBulkUpdate(Array.from(selectedIds), { isExcluded: true })
+    setSelectedIds(new Set())
+  }
 
-    return (
-        <div className="w-full max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 gap-6 mb-6">
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="p-4 sm:p-6">
-                        <h2 className="text-lg font-medium mb-4 flex items-center">
-                            <FileUp className="h-5 w-5 mr-2 text-blue-500" />
-                            Upload Transactions
-                        </h2>
+  const handleBulkInclude = () => {
+    onBulkUpdate(Array.from(selectedIds), { isExcluded: false })
+    setSelectedIds(new Set())
+  }
 
-                        <div className="space-y-4">
-                            <FileUpload
-                                onTransactionsLoaded={handleTransactionsLoaded}
-                                onError={handleError}
-                            />
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'transactions', label: 'Transactions' },
+    { id: 'income', label: 'Income Review' },
+    { id: 'analytics', label: 'Analytics' },
+    { id: 'trends', label: 'Trends' },
+  ]
 
-                            {errorMessage && (
-                                <div className="bg-red-50 text-red-700 p-3 rounded-md">
-                                    {errorMessage}
-                                </div>
-                            )}
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <SummaryCards summary={summary} />
 
-                            {allTransactions.length > 0 && (
-                                <div className="py-3">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <p className="text-sm text-gray-500">
-                                            {allTransactions.length} transactions loaded
-                                        </p>
-                                        <button
-                                            onClick={handleTransfersToggle}
-                                            disabled={isProcessing}
-                                            className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${includeTransfers
-                                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                                        >
-                                            <Filter className="h-4 w-4 mr-1.5" />
-                                            {includeTransfers ? 'Including Transfers' : 'Excluding Transfers'}
-                                        </button>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <p className="text-sm font-medium mb-2">Select date range for analysis:</p>
-                                            <DateRangePicker
-                                                onChange={handleDateRangeChange}
-                                                disabled={allTransactions.length === 0 || isProcessing}
-                                            />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium mb-2">Keyword Filters</p>
-                                            <KeywordFilter
-                                                keywords={filterKeywords}
-                                                onKeywordsChange={handleKeywordsChange}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
+      {/* Search & Filter Bar */}
+      <div className="card">
+        <SearchFilter
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedCategories={selectedCategories}
+          onCategoryChange={setSelectedCategories}
+          showTransfers={showTransfers}
+          onShowTransfersChange={setShowTransfers}
+          dateRange={dateRange}
+          onDateRangeChange={onDateRangeChange}
+          transactionCount={filteredTransactions.length}
+          totalCount={transactions.length}
+          transactions={transactions}
+        />
+      </div>
 
-            {allTransactions.length > 0 && (
-                <>
-                    <div className="sticky top-0 z-40 bg-white flex space-x-2 mb-6">
-                        <button
-                            className={`
-                                py-2 px-1 border-b-2 font-medium text-sm
-                                ${activeTab === 'transactions'
-                                    ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                            `}
-                            onClick={() => setActiveTab('transactions')}
-                        >
-                            Transactions
-                        </button>
-                        <button
-                            className={`
-                                py-2 px-1 border-b-2 font-medium text-sm
-                                ${activeTab === 'analytics'
-                                    ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                            `}
-                            onClick={() => setActiveTab('analytics')}
-                        >
-                            Analytics
-                        </button>
-                        <button
-                            className={`
-                                py-2 px-1 border-b-2 font-medium text-sm
-                                ${activeTab === 'merchants'
-                                    ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
-                            `}
-                            onClick={() => setActiveTab('merchants')}
-                        >
-                            Merchants
-                        </button>
-                    </div>
-
-                    <div className="pb-12 relative">
-                        {isProcessing && (
-                            <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-50">
-                                <div className="flex items-center space-x-2 text-blue-600">
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                    <span>Processing...</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'transactions' ? (
-                            <TransactionTable transactions={filteredTransactions} />
-                        ) : activeTab === 'analytics' ? (
-                            analysisSummary ? (
-                                <AnalysisSummary
-                                    summary={analysisSummary}
-                                    transactions={filteredTransactions}
-                                    startDate={dateRange?.startDate || new Date()}
-                                    endDate={dateRange?.endDate || new Date()}
-                                />
-                            ) : (
-                                <div className="bg-white rounded-lg shadow p-6 text-center">
-                                    <p className="text-gray-500">No transaction data available for analysis.</p>
-                                    <p className="text-sm text-gray-400 mt-2">Upload your transaction data to see analytics.</p>
-                                </div>
-                            )
-                        ) : (
-                            <MerchantBreakdown transactions={filteredTransactions} />
-                        )}
-                    </div>
-                </>
-            )}
+      {/* Tabs */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                px-4 py-2 rounded-lg font-medium text-sm transition-all
+                ${activeTab === tab.id
+                  ? 'bg-accent text-white'
+                  : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
+                }
+              `}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-    );
-};
 
-export default Dashboard; 
+        <div className="flex items-center gap-3">
+          <ExportButton
+            transactions={filteredTransactions}
+            sheetConfig={sheetConfig}
+            dateRange={dateRange}
+            onOpenSettings={() => setShowSettings(true)}
+          />
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'transactions' && (
+        <TransactionTable
+          transactions={filteredTransactions}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onSelectAll={handleSelectAll}
+          onUpdateTransaction={onUpdateTransaction}
+          onBulkCategoryChange={handleBulkCategoryChange}
+          onBulkExclude={handleBulkExclude}
+          onBulkInclude={handleBulkInclude}
+          currency={summary.currency}
+        />
+      )}
+
+      {activeTab === 'income' && (
+        <IncomeReview
+          transactions={dateFilteredTransactions}
+          onUpdateTransaction={onUpdateTransaction}
+          currency={summary.currency}
+        />
+      )}
+
+      {activeTab === 'analytics' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CategoryChart categorySummary={summary.categorySummary} currency={summary.currency} />
+          <TopExpenses topMerchants={summary.topMerchants} currency={summary.currency} />
+        </div>
+      )}
+
+      {activeTab === 'trends' && (
+        <SpendingTrend 
+          transactions={filteredTransactions} 
+          dateRange={dateRange}
+          currency={summary.currency}
+        />
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <SettingsPanel
+          config={sheetConfig}
+          onSave={(config) => {
+            onSheetConfigChange(config)
+            setShowSettings(false)
+          }}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+    </div>
+  )
+}

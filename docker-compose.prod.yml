@@ -1,0 +1,68 @@
+# Production docker-compose for Raspberry Pi with Cloudflare Tunnel
+version: "3.8"
+
+services:
+  web:
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/transaction-analyser}-web:latest
+    container_name: transaction-analyser-web
+    restart: unless-stopped
+    networks:
+      - transaction-analyser-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  api:
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/transaction-analyser}-api:latest
+    container_name: transaction-analyser-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    networks:
+      - transaction-analyser-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Cloudflare Tunnel - configure via dashboard or config file
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - transaction-analyser-network
+    depends_on:
+      - web
+      - api
+
+networks:
+  transaction-analyser-network:
+    driver: bridge
