@@ -56,3 +56,16 @@ temp/
 
 # Web specific
 web/.bolt/
+
+# Database files (SQLite)
+*.db
+*.db-shm
+*.db-wal
+api/data/
+data/
+
+# Transaction data (user uploads)
+*.csv
+*.xlsx
+*.xls
+*.ofx

@@ -1,58 +1,48 @@
-# Production docker-compose for Raspberry Pi with Cloudflare Tunnel
-version: "3.8"
+# Transaction Analyser - Production Docker Compose
+# Usage:
+#   Update services:  docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+#   View logs:        docker compose -f docker-compose.prod.yml logs -f
+#   Stop:             docker compose -f docker-compose.prod.yml down
 
 services:
-  web:
-    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/transaction-analyser}-web:latest
+  homefi-web:
+    image: ghcr.io/samsonnegedu/transaction_analyser-web:latest
     container_name: transaction-analyser-web
+    pull_policy: always
     restart: unless-stopped
     networks:
       - transaction-analyser-network
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:3000/",
-        ]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 5s
 
-  api:
-    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/transaction-analyser}-api:latest
+  homefi-api:
+    image: ghcr.io/samsonnegedu/transaction_analyser-api:latest
     container_name: transaction-analyser-api
+    pull_policy: always
     restart: unless-stopped
-    env_file:
-      - .env
+    env_file: .env
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - DATA_DIR=/data
+    volumes:
+      - api-data:/data # Persistent storage for SQLite database
     networks:
       - transaction-analyser-network
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:3000/health",
-        ]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 10s
 
-  # Cloudflare Tunnel - configure via dashboard or config file
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: cloudflared
+    container_name: transaction-analyser-cloudflared
     restart: unless-stopped
     command: tunnel run
     environment:
@@ -60,8 +50,14 @@ services:
     networks:
       - transaction-analyser-network
     depends_on:
-      - web
-      - api
+      homefi-api:
+        condition: service_healthy
+      homefi-web:
+        condition: service_healthy
+
+volumes:
+  api-data:
+    name: transaction-analyser-api-data
 
 networks:
   transaction-analyser-network:

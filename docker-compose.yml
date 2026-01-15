@@ -33,9 +33,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - DATA_DIR=/app/data
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GOOGLE_SERVICE_ACCOUNT_EMAIL=${GOOGLE_SERVICE_ACCOUNT_EMAIL:-}
       - GOOGLE_PRIVATE_KEY=${GOOGLE_PRIVATE_KEY:-}
+    volumes:
+      - api-data:/app/data
     networks:
       - app-network
     healthcheck:
@@ -52,6 +55,9 @@ services:
       timeout: 3s
       retries: 3
       start_period: 10s
+
+volumes:
+  api-data:
 
 networks:
   app-network:

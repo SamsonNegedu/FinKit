@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { categorizeRoute } from './routes/categorize'
 import { exportRoute } from './routes/export'
+import { learnRoute } from './routes/learn'
 
 const app = new Hono()
 
@@ -11,9 +12,9 @@ const app = new Hono()
 app.use('*', logger())
 app.use('*', cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? '*'  // In production, nginx handles CORS
+    ? '*'  // In production, handled by reverse proxy
     : ['http://localhost:5173', 'http://localhost:3000'],
-  allowMethods: ['GET', 'POST', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }))
 
@@ -28,6 +29,7 @@ app.get('/api/health', (c) => {
 // Routes
 app.route('/api/categorize', categorizeRoute)
 app.route('/api/export', exportRoute)
+app.route('/api/learn', learnRoute)
 
 // 404 handler
 app.notFound((c) => {

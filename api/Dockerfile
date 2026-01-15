@@ -3,10 +3,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install build dependencies for better-sqlite3
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (including native modules)
 RUN npm ci
 
 # Copy source code
@@ -20,6 +23,9 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
+# Create data directory for SQLite database
+RUN mkdir -p /app/data
+
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
@@ -27,17 +33,26 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy package files
 COPY package*.json ./
 
+# Install build tools for better-sqlite3
+RUN apk add --no-cache python3 make g++
+
 # Install production dependencies only
 RUN npm ci --omit=dev && npm cache clean --force
+
+# Remove build tools to reduce image size
+RUN apk del python3 make g++
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
-# Set ownership
+# Set ownership (including data directory)
 RUN chown -R nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs
+
+# Environment
+ENV DATA_DIR=/app/data
 
 # Expose port
 EXPOSE 3000

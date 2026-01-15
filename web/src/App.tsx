@@ -1,12 +1,13 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Transaction, DateRange, SheetConfig, RawTransaction } from './types'
 import Dashboard from './components/Dashboard'
-import FileUpload from './components/FileUpload'
+import FileUpload, { ImportOptions } from './components/FileUpload'
 import { parseFile } from './lib/parser'
 import { anonymizeTransactions, processWithoutAnonymization } from './lib/anonymizer'
-import { categorizeWithRules } from './lib/categorizer'
+import { categorizeWithRules, setLearnedMappings } from './lib/categorizer'
 import { detectRecurring } from './lib/recurring'
 import { detectDoubleBookings } from './lib/double-booking'
+import { getLearnedMappings, saveLearnedMapping } from './lib/api'
 import { Shield, ShieldOff } from 'lucide-react'
 
 function App() {
@@ -19,6 +20,17 @@ function App() {
   
   // Store raw transactions to allow toggling anonymization
   const rawTransactionsRef = useRef<RawTransaction[]>([])
+
+  // Load learned categorizations on startup
+  useEffect(() => {
+    async function loadLearnedMappings() {
+      const mappings = await getLearnedMappings()
+      if (mappings.length > 0) {
+        setLearnedMappings(mappings)
+      }
+    }
+    loadLearnedMappings()
+  }, [])
 
   const processTransactions = (raw: RawTransaction[], anonymize: boolean) => {
     // Process with or without anonymization
@@ -36,13 +48,28 @@ function App() {
     return detectRecurring(withDoubleBookings)
   }
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = async (file: File, options: ImportOptions) => {
     setIsLoading(true)
     setError(null)
     
     try {
       // Parse file (CSV, Excel, or OFX)
-      const rawTransactions = await parseFile(file)
+      let rawTransactions = await parseFile(file)
+      
+      // Apply date filter if specified (filter early to reduce processing load)
+      if (options.dateFilter !== 'all' && options.customStartDate) {
+        const startTime = options.customStartDate.getTime()
+        const endTime = options.customEndDate?.getTime() || Date.now()
+        
+        const beforeCount = rawTransactions.length
+        rawTransactions = rawTransactions.filter(tx => {
+          const txTime = new Date(tx.date).getTime()
+          return txTime >= startTime && txTime <= endTime
+        })
+        
+        console.log(`Date filter: ${beforeCount} → ${rawTransactions.length} transactions`)
+      }
+      
       rawTransactionsRef.current = rawTransactions
       
       // Process transactions
@@ -86,9 +113,24 @@ function App() {
   }
 
   const handleUpdateTransaction = (id: string, updates: Partial<Transaction>) => {
-    setTransactions(prev => 
-      prev.map(t => t.id === id ? { ...t, ...updates, categorySource: 'manual' as const } : t)
-    )
+    setTransactions(prev => {
+      const updated = prev.map(t => {
+        if (t.id !== id) return t
+        
+        const updatedTx = { ...t, ...updates, categorySource: 'manual' as const }
+        
+        // If category changed, save to learned mappings
+        if (updates.category && updates.category !== t.category) {
+          const merchantKey = t.merchant || t.recipient || t.description.slice(0, 30)
+          if (merchantKey) {
+            saveLearnedMapping(merchantKey, updates.category)
+          }
+        }
+        
+        return updatedTx
+      })
+      return updated
+    })
   }
 
   const handleBulkUpdate = (ids: string[], updates: Partial<Transaction>) => {

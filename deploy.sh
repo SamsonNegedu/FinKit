@@ -1,66 +1,79 @@
 #!/bin/bash
 set -e
 
-# Transaction Analyser Deployment Script for Raspberry Pi
-# Usage: ./deploy.sh [--pull-only]
+# Transaction Analyser - Raspberry Pi Deployment
+# Usage:
+#   ./deploy.sh          - Pull latest images and restart
+#   ./deploy.sh pull     - Pull images only (no restart)
+#   ./deploy.sh logs     - View logs
+#   ./deploy.sh status   - Show container status
+#   ./deploy.sh stop     - Stop all containers
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+COMPOSE_FILE="docker-compose.prod.yml"
+cd "$(dirname "$0")"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# Colors
+G='\033[0;32m' Y='\033[1;33m' R='\033[0;31m' N='\033[0m'
 
-echo -e "${GREEN}🚀 Transaction Analyser Deployment${NC}"
-echo "=================================="
+info() { echo -e "${G}$1${N}"; }
+warn() { echo -e "${Y}$1${N}"; }
 
-# Check for .env file
-if [ ! -f .env ]; then
-    echo -e "${YELLOW}Warning: .env file not found${NC}"
-    echo "Creating from .env.example..."
-    if [ -f .env.example ]; then
-        cp .env.example .env
-        echo -e "${RED}Please edit .env with your API keys before running again${NC}"
+case "${1:-update}" in
+  pull)
+    info "📦 Pulling latest images..."
+    docker compose -f $COMPOSE_FILE pull
+    info "✅ Done. Run './deploy.sh' to restart with new images."
+    ;;
+
+  logs)
+    docker compose -f $COMPOSE_FILE logs -f
+    ;;
+
+  status)
+    docker compose -f $COMPOSE_FILE ps
+    ;;
+
+  stop)
+    info "🛑 Stopping containers..."
+    docker compose -f $COMPOSE_FILE down
+    ;;
+
+  update|"")
+    # Check .env
+    if [ ! -f .env ]; then
+      if [ -f example.env ]; then
+        cp example.env .env
+        warn "Created .env from example. Edit it with your credentials, then run again."
         exit 1
+      fi
     fi
-fi
 
-# Load environment variables
-export $(grep -v '^#' .env | xargs)
+    # Load env
+    set -a; source .env 2>/dev/null || true; set +a
 
-# Login to GitHub Container Registry (if needed)
-if [ -n "$GITHUB_TOKEN" ]; then
-    echo -e "${GREEN}Logging in to GitHub Container Registry...${NC}"
-    echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-fi
+    # GHCR login if credentials provided
+    if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
+      info "🔐 Logging in to ghcr.io..."
+      echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_USER" --password-stdin
+    fi
 
-# Pull latest images
-echo -e "${GREEN}Pulling latest images...${NC}"
-docker compose -f docker-compose.prod.yml pull
+    info "📦 Pulling latest images..."
+    docker compose -f $COMPOSE_FILE pull
 
-if [ "$1" == "--pull-only" ]; then
-    echo -e "${GREEN}✅ Images pulled successfully${NC}"
-    exit 0
-fi
+    info "🔄 Restarting containers..."
+    docker compose -f $COMPOSE_FILE up -d --remove-orphans
 
-# Stop existing containers
-echo -e "${GREEN}Stopping existing containers...${NC}"
-docker compose -f docker-compose.prod.yml down || true
+    info "⏳ Waiting for health checks..."
+    sleep 5
 
-# Start new containers
-echo -e "${GREEN}Starting containers...${NC}"
-docker compose -f docker-compose.prod.yml up -d
+    echo ""
+    docker compose -f $COMPOSE_FILE ps
+    echo ""
+    info "✅ Deployed! Access via your Cloudflare tunnel URL."
+    ;;
 
-# Wait for health checks
-echo -e "${GREEN}Waiting for services to be healthy...${NC}"
-sleep 10
-
-# Check status
-echo ""
-echo -e "${GREEN}✅ Deployment complete!${NC}"
-echo ""
-docker compose -f docker-compose.prod.yml ps
-echo ""
-echo -e "Access the app at: ${GREEN}http://$(hostname -I | awk '{print $1}')${NC}"
+  *)
+    echo "Usage: ./deploy.sh [pull|logs|status|stop|update]"
+    exit 1
+    ;;
+esac

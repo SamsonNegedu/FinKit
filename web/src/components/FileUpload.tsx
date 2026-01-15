@@ -1,15 +1,32 @@
 import { useCallback, useState } from 'react'
-import { Upload, FileSpreadsheet, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, FileSpreadsheet, AlertCircle, Loader2, Calendar } from 'lucide-react'
 import { isFileSupported, getSupportedExtensions } from '../lib/parser'
 
+export interface ImportOptions {
+  dateFilter: 'all' | '1m' | '3m' | '6m' | '1y' | 'custom'
+  customStartDate?: Date
+  customEndDate?: Date
+}
+
 interface FileUploadProps {
-  onFileUpload: (file: File) => Promise<void>
+  onFileUpload: (file: File, options: ImportOptions) => Promise<void>
   isLoading: boolean
   error: string | null
 }
 
+const DATE_FILTER_OPTIONS = [
+  { value: '1m', label: 'Last Month' },
+  { value: '3m', label: 'Last 3 Months' },
+  { value: '6m', label: 'Last 6 Months' },
+  { value: '1y', label: 'Last Year' },
+  { value: 'all', label: 'All Time' },
+] as const
+
 export default function FileUpload({ onFileUpload, isLoading, error }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [showOptions, setShowOptions] = useState(false)
+  const [dateFilter, setDateFilter] = useState<ImportOptions['dateFilter']>('3m')
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -21,22 +38,49 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
     setIsDragging(false)
   }, [])
 
+  const handleFileSelect = (file: File) => {
+    if (isFileSupported(file)) {
+      setPendingFile(file)
+      setShowOptions(true)
+    }
+  }
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-    
     const file = e.dataTransfer.files[0]
-    if (file && isFileSupported(file)) {
-      onFileUpload(file)
-    }
-  }, [onFileUpload])
+    if (file) handleFileSelect(file)
+  }, [])
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      onFileUpload(file)
+    if (file) handleFileSelect(file)
+    // Reset input so same file can be re-selected
+    e.target.value = ''
+  }, [])
+
+  const handleConfirmImport = () => {
+    if (!pendingFile) return
+
+    const options: ImportOptions = { dateFilter }
+
+    // Calculate date range based on filter
+    if (dateFilter !== 'all' && dateFilter !== 'custom') {
+      const now = new Date()
+      const months = dateFilter === '1m' ? 1 : dateFilter === '3m' ? 3 : dateFilter === '6m' ? 6 : 12
+      options.customStartDate = new Date(now.getFullYear(), now.getMonth() - months, 1)
+      options.customEndDate = now
     }
-  }, [onFileUpload])
+
+    setShowOptions(false)
+    onFileUpload(pendingFile, options)
+    setPendingFile(null)
+  }
+
+  const handleCancel = () => {
+    setShowOptions(false)
+    setPendingFile(null)
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -45,9 +89,78 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
           Analyse Your Transactions
         </h2>
         <p className="text-midnight-300">
-          Upload your bank export CSV to get started. All data is anonymized before processing.
+          Upload your bank export. Large files? No problem - filter by date on import.
         </p>
       </div>
+
+      {/* Import Options Modal */}
+      {showOptions && pendingFile && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-midnight-900 border border-midnight-700 rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-semibold text-white mb-2">Import Options</h3>
+            <p className="text-midnight-400 text-sm mb-6">
+              Filter transactions to import only what you need
+            </p>
+
+            {/* File Info */}
+            <div className="bg-midnight-800 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <FileSpreadsheet className="w-8 h-8 text-accent" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-medium truncate">{pendingFile.name}</p>
+                  <p className="text-midnight-400 text-sm">
+                    {(pendingFile.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Date Filter */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-midnight-300 mb-3">
+                <Calendar className="w-4 h-4 inline mr-2" />
+                Import transactions from
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {DATE_FILTER_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setDateFilter(option.value)}
+                    className={`
+                      px-4 py-3 rounded-lg text-sm font-medium transition-all
+                      ${dateFilter === option.value
+                        ? 'bg-accent text-white'
+                        : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
+                      }
+                    `}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-midnight-500 mt-3">
+                💡 Tip: For monthly analysis, "Last Month" is usually sufficient
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancel}
+                className="flex-1 btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmImport}
+                className="flex-1 btn-primary"
+              >
+                Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         onDragOver={handleDragOver}
@@ -55,8 +168,8 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
         onDrop={handleDrop}
         className={`
           relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300
-          ${isDragging 
-            ? 'border-accent bg-accent/10 scale-[1.02]' 
+          ${isDragging
+            ? 'border-accent bg-accent/10 scale-[1.02]'
             : 'border-midnight-600 hover:border-midnight-500 bg-midnight-900/50'
           }
           ${isLoading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}
@@ -65,11 +178,11 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
         <input
           type="file"
           accept={getSupportedExtensions()}
-          onChange={handleFileSelect}
+          onChange={handleInputChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           disabled={isLoading}
         />
-        
+
         <div className="flex flex-col items-center gap-4">
           {isLoading ? (
             <>
@@ -78,7 +191,7 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
               </div>
               <div>
                 <p className="text-lg font-medium text-white">Processing transactions...</p>
-                <p className="text-sm text-midnight-400 mt-1">Anonymizing and categorizing</p>
+                <p className="text-sm text-midnight-400 mt-1">Filtering and categorizing</p>
               </div>
             </>
           ) : (
@@ -117,19 +230,19 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
       )}
 
       <div className="mt-8 grid grid-cols-3 gap-4">
-        <Feature 
-          icon="🔒" 
-          title="Privacy First" 
-          description="All personal data is anonymized before processing"
+        <Feature
+          icon="📅"
+          title="Date Filtering"
+          description="Import only the months you need"
         />
-        <Feature 
-          icon="⚡" 
-          title="Smart Categories" 
+        <Feature
+          icon="⚡"
+          title="Smart Categories"
           description="Auto-categorizes based on merchant patterns"
         />
-        <Feature 
-          icon="📊" 
-          title="Export Ready" 
+        <Feature
+          icon="📊"
+          title="Export Ready"
           description="One-click export to your Google Sheet"
         />
       </div>

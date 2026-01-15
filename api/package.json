@@ -12,10 +12,12 @@
     "@hono/node-server": "^1.13.7",
     "openai": "^4.73.0",
     "googleapis": "^144.0.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "better-sqlite3": "^11.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/better-sqlite3": "^7.6.11",
     "tsx": "^4.19.2",
     "typescript": "~5.6.2"
   }

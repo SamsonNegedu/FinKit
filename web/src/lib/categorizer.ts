@@ -71,6 +71,96 @@ const TRANSFER_PATTERNS = [
   /\bumbuchung\b/i,
 ]
 
+// Learned mappings cache (populated by App.tsx on startup)
+let learnedMappings: Map<string, string> = new Map()
+
+// Set learned mappings (called from App.tsx after fetching from API)
+export function setLearnedMappings(mappings: Array<{ merchant: string; category: string }>): void {
+  // Normalize merchants to match how we'll query them
+  learnedMappings = new Map(
+    mappings.map(m => [normalizeMerchant(m.merchant), m.category])
+  )
+  console.log(`Loaded ${learnedMappings.size} learned categorizations`)
+}
+
+// Normalize merchant name for matching (must match backend normalization)
+function normalizeMerchant(merchant: string): string {
+  return merchant.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ')
+}
+
+// Extract variations of merchant name for fuzzy matching
+function getMerchantVariations(text: string): string[] {
+  const normalized = normalizeMerchant(text)
+  const variations: string[] = [normalized]
+  
+  // Common suffixes to strip
+  const suffixes = [' gmbh', ' ag', ' kg', ' ltd', ' inc', ' co', ' ug', ' mbh', ' gbr', ' ohg', ' se']
+  for (const suffix of suffixes) {
+    if (normalized.endsWith(suffix)) {
+      variations.push(normalized.slice(0, -suffix.length).trim())
+    }
+  }
+  
+  // Strip common prefixes
+  const prefixes = ['paypal ', 'klarna ', 'amazon ', 'ec ', 'visa ']
+  for (const prefix of prefixes) {
+    if (normalized.startsWith(prefix)) {
+      variations.push(normalized.slice(prefix.length).trim())
+    }
+  }
+  
+  return [...new Set(variations.filter(v => v.length > 2))]
+}
+
+// Check if a merchant/description matches any learned mapping with fuzzy matching
+function findLearnedCategory(tx: Transaction): string | null {
+  if (learnedMappings.size === 0) return null
+  
+  // 1. Exact match on normalized merchant
+  if (tx.merchant) {
+    const normalized = normalizeMerchant(tx.merchant)
+    const learned = learnedMappings.get(normalized)
+    if (learned) return learned
+  }
+  
+  // 2. Exact match on normalized recipient
+  if (tx.recipient) {
+    const normalized = normalizeMerchant(tx.recipient)
+    const learned = learnedMappings.get(normalized)
+    if (learned) return learned
+  }
+  
+  // 3. Fuzzy match - check if any learned merchant is contained in description
+  const descNormalized = normalizeMerchant(tx.description)
+  for (const [merchant, category] of learnedMappings) {
+    if (descNormalized.includes(merchant) && merchant.length > 3) {
+      return category
+    }
+  }
+  
+  // 4. Variation matching - check merchant variations against learned mappings
+  const textsToCheck = [tx.merchant, tx.recipient, tx.description].filter(Boolean) as string[]
+  for (const text of textsToCheck) {
+    const variations = getMerchantVariations(text)
+    for (const variation of variations) {
+      const learned = learnedMappings.get(variation)
+      if (learned) return learned
+      
+      // Also check if any stored merchant is a substring of our variation
+      for (const [storedMerchant, category] of learnedMappings) {
+        if (variation.includes(storedMerchant) && storedMerchant.length > 3) {
+          return category
+        }
+        if (storedMerchant.includes(variation) && variation.length > 3) {
+          return category
+        }
+      }
+    }
+  }
+  
+  return null
+}
+
 export function categorizeWithRules(transactions: Transaction[]): Transaction[] {
   return transactions.map(tx => {
     // Check if it's a transfer between own accounts
@@ -85,10 +175,19 @@ export function categorizeWithRules(transactions: Transaction[]): Transaction[] 
       }
     }
 
-    // First, try to map German categories from the source file to standard categories
+    // 1. First, check learned mappings (user's manual recategorizations take priority)
+    const learnedCategory = findLearnedCategory(tx)
+    if (learnedCategory) {
+      return {
+        ...tx,
+        category: learnedCategory,
+        categorySource: 'learned' as const,
+      }
+    }
+
+    // 2. Try to map German categories from the source file
     const mappedCategory = mapGermanCategory(tx.category, tx.subcategory)
     
-    // If we got a valid mapped category (not Other), use it
     if (mappedCategory && mappedCategory !== 'Other') {
       return {
         ...tx,
@@ -97,7 +196,7 @@ export function categorizeWithRules(transactions: Transaction[]): Transaction[] 
       }
     }
 
-    // Apply merchant rules for better categorization
+    // 3. Apply merchant rules for pattern-based categorization
     const textToMatch = `${tx.description} ${tx.recipient || ''} ${tx.category || ''} ${tx.subcategory || ''}`
     
     for (const rule of MERCHANT_RULES) {
@@ -111,7 +210,7 @@ export function categorizeWithRules(transactions: Transaction[]): Transaction[] 
       }
     }
 
-    // Fall back to mapped category or 'Other'
+    // 4. Fall back to mapped category or 'Other'
     return {
       ...tx,
       category: mappedCategory || 'Other',

@@ -21,7 +21,7 @@ export interface Transaction extends RawTransaction {
   isRecurring?: boolean;
   recurringFrequency?: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
   isExcluded?: boolean;
-  categorySource?: 'rule' | 'ai' | 'manual';
+  categorySource?: 'rule' | 'ai' | 'manual' | 'learned';
   doubleBookingMatch?: string; // ID of the matching transaction in a double-booking pair
 }
 

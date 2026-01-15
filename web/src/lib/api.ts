@@ -157,3 +157,55 @@ export function generateExportPreview(
     income: Math.round(totalIncome * 100) / 100,
   }
 }
+
+// ============ Learning API ============
+
+export interface LearnedMapping {
+  merchant: string
+  category: string
+  confidence: number
+}
+
+// Fetch all learned merchant → category mappings
+export async function getLearnedMappings(): Promise<LearnedMapping[]> {
+  try {
+    const response = await fetch(`${API_BASE}/learn/mappings`)
+    if (!response.ok) return []
+    
+    const result = await response.json()
+    return result.data || []
+  } catch {
+    // API might not be available, return empty
+    console.log('Learning API not available, using local categorization only')
+    return []
+  }
+}
+
+// Save a merchant → category mapping (called when user manually recategorizes)
+export async function saveLearnedMapping(merchant: string, category: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/learn/mapping`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant, category }),
+    })
+  } catch {
+    // Silently fail - learning is optional
+    console.log('Failed to save learned mapping (API may not be available)')
+  }
+}
+
+// Save multiple mappings at once
+export async function saveBatchLearnedMappings(
+  mappings: Array<{ merchant: string; category: string }>
+): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/learn/mappings/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mappings }),
+    })
+  } catch {
+    console.log('Failed to save batch mappings')
+  }
+}
