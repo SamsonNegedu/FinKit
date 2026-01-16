@@ -26,24 +26,22 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Create data directory for SQLite database
-RUN mkdir -p /app/data
-
-# Create non-root user for security
+# Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copy built files and production node_modules from builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
+# Create data directory with correct ownership BEFORE switching user
+RUN mkdir -p /data && chown nodejs:nodejs /data
 
-# Set ownership
-RUN chown -R nodejs:nodejs /app
+# Copy built files and production node_modules from builder
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./
 
 USER nodejs
 
-ENV DATA_DIR=/app/data
+ENV NODE_ENV=production
+ENV DATA_DIR=/data
 
 EXPOSE 3000
 
