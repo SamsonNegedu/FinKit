@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Plus, Trash2, Loader2, RefreshCw } from 'lucide-react'
 import { SheetConfig, CategoryMapping } from '../types'
 import { AVAILABLE_CATEGORIES } from '../lib/categorizer'
+import { getSheetConfig, saveSheetConfig } from '../lib/api'
 
 interface SettingsPanelProps {
   config: SheetConfig | null
@@ -51,6 +52,27 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
   const [availableTabs, setAvailableTabs] = useState<SheetTab[]>([])
   const [loadingTabs, setLoadingTabs] = useState(false)
   const [sheetError, setSheetError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(!config) // Load from API if no config passed
+  const hasFetched = useRef(false)
+
+  // Fetch settings from API on mount if no config provided (only once)
+  useEffect(() => {
+    if (!config && !hasFetched.current) {
+      hasFetched.current = true
+      setLoading(true)
+      getSheetConfig().then((serverConfig) => {
+        if (serverConfig) {
+          setSheetId(serverConfig.sheetId || '')
+          setTabName(serverConfig.tabName || '2026')
+          setMonthFormat(serverConfig.monthFormat || 'short')
+          setMappings(serverConfig.categoryMappings || DEFAULT_MAPPINGS)
+          setConstantColumns(serverConfig.constantColumns || DEFAULT_CONSTANTS)
+        }
+        setLoading(false)
+      })
+    }
+  }, [config])
 
   // Extract sheet ID from URL if pasted
   const extractSheetId = (input: string): string => {
@@ -99,7 +121,7 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
       const data = await response.json()
       const tabs = data.data?.sheets || []
       setAvailableTabs(tabs)
-      
+
       // Auto-select first tab if none selected
       if (tabs.length > 0 && !tabName) {
         setTabName(tabs[0].title)
@@ -130,20 +152,32 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
     setMappings(updated)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!sheetId) {
       alert('Please enter a Google Sheet ID')
       return
     }
 
-    onSave({
+    const newConfig: SheetConfig = {
       sheetId,
       tabName,
       monthFormat,
       monthColumn: 'A',
       categoryMappings: mappings.filter(m => m.sheetColumn),
       constantColumns,
-    })
+    }
+
+    setSaving(true)
+
+    // Save to backend API (persists across sessions)
+    const saved = await saveSheetConfig(newConfig)
+    if (!saved) {
+      console.warn('Failed to save to server, using local only')
+    }
+
+    // Update parent component state
+    onSave(newConfig)
+    setSaving(false)
   }
 
   return (
@@ -162,170 +196,186 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
 
         {/* Scrollable content */}
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
-          {/* Sheet Configuration */}
-          <section>
-            <h3 className="text-sm font-medium text-midnight-300 mb-3">Google Sheet</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-midnight-400 mb-1">Sheet URL or ID</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={sheetId}
-                    onChange={(e) => handleSheetIdChange(e.target.value)}
-                    placeholder="Paste Google Sheets URL or ID"
-                    className="input flex-1"
-                  />
-                  <button
-                    onClick={fetchSheetTabs}
-                    disabled={loadingTabs || !sheetId}
-                    className="btn-secondary flex items-center gap-2 shrink-0"
-                    title="Fetch available tabs"
-                  >
-                    {loadingTabs ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4" />
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-accent" />
+              <span className="ml-3 text-midnight-400">Loading settings...</span>
+            </div>
+          ) : (
+            <>
+              {/* Sheet Configuration */}
+              <section>
+                <h3 className="text-sm font-medium text-midnight-300 mb-3">Google Sheet</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-midnight-400 mb-1">Sheet URL or ID</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={sheetId}
+                        onChange={(e) => handleSheetIdChange(e.target.value)}
+                        placeholder="Paste Google Sheets URL or ID"
+                        className="input flex-1"
+                      />
+                      <button
+                        onClick={fetchSheetTabs}
+                        disabled={loadingTabs || !sheetId}
+                        className="btn-secondary flex items-center gap-2 shrink-0"
+                        title="Fetch available tabs"
+                      >
+                        {loadingTabs ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                        <span className="hidden sm:inline">Load Tabs</span>
+                      </button>
+                    </div>
+                    {sheetError && (
+                      <p className="text-xs text-red-400 mt-1">{sheetError}</p>
                     )}
-                    <span className="hidden sm:inline">Load Tabs</span>
-                  </button>
+                    {!sheetError && sheetId && (
+                      <p className="text-xs text-midnight-500 mt-1">
+                        Sheet ID: <span className="font-mono text-midnight-400">{sheetId.slice(0, 20)}...</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-midnight-400 mb-1">Tab / Sheet Name</label>
+                      {availableTabs.length > 0 ? (
+                        <select
+                          value={tabName}
+                          onChange={(e) => setTabName(e.target.value)}
+                          className="input w-full"
+                        >
+                          {availableTabs.map((tab) => (
+                            <option key={tab.index} value={tab.title}>
+                              {tab.title}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={tabName}
+                          onChange={(e) => setTabName(e.target.value)}
+                          placeholder="2026"
+                          className="input w-full"
+                        />
+                      )}
+                      <p className="text-xs text-midnight-500 mt-1">
+                        {availableTabs.length > 0
+                          ? `${availableTabs.length} tabs found`
+                          : 'Click "Load Tabs" to see available tabs'
+                        }
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-midnight-400 mb-1">Month Format</label>
+                      <select
+                        value={monthFormat}
+                        onChange={(e) => setMonthFormat(e.target.value as 'short' | 'long' | 'numeric')}
+                        className="input w-full"
+                      >
+                        <option value="short">Short (Jan, Feb, ...)</option>
+                        <option value="long">Long (January, February, ...)</option>
+                        <option value="numeric">Numeric (01, 02, ...)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                {sheetError && (
-                  <p className="text-xs text-red-400 mt-1">{sheetError}</p>
-                )}
-                {!sheetError && sheetId && (
-                  <p className="text-xs text-midnight-500 mt-1">
-                    Sheet ID: <span className="font-mono text-midnight-400">{sheetId.slice(0, 20)}...</span>
-                  </p>
-                )}
-              </div>
+              </section>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-midnight-400 mb-1">Tab / Sheet Name</label>
-                  {availableTabs.length > 0 ? (
-                    <select
-                      value={tabName}
-                      onChange={(e) => setTabName(e.target.value)}
-                      className="input w-full"
-                    >
-                      {availableTabs.map((tab) => (
-                        <option key={tab.index} value={tab.title}>
-                          {tab.title}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      value={tabName}
-                      onChange={(e) => setTabName(e.target.value)}
-                      placeholder="2026"
-                      className="input w-full"
-                    />
-                  )}
-                  <p className="text-xs text-midnight-500 mt-1">
-                    {availableTabs.length > 0 
-                      ? `${availableTabs.length} tabs found` 
-                      : 'Click "Load Tabs" to see available tabs'
-                    }
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-midnight-400 mb-1">Month Format</label>
-                  <select
-                    value={monthFormat}
-                    onChange={(e) => setMonthFormat(e.target.value as 'short' | 'long' | 'numeric')}
-                    className="input w-full"
-                  >
-                    <option value="short">Short (Jan, Feb, ...)</option>
-                    <option value="long">Long (January, February, ...)</option>
-                    <option value="numeric">Numeric (01, 02, ...)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Category Mappings */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-midnight-300">Category to Column Mapping</h3>
-              <button
-                onClick={handleAddMapping}
-                className="flex items-center gap-1 text-sm text-accent hover:text-accent-light"
-              >
-                <Plus className="w-4 h-4" />
-                Add Mapping
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="grid grid-cols-[1fr,100px,40px] gap-2 text-xs text-midnight-400 px-2">
-                <span>Category</span>
-                <span>Column</span>
-                <span></span>
-              </div>
-
-              {mappings.map((mapping, index) => (
-                <div key={index} className="grid grid-cols-[1fr,100px,40px] gap-2 items-center">
-                  <select
-                    value={mapping.appCategory}
-                    onChange={(e) => handleMappingChange(index, 'appCategory', e.target.value)}
-                    className="input text-sm"
-                  >
-                    {AVAILABLE_CATEGORIES.filter(c => c !== 'Transfer' && c !== 'Income').map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="text"
-                    value={mapping.sheetColumn}
-                    onChange={(e) => handleMappingChange(index, 'sheetColumn', e.target.value.toUpperCase())}
-                    placeholder="B"
-                    className="input text-sm text-center"
-                    maxLength={2}
-                  />
-
+              {/* Category Mappings */}
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-midnight-300">Category to Column Mapping</h3>
                   <button
-                    onClick={() => handleRemoveMapping(index)}
-                    className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-red-400"
+                    onClick={handleAddMapping}
+                    className="flex items-center gap-1 text-sm text-accent hover:text-accent-light"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Plus className="w-4 h-4" />
+                    Add Mapping
                   </button>
                 </div>
-              ))}
-            </div>
-          </section>
 
-          {/* Constant Columns */}
-          <section>
-            <h3 className="text-sm font-medium text-midnight-300 mb-3">Formula Columns (Don't Overwrite)</h3>
-            <p className="text-xs text-midnight-500 mb-2">
-              Columns with formulas (Total Expenditure, Income After Expenditure, etc.) that should not be overwritten
-            </p>
-            <input
-              type="text"
-              value={constantColumns.join(', ')}
-              onChange={(e) => setConstantColumns(e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean))}
-              placeholder="S, T, U, V, W, X"
-              className="input w-full"
-            />
-            <p className="text-xs text-midnight-500 mt-1">
-              Default: S (Total Expenditure), T (Income), U-X (calculated columns)
-            </p>
-          </section>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-[1fr,100px,40px] gap-2 text-xs text-midnight-400 px-2">
+                    <span>Category</span>
+                    <span>Column</span>
+                    <span></span>
+                  </div>
+
+                  {mappings.map((mapping, index) => (
+                    <div key={index} className="grid grid-cols-[1fr,100px,40px] gap-2 items-center">
+                      <select
+                        value={mapping.appCategory}
+                        onChange={(e) => handleMappingChange(index, 'appCategory', e.target.value)}
+                        className="input text-sm"
+                      >
+                        {AVAILABLE_CATEGORIES.filter(c => c !== 'Transfer' && c !== 'Income').map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+
+                      <input
+                        type="text"
+                        value={mapping.sheetColumn}
+                        onChange={(e) => handleMappingChange(index, 'sheetColumn', e.target.value.toUpperCase())}
+                        placeholder="B"
+                        className="input text-sm text-center"
+                        maxLength={2}
+                      />
+
+                      <button
+                        onClick={() => handleRemoveMapping(index)}
+                        className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Constant Columns */}
+              <section>
+                <h3 className="text-sm font-medium text-midnight-300 mb-3">Formula Columns (Don't Overwrite)</h3>
+                <p className="text-xs text-midnight-500 mb-2">
+                  Columns with formulas (Total Expenditure, Income After Expenditure, etc.) that should not be overwritten
+                </p>
+                <input
+                  type="text"
+                  value={constantColumns.join(', ')}
+                  onChange={(e) => setConstantColumns(e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean))}
+                  placeholder="S, T, U, V, W, X"
+                  className="input w-full"
+                />
+                <p className="text-xs text-midnight-500 mt-1">
+                  Default: S (Total Expenditure), T (Income), U-X (calculated columns)
+                </p>
+              </section>
+            </>
+          )}
         </div>
 
         {/* Footer - fixed */}
         <div className="flex justify-end gap-3 p-6 border-t border-midnight-700 shrink-0 bg-midnight-900">
-          <button onClick={onClose} className="btn-secondary">
+          <button onClick={onClose} className="btn-secondary" disabled={saving}>
             Cancel
           </button>
-          <button onClick={handleSave} className="btn-primary">
-            Save Settings
+          <button onClick={handleSave} className="btn-primary flex items-center gap-2" disabled={saving || loading}>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Settings'
+            )}
           </button>
         </div>
       </div>

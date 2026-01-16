@@ -1,6 +1,15 @@
 import { Transaction, SheetConfig, ExportPreviewData } from '../types'
 
-const API_BASE = '/api'
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
+
+// Headers helper
+function getHeaders(contentType = true): HeadersInit {
+  const headers: HeadersInit = {}
+  if (contentType) {
+    headers['Content-Type'] = 'application/json'
+  }
+  return headers
+}
 
 interface CategorizeResponse {
   success: boolean;
@@ -22,7 +31,7 @@ interface ExportResponse {
 export async function categorizeWithAI(transactions: Transaction[]): Promise<Transaction[]> {
   const response = await fetch(`${API_BASE}/categorize`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({
       transactions: transactions.map(tx => ({
         id: tx.id,
@@ -92,7 +101,7 @@ export async function exportToSheets(
   
   const response = await fetch(`${API_BASE}/export/sheets`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({
       sheetId: config.sheetId,
       tabName: config.tabName,
@@ -169,7 +178,9 @@ export interface LearnedMapping {
 // Fetch all learned merchant → category mappings
 export async function getLearnedMappings(): Promise<LearnedMapping[]> {
   try {
-    const response = await fetch(`${API_BASE}/learn/mappings`)
+    const response = await fetch(`${API_BASE}/learn/mappings`, {
+      headers: getHeaders(false),
+    })
     if (!response.ok) return []
     
     const result = await response.json()
@@ -186,7 +197,7 @@ export async function saveLearnedMapping(merchant: string, category: string): Pr
   try {
     await fetch(`${API_BASE}/learn/mapping`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ merchant, category }),
     })
   } catch {
@@ -202,10 +213,43 @@ export async function saveBatchLearnedMappings(
   try {
     await fetch(`${API_BASE}/learn/mappings/batch`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ mappings }),
     })
   } catch {
     console.log('Failed to save batch mappings')
+  }
+}
+
+// ============ Settings API ============
+
+// Fetch sheet configuration (with server-side defaults as fallback)
+export async function getSheetConfig(): Promise<SheetConfig | null> {
+  try {
+    const response = await fetch(`${API_BASE}/settings/sheet`, {
+      headers: getHeaders(false),
+    })
+    if (!response.ok) return null
+    
+    const result = await response.json()
+    return result.data || null
+  } catch {
+    console.log('Settings API not available')
+    return null
+  }
+}
+
+// Save sheet configuration to server
+export async function saveSheetConfig(config: SheetConfig): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/settings/sheet`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(config),
+    })
+    return response.ok
+  } catch {
+    console.log('Failed to save settings')
+    return false
   }
 }

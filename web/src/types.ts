@@ -50,7 +50,11 @@ export interface SheetConfig {
   monthFormat: 'short' | 'long' | 'numeric'; // Jan, January, 01
   monthColumn: string; // Column letter for month, e.g., "A"
   categoryMappings: CategoryMapping[];
-  constantColumns: string[]; // Columns to skip (pre-filled constants)
+  constantColumns: string[]; // Formula columns to skip (auto-calculated)
+  // Specific columns for income/savings data
+  incomeColumn?: string;    // Default: T
+  savingsColumn?: string;   // Default: V
+  investmentColumn?: string; // Default: W
 }
 
 // Analytics types

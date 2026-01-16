@@ -23,22 +23,27 @@ db.pragma('journal_mode = WAL')
 db.pragma('synchronous = NORMAL')
 db.pragma('cache_size = 10000')
 
-// Create table with proper constraints
-// Uses normalized merchant_key for deduplication
+// Create tables
 db.exec(`
+  -- Merchant category mappings
   CREATE TABLE IF NOT EXISTS merchant_categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    merchant_key TEXT NOT NULL UNIQUE,      -- Normalized key for dedup
-    merchant_display TEXT NOT NULL,          -- Original display name
+    merchant_key TEXT NOT NULL UNIQUE,
+    merchant_display TEXT NOT NULL,
     category TEXT NOT NULL,
-    confidence INTEGER DEFAULT 1,            -- Times user confirmed this
+    confidence INTEGER DEFAULT 1,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
-
-  -- Index for fast lookups
   CREATE INDEX IF NOT EXISTS idx_merchant_key ON merchant_categories(merchant_key);
   CREATE INDEX IF NOT EXISTS idx_category ON merchant_categories(category);
+
+  -- App settings (key-value store)
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 `)
 
 // ============ Normalization ============
@@ -180,6 +185,47 @@ export function getMappingStats(): {
   `).all() as MerchantMapping[]
   
   return { total, topCategories, recentMappings }
+}
+
+// ============ Settings ============
+
+const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?')
+const setSetting = db.prepare(`
+  INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+  ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+`)
+const deleteSetting = db.prepare('DELETE FROM settings WHERE key = ?')
+const getAllSettings = db.prepare('SELECT key, value FROM settings')
+
+export function getSettingValue<T>(key: string, defaultValue: T): T {
+  const result = getSetting.get(key) as { value: string } | undefined
+  if (!result) return defaultValue
+  try {
+    return JSON.parse(result.value) as T
+  } catch {
+    return defaultValue
+  }
+}
+
+export function setSettingValue<T>(key: string, value: T): void {
+  setSetting.run(key, JSON.stringify(value))
+}
+
+export function deleteSettingValue(key: string): void {
+  deleteSetting.run(key)
+}
+
+export function getAllSettingsMap(): Record<string, unknown> {
+  const results = getAllSettings.all() as Array<{ key: string; value: string }>
+  const settings: Record<string, unknown> = {}
+  for (const { key, value } of results) {
+    try {
+      settings[key] = JSON.parse(value)
+    } catch {
+      settings[key] = value
+    }
+  }
+  return settings
 }
 
 // ============ Maintenance ============
