@@ -242,8 +242,8 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
         />
         <Feature
           icon="📊"
-          title="Export Ready"
-          description="One-click export to your Google Sheet"
+          title="Visual Analytics"
+          description="Charts, trends, and spending breakdowns"
         />
       </div>
     </div>

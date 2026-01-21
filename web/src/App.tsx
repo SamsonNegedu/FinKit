@@ -16,7 +16,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | null>(null)
   const [sheetConfig, setSheetConfig] = useState<SheetConfig | null>(null)
-  const [anonymizationEnabled, setAnonymizationEnabled] = useState(true)
+  const [anonymizationEnabled, setAnonymizationEnabled] = useState(false)
   
   // Store raw transactions to allow toggling anonymization
   const rawTransactionsRef = useRef<RawTransaction[]>([])
@@ -146,11 +146,11 @@ function App() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center">
-                <span className="text-xl font-bold text-white">T</span>
+                <span className="text-xl font-bold text-white">F</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Transaction Analyser</h1>
-                <p className="text-xs text-midnight-400">Privacy-first expense tracking</p>
+                <h1 className="text-xl font-bold text-white">FinKit</h1>
+                <p className="text-xs text-midnight-400">Transaction analysis & insights</p>
               </div>
             </div>
             {transactions.length > 0 && (
