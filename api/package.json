@@ -1,5 +1,5 @@
 {
-  "name": "transaction-analyser-api",
+  "name": "finkit-api",
   "version": "2.0.0",
   "type": "module",
   "scripts": {

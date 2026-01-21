@@ -1,4 +1,4 @@
-# Transaction Analyser v2
+# FinKit
 
 A privacy-first transaction analysis tool that anonymizes your bank data before processing and exports to your Google Sheets yearly breakdown.
 

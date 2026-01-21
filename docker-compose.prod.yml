@@ -1,17 +1,17 @@
-# Transaction Analyser - Production Docker Compose
+# FinKit - Production Docker Compose
 # Usage:
 #   Update services:  docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
 #   View logs:        docker compose -f docker-compose.prod.yml logs -f
 #   Stop:             docker compose -f docker-compose.prod.yml down
 
 services:
-  homefi-web:
-    image: ghcr.io/samsonnegedu/transaction_analyser-web:latest
-    container_name: transaction-analyser-web
+  finkit-web:
+    image: ghcr.io/samsonnegedu/finkit-web:latest
+    container_name: finkit-web
     pull_policy: always
     restart: unless-stopped
     networks:
-      - transaction-analyser-network
+      - finkit-network
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
       interval: 30s
@@ -19,9 +19,9 @@ services:
       retries: 3
       start_period: 5s
 
-  homefi-api:
-    image: ghcr.io/samsonnegedu/transaction_analyser-api:latest
-    container_name: transaction-analyser-api
+  finkit-api:
+    image: ghcr.io/samsonnegedu/finkit-api:latest
+    container_name: finkit-api
     pull_policy: always
     restart: unless-stopped
     env_file: .env
@@ -32,7 +32,7 @@ services:
     volumes:
       - api-data:/data # Persistent storage for SQLite database
     networks:
-      - transaction-analyser-network
+      - finkit-network
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
       interval: 30s
@@ -42,23 +42,23 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: transaction-analyser-cloudflared
+    container_name: finkit-cloudflared
     restart: unless-stopped
     command: tunnel run
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     networks:
-      - transaction-analyser-network
+      - finkit-network
     depends_on:
-      homefi-api:
+      finkit-api:
         condition: service_healthy
-      homefi-web:
+      finkit-web:
         condition: service_healthy
 
 volumes:
   api-data:
-    name: transaction-analyser-api-data
+    name: finkit-api-data
 
 networks:
-  transaction-analyser-network:
+  finkit-network:
     driver: bridge

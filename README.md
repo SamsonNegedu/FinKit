@@ -1,4 +1,4 @@
-# FinanzGuru Parser
+# FinKit
 
 A simple tool to parse and visualize transaction records exported from FinanzGuru.
 

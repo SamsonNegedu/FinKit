@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Transaction Analyser - Raspberry Pi Deployment
+# FinKit - Raspberry Pi Deployment
 # Usage:
 #   ./deploy.sh          - Pull latest images and restart
 #   ./deploy.sh pull     - Pull images only (no restart)

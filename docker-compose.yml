@@ -5,7 +5,7 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
-    container_name: transaction-analyser-web
+    container_name: finkit-web
     restart: unless-stopped
     networks:
       - app-network
@@ -28,7 +28,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    container_name: transaction-analyser-api
+    container_name: finkit-api
     restart: unless-stopped
     environment:
       - NODE_ENV=production
