@@ -83,9 +83,13 @@ function App() {
         const maxDate = new Date(Math.max(...dates))
         
         // Set to the month range of the data
+        // Set endDate to end of day (23:59:59.999) to include all transactions on that day
+        const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0)
+        endDate.setHours(23, 59, 59, 999)
+        
         setDateRange({
           startDate: new Date(minDate.getFullYear(), minDate.getMonth(), 1),
-          endDate: new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0) // Last day of month
+          endDate: endDate
         })
       }
     } catch (err) {

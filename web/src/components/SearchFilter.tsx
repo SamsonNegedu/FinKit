@@ -3,6 +3,13 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { DateRange, Transaction } from '../types'
 import { AVAILABLE_CATEGORIES } from '../lib/categorizer'
 
+// Helper function to set a date to end of day (23:59:59.999) to include all transactions on that day
+function setEndOfDay(date: Date): Date {
+  const endDate = new Date(date)
+  endDate.setHours(23, 59, 59, 999)
+  return endDate
+}
+
 interface SearchFilterProps {
     searchQuery: string
     onSearchChange: (query: string) => void
@@ -62,9 +69,10 @@ export default function SearchFilter({
             const key = `${year}-${month}`
             
             if (!monthSet.has(key)) {
+                const endDate = new Date(year, month + 1, 0) // Last day of month
                 monthSet.set(key, {
                     start: new Date(year, month, 1),
-                    end: new Date(year, month + 1, 0), // Last day of month
+                    end: setEndOfDay(endDate), // Set to end of day to include all transactions
                     label: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
                 })
             }
@@ -181,9 +189,10 @@ export default function SearchFilter({
                             <button
                                 onClick={() => {
                                     const now = new Date()
+                                    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
                                     onDateRangeChange({
                                         startDate: new Date(now.getFullYear(), now.getMonth(), 1),
-                                        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0)
+                                        endDate: setEndOfDay(endDate)
                                     })
                                     setShowDatePicker(false)
                                 }}
@@ -194,9 +203,10 @@ export default function SearchFilter({
                             <button
                                 onClick={() => {
                                     const now = new Date()
+                                    const endDate = new Date(now.getFullYear(), now.getMonth(), 0)
                                     onDateRangeChange({
                                         startDate: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-                                        endDate: new Date(now.getFullYear(), now.getMonth(), 0)
+                                        endDate: setEndOfDay(endDate)
                                     })
                                     setShowDatePicker(false)
                                 }}
@@ -207,9 +217,10 @@ export default function SearchFilter({
                             <button
                                 onClick={() => {
                                     const now = new Date()
+                                    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
                                     onDateRangeChange({
                                         startDate: new Date(now.getFullYear(), now.getMonth() - 2, 1),
-                                        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0)
+                                        endDate: setEndOfDay(endDate)
                                     })
                                     setShowDatePicker(false)
                                 }}
@@ -220,9 +231,10 @@ export default function SearchFilter({
                                 <button
                                     onClick={() => {
                                     const now = new Date()
+                                    const endDate = new Date(now.getFullYear(), 11, 31)
                                     onDateRangeChange({
                                         startDate: new Date(now.getFullYear(), 0, 1),
-                                        endDate: new Date(now.getFullYear(), 11, 31)
+                                        endDate: setEndOfDay(endDate)
                                     })
                                         setShowDatePicker(false)
                                     }}
