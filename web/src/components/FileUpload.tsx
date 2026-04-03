@@ -68,8 +68,17 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
     if (dateFilter !== 'all' && dateFilter !== 'custom') {
       const now = new Date()
       const months = dateFilter === '1m' ? 1 : dateFilter === '3m' ? 3 : dateFilter === '6m' ? 6 : 12
-      options.customStartDate = new Date(now.getFullYear(), now.getMonth() - months, 1)
-      options.customEndDate = now
+
+      if (dateFilter === '1m') {
+        // Calendar "last month" only — not from 1st of prev month through today (which would include current month)
+        options.customStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+        options.customEndDate = new Date(lastDayPrevMonth)
+        options.customEndDate.setHours(23, 59, 59, 999)
+      } else {
+        options.customStartDate = new Date(now.getFullYear(), now.getMonth() - months, 1)
+        options.customEndDate = now
+      }
     }
 
     setShowOptions(false)

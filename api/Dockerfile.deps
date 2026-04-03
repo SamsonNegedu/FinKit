@@ -1,0 +1,35 @@
+# Dockerfile.deps - Dependency caching layer for faster builds
+# This creates reusable dependency images that only rebuild when package files change
+
+FROM node:20-alpine AS deps-base
+
+WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++ git
+
+# Copy package files and scripts (needed for postinstall hook)
+COPY package*.json ./
+COPY scripts ./scripts
+
+# ============================================
+# Builder stage - includes devDependencies
+# ============================================
+FROM deps-base AS deps-builder
+
+# Install all dependencies (including devDependencies for building)
+# The postinstall script will attempt to download prebuilt better-sqlite3 binary
+RUN npm ci
+
+# ============================================
+# Production stage - production dependencies only
+# ============================================
+FROM deps-base AS deps-production
+
+# Install production dependencies only
+# The postinstall script will attempt to download prebuilt better-sqlite3 binary
+RUN npm ci --omit=dev
+
+# Verify better-sqlite3 binary exists
+RUN test -f node_modules/better-sqlite3/build/Release/better_sqlite3.node || \
+    (echo "ERROR: better-sqlite3 binary not found" && exit 1)

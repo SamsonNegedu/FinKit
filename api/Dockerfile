@@ -1,16 +1,20 @@
-# Build stage
+# Build stage - uses cached dependencies from Dockerfile.deps
+ARG BUILDER_DEPS_IMAGE=builder-deps:latest
+ARG PRODUCTION_DEPS_IMAGE=production-deps:latest
+
+FROM ${BUILDER_DEPS_IMAGE} AS deps-builder
+FROM ${PRODUCTION_DEPS_IMAGE} AS deps-production
+
+# ============================================
+# Builder stage
+# ============================================
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies for better-sqlite3
-RUN apk add --no-cache python3 make g++
-
-# Copy package files
-COPY package*.json ./
-
-# Install all dependencies (including native modules)
-RUN npm ci
+# Copy cached node_modules from deps-builder
+COPY --from=deps-builder /app/node_modules ./node_modules
+COPY --from=deps-builder /app/package*.json ./
 
 # Copy source code
 COPY . .
@@ -18,13 +22,15 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
-# Prune dev dependencies after build
-RUN npm prune --omit=dev
-
+# ============================================
 # Production stage
+# ============================================
 FROM node:20-alpine AS production
 
 WORKDIR /app
+
+# Install wget for healthcheck
+RUN apk add --no-cache wget
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -33,11 +39,14 @@ RUN addgroup -g 1001 -S nodejs && \
 # Create data directory with correct ownership BEFORE switching user
 RUN mkdir -p /data && chown nodejs:nodejs /data
 
-# Copy built files and production node_modules from builder
+# Copy built files from builder
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/package.json ./
 
+# Copy production node_modules from deps-production
+COPY --from=deps-production --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Switch to non-root user
 USER nodejs
 
 ENV NODE_ENV=production

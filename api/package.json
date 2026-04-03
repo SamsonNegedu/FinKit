@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsup src/index.ts --format esm --dts --clean",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "postinstall": "node scripts/install-better-sqlite3.cjs || npm rebuild better-sqlite3"
   },
   "dependencies": {
     "hono": "^4.6.12",
@@ -13,7 +14,7 @@
     "openai": "^4.73.0",
     "googleapis": "^144.0.0",
     "zod": "^3.23.8",
-    "better-sqlite3": "^11.6.0"
+    "better-sqlite3": "12.8.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
