@@ -8,7 +8,7 @@ FROM ${PRODUCTION_DEPS_IMAGE} AS deps-production
 # ============================================
 # Builder stage
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ RUN npm run build
 # ============================================
 # Production stage
 # ============================================
-FROM node:20-alpine AS production
+FROM node:26-alpine AS production
 
 WORKDIR /app
 

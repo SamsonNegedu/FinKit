@@ -25,11 +25,83 @@ const BETTER_SQLITE3_PATH = path.join(__dirname, '..', 'node_modules', 'better-s
 
 const BUILD_DIR = path.join(BETTER_SQLITE3_PATH, 'build', 'Release')
 const BINARY_PATH = path.join(BUILD_DIR, BINARY_NAME)
+const STAMP_PATH = path.join(BUILD_DIR, '.better-sqlite3-stamp.json')
 
-// Check if binary already exists
-if (fs.existsSync(BINARY_PATH)) {
-  console.log(`✓ better-sqlite3 binary already exists at ${BINARY_PATH}`)
+function expectedStamp() {
+  return {
+    version: BETTER_SQLITE3_VERSION,
+    nodeAbi: String(NODE_ABI_VERSION),
+    platform: PLATFORM,
+    arch: ARCH,
+  }
+}
+
+function stampMatches() {
+  if (!fs.existsSync(STAMP_PATH) || !fs.existsSync(BINARY_PATH)) {
+    return false
+  }
+  try {
+    const stamp = JSON.parse(fs.readFileSync(STAMP_PATH, 'utf8'))
+    const want = expectedStamp()
+    return (
+      stamp.version === want.version &&
+      stamp.nodeAbi === want.nodeAbi &&
+      stamp.platform === want.platform &&
+      stamp.arch === want.arch
+    )
+  } catch {
+    return false
+  }
+}
+
+function writeStamp() {
+  fs.mkdirSync(BUILD_DIR, { recursive: true })
+  fs.writeFileSync(STAMP_PATH, JSON.stringify(expectedStamp()))
+}
+
+function removeInstalledBinary() {
+  for (const p of [BINARY_PATH, STAMP_PATH]) {
+    if (fs.existsSync(p)) {
+      fs.rmSync(p, { force: true })
+    }
+  }
+}
+
+/** Darwin needs Mach-O; a Linux ELF left in node_modules (e.g. after Docker) fails dlopen. */
+function binaryLooksNative() {
+  if (PLATFORM !== 'darwin' || !fs.existsSync(BINARY_PATH)) {
+    return true
+  }
+  try {
+    const kind = execSync(`file -b ${JSON.stringify(BINARY_PATH)}`, { encoding: 'utf8' })
+    return kind.includes('Mach-O')
+  } catch {
+    return false
+  }
+}
+
+function canOpenDatabase() {
+  if (!fs.existsSync(BINARY_PATH)) {
+    return false
+  }
+  try {
+    const Database = require(BETTER_SQLITE3_PATH)
+    const db = new Database(':memory:')
+    db.close()
+    return true
+  } catch {
+    return false
+  }
+}
+
+if (stampMatches() && binaryLooksNative() && canOpenDatabase()) {
+  console.log(`✓ better-sqlite3 binary OK for Node ${process.version} (${PLATFORM}-${ARCH})`)
   process.exit(0)
+}
+
+if (fs.existsSync(BINARY_PATH)) {
+  console.log('Replacing better-sqlite3 binary (wrong platform, Node ABI, or corrupt)')
+  removeInstalledBinary()
 }
 
 console.log(`Downloading better-sqlite3 pre-built binary...`)
@@ -66,11 +138,13 @@ function extractBinary() {
     // Cleanup temp file
     fs.unlinkSync(tempTarball)
 
-    if (fs.existsSync(BINARY_PATH)) {
+    if (fs.existsSync(BINARY_PATH) && canOpenDatabase()) {
+      writeStamp()
       console.log(`✓ better-sqlite3 binary installed at ${BINARY_PATH}`)
       process.exit(0)
     } else {
-      console.error(`✗ Binary not found after extraction`)
+      console.error(`✗ Binary not loadable after extraction`)
+      removeInstalledBinary()
       fallbackToBuild()
     }
   } catch (err) {
@@ -89,6 +163,10 @@ function fallbackToBuild() {
       stdio: 'inherit',
       cwd: path.join(__dirname, '..'),
     })
+    if (!canOpenDatabase()) {
+      throw new Error('rebuild succeeded but module still fails to load')
+    }
+    writeStamp()
     console.log(`✓ better-sqlite3 built from source successfully`)
     process.exit(0)
   } catch (err) {

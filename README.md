@@ -32,7 +32,7 @@ See [web/public/privacy.html](./web/public/privacy.html) and [web/public/terms.h
 
 ## Prerequisites
 
-- Node.js 20+ (matches Docker images)
+- Node.js 26.13+ (matches Docker `node:26-alpine`; see `.nvmrc`). Nest 12 CLI officially supports the 26.x line.
 - For Sheets export: Google Cloud service account with Sheets API enabled
 - For production deploy: [example.env](./example.env) (tunnel, registry, Google credentials, **Cloudflare Access**, **ALLOWED_ORIGIN**, **ALLOWED_USER_EMAILS**)
 - For bank sync: [api/.env.example](./api/.env.example) and [Enable Banking setup](./docs/enable-banking-setup.md)

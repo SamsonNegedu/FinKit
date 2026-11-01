@@ -1,7 +1,7 @@
 # Dockerfile.deps - Dependency caching layer for faster builds
 # This creates reusable dependency images that only rebuild when package files change
 
-FROM node:20-alpine AS deps-base
+FROM node:26-alpine AS deps-base
 
 WORKDIR /app
 

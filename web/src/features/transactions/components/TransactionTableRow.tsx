@@ -13,7 +13,7 @@ export interface TransactionTableRowProps {
   currency: string
   editingId: string | null
   pickerPos: { left: number; top?: number; bottom?: number } | null
-  dropdownRef: React.RefObject<HTMLDivElement>
+  dropdownRef: React.RefObject<HTMLDivElement | null>
   categorySearch: string
   setCategorySearch: (value: string) => void
   activeIndex: number

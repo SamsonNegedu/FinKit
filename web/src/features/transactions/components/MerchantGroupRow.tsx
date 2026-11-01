@@ -16,7 +16,7 @@ export interface MerchantGroupRowProps {
   setRenamingKey: (key: string | null) => void
   editingId: string | null
   pickerPos: { left: number; top?: number; bottom?: number } | null
-  dropdownRef: React.RefObject<HTMLDivElement>
+  dropdownRef: React.RefObject<HTMLDivElement | null>
   categorySearch: string
   setCategorySearch: (value: string) => void
   activeIndex: number

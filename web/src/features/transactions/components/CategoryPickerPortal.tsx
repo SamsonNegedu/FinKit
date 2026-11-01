@@ -3,7 +3,7 @@ import { Check } from 'lucide-react'
 import { getCategoryColor } from '@/shared/utils/categorizer'
 
 export interface CategoryPickerPortalProps {
-  dropdownRef: React.RefObject<HTMLDivElement>
+  dropdownRef: React.RefObject<HTMLDivElement | null>
   pickerPos: { left: number; top?: number; bottom?: number }
   categorySearch: string
   onCategorySearchChange: (value: string) => void

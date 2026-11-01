@@ -16,9 +16,9 @@
     "check": "npm run check --prefix api && npm run check --prefix web"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "9.2.5"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=26.13.0"
   }
 }
