@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
-import { AUTO_SYNC_CHECK_INTERVAL_MS } from '../constants'
+import { AUTO_SYNC_CHECK_INTERVAL_MS, AUTO_SYNC_STARTUP_DELAY_MS } from '../constants'
 import { BankSyncService } from './bank-sync.service'
 import { BANKING_CONFIG, BankingConfig } from '../config/bank-connections.tokens'
 
@@ -8,6 +8,7 @@ import { BANKING_CONFIG, BankingConfig } from '../config/bank-connections.tokens
 export class BankAutoSync implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger('BankAutoSync')
   private timer?: NodeJS.Timeout
+  private startup?: NodeJS.Timeout
   private running = false
 
   constructor(
@@ -21,11 +22,15 @@ export class BankAutoSync implements OnModuleInit, OnModuleDestroy {
     }
     this.timer = setInterval(() => void this.tick(), AUTO_SYNC_CHECK_INTERVAL_MS)
     this.timer.unref() // never keeps the process alive
+    // If the app was stopped for a while, don't wait a whole check interval to catch up
+    this.startup = setTimeout(() => void this.tick(), AUTO_SYNC_STARTUP_DELAY_MS)
+    this.startup.unref()
     this.logger.log(`Scheduled sync every ${this.config.autoSyncHours}h`)
   }
 
   onModuleDestroy() {
     clearInterval(this.timer)
+    clearTimeout(this.startup)
   }
 
   async tick() {
