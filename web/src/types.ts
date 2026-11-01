@@ -24,6 +24,7 @@ export interface Transaction extends RawTransaction {
   categorySource?: 'rule' | 'ai' | 'manual' | 'learned';
   doubleBookingMatch?: string; // ID of the matching transaction in a double-booking pair
   displayName?: string;        // user-chosen merchant name (grouping and learning still use the original)
+  excludedManually?: boolean;  // the user (not an automatic rule) chose the excluded state
   splitOf?: string;            // id of the transaction this one was split from
   originalAmount?: number;     // amount before currency conversion
   originalCurrency?: string;   // currency before conversion

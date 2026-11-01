@@ -3,6 +3,7 @@ import { Transaction } from '../types'
 export interface SplitPart {
   amount: number
   category: string
+  isExcluded?: boolean
 }
 
 // Keeps the original so a split can be undone or edited, even after re-processing
@@ -30,6 +31,8 @@ export function childrenOf(parent: Transaction, parts: SplitPart[]): Transaction
     amount: round2(p.amount),
     category: p.category,
     categorySource: 'manual' as const,
+    isExcluded: p.isExcluded ?? parent.isExcluded,
+    excludedManually: p.isExcluded !== undefined ? true : parent.excludedManually,
     splitOf: parent.id,
     isRecurring: false,
   }))
@@ -59,4 +62,34 @@ export function removeSplit(txs: Transaction[], parentId: string, original: Tran
     }
   }
   return out
+}
+
+/**
+ * Copy edits made to split parts (category, excluded) back into the stored split, so they
+ * survive re-processing. Records whose parts aren't all present are left unchanged.
+ */
+export function syncSplits(splits: SplitMap, txs: Transaction[]): SplitMap {
+  const byId = new Map<string, Transaction>()
+  for (const t of txs) if (t.splitOf) byId.set(t.id, t)
+  if (byId.size === 0) return splits
+
+  let changed = false
+  const next: SplitMap = {}
+  for (const [id, record] of Object.entries(splits)) {
+    const children = record.parts.map((_, i) => byId.get(`${id}~${i + 1}`))
+    if (children.some(c => !c)) {
+      next[id] = record
+      continue
+    }
+    const parts = record.parts.map((p, i) => {
+      const c = children[i]!
+      const category = c.category || p.category
+      const isExcluded = c.excludedManually ? !!c.isExcluded : p.isExcluded
+      if (category === p.category && isExcluded === p.isExcluded) return p
+      changed = true
+      return { ...p, category, isExcluded }
+    })
+    next[id] = parts === record.parts ? record : { ...record, parts }
+  }
+  return changed ? next : splits
 }

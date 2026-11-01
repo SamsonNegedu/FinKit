@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Transaction } from '../types'
 import { ArrowLeftRight, Check, X, Eye, EyeOff, TrendingUp } from 'lucide-react'
 import { formatCurrency } from '../lib/format'
+import { parseLocalDate, formatDay } from '../lib/dates'
 
 interface IncomeReviewProps {
   transactions: Transaction[]
@@ -10,10 +11,7 @@ interface IncomeReviewProps {
 }
 
 function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: 'short',
-  })
+  return formatDay(date)
 }
 
 export default function IncomeReview({
@@ -26,7 +24,7 @@ export default function IncomeReview({
   // Get all income transactions
   const incomeTransactions = transactions
     .filter(tx => tx.type === 'income')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
 
   // Apply filter
   const filteredTransactions = incomeTransactions.filter(tx => {

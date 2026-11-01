@@ -2,6 +2,7 @@ import { Search, X, Calendar, ChevronDown } from 'lucide-react'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { DateRange, Transaction } from '../types'
 import { getAvailableCategories } from '../lib/categorizer'
+import { parseLocalDate, formatDay } from '../lib/dates'
 
 // Helper function to set a date to end of day (23:59:59.999) to include all transactions on that day
 function setEndOfDay(date: Date): Date {
@@ -63,7 +64,7 @@ export default function SearchFilter({
         const monthSet = new Map<string, { start: Date; end: Date; label: string }>()
         
         for (const tx of transactions) {
-            const date = new Date(tx.date)
+            const date = parseLocalDate(tx.date)
             const year = date.getFullYear()
             const month = date.getMonth()
             const key = `${year}-${month}`
@@ -105,7 +106,7 @@ export default function SearchFilter({
             return start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
         }
         
-        const format = (d: Date) => d.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })
+        const format = (d: Date) => formatDay(d)
         return `${format(start)} - ${format(end)}`
     }
 

@@ -1,4 +1,5 @@
 import { Transaction } from '../types'
+import { parseLocalDate } from './dates'
 
 interface RecurringPattern {
   merchant: string;
@@ -18,8 +19,8 @@ const MIN_OCCURRENCES = 2
 const DAY_TOLERANCE = 3
 
 function calculateDaysBetween(date1: string, date2: string): number {
-  const d1 = new Date(date1)
-  const d2 = new Date(date2)
+  const d1 = parseLocalDate(date1)
+  const d2 = parseLocalDate(date2)
   return Math.abs(d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24)
 }
 

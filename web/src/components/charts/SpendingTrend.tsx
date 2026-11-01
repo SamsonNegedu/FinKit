@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts'
 import { Transaction, DateRange } from '../../types'
 import { formatCurrency } from '../../lib/format'
+import { toISODate, formatDay } from '../../lib/dates'
 
 interface SpendingTrendProps {
   transactions: Transaction[]
@@ -35,7 +36,7 @@ export default function SpendingTrend({ transactions, dateRange, currency }: Spe
       const end = new Date(dateRange.endDate)
       
       while (current <= end) {
-        const dateStr = current.toISOString().split('T')[0]
+        const dateStr = toISODate(current)
         if (!byDate.has(dateStr)) {
           byDate.set(dateStr, { expenses: 0, income: 0 })
         }
@@ -47,7 +48,7 @@ export default function SpendingTrend({ transactions, dateRange, currency }: Spe
     return Array.from(byDate.entries())
       .map(([date, data]) => ({
         date,
-        displayDate: new Date(date).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }),
+        displayDate: formatDay(date),
         expenses: data.expenses,
         income: data.income,
         net: data.income - data.expenses,

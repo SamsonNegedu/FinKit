@@ -19,16 +19,17 @@ import { getLearnedMappings, saveBatchLearnedMappings, deleteLearnedMapping, get
 import { saveSession, loadSession, clearSession, getRememberPreference, setRememberPreference } from './lib/storage'
 import { getNumberFormat, setNumberFormat, NumberFormat } from './lib/format'
 import { recategorize as applyRecategorize } from './lib/recategorize'
-import { assignStableIds } from './lib/ids'
+import { assignStableIds, migrateOldIds } from './lib/ids'
 import { mergeWithoutDuplicates } from './lib/dedupe'
 import { transactionsToCsv, downloadCsv } from './lib/csv'
 import { applyAliases, saveAlias } from './lib/aliases'
-import { SplitMap, SplitPart, applySplits, removeSplit } from './lib/splits'
-import { RateMap, loadRates, saveRates, baseCurrencyOf, foreignCurrenciesOf, applyRates } from './lib/rates'
+import { SplitMap, SplitPart, applySplits, removeSplit, syncSplits } from './lib/splits'
+import { RateMap, RateStore, loadRateStore, saveRateStore, baseCurrencyOf, foreignCurrenciesOf, applyRates } from './lib/rates'
 import { merchantKeyOf, sameMerchant } from './lib/categorizer'
 import HeaderMenu from './components/HeaderMenu'
 import ImportConfirm from './components/ImportConfirm'
 import { Shield, ShieldOff, Loader2, FilePlus } from 'lucide-react'
+import { parseLocalDate } from './lib/dates'
 
 interface MappingChange {
   merchant: string
@@ -46,7 +47,7 @@ function App() {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const [pendingSaves, setPendingSaves] = useState(0)
   const [remember, setRemember] = useState(getRememberPreference())
-  const [rates, setRates] = useState<RateMap>(loadRates())
+  const [rateStore, setRateStore] = useState<RateStore>(loadRateStore())
   const [pendingImport, setPendingImport] = useState<{ incoming: RawTransaction[]; duplicates: number; fileName: string } | null>(null)
   // Held in state so changing it re-renders every number in the app
   const [numberFormat, setNumberFormatState] = useState<NumberFormat>(getNumberFormat())
@@ -65,6 +66,8 @@ function App() {
 
   const commit = useCallback((next: Transaction[]) => {
     transactionsRef.current = next
+    // Edits to a split part (category, exclusion) are copied into the stored split
+    splitsRef.current = syncSplits(splitsRef.current, next)
     setTransactions(next)
   }, [])
 
@@ -92,7 +95,7 @@ function App() {
       if (saved && saved.transactions.length > 0) {
         rawTransactionsRef.current = saved.raw
         splitsRef.current = saved.splits || {}
-        commit(saved.transactions)
+        commit(migrateOldIds(saved.transactions, saved.raw))
         setAnonymizationEnabled(saved.anonymizationEnabled)
         if (saved.dateRange) {
           setDateRange({ startDate: new Date(saved.dateRange.start), endDate: new Date(saved.dateRange.end) })
@@ -111,7 +114,9 @@ function App() {
       const config = await getSheetConfig()
       if (!config || cancelled) return
       setSheetConfig(config)
-      if (!config.sheetId) return
+      // Only auto-sync if this layout came from the API before. A pasted layout has no header
+      // row number, and servers without Google access would just log an error on every load.
+      if (!config.sheetId || !config.headerRow) return
       try {
         const synced = await syncSheetLayout(config)
         if (cancelled) return
@@ -158,10 +163,12 @@ function App() {
   // Currency: show everything in the main currency, converting with the rates the user entered
   const baseCurrency = useMemo(() => baseCurrencyOf(transactions), [transactions])
   const foreignCurrencies = useMemo(() => foreignCurrenciesOf(transactions, baseCurrency), [transactions, baseCurrency])
-  const displayTransactions = useMemo(() => applyRates(transactions, baseCurrency, rates), [transactions, baseCurrency, rates])
+  const rates: RateMap = rateStore[baseCurrency] ?? {}
+  const displayTransactions = useMemo(() => applyRates(transactions, baseCurrency, rates), [transactions, baseCurrency, rateStore]) // eslint-disable-line react-hooks/exhaustive-deps
   const handleRatesChange = (next: RateMap) => {
-    setRates(next)
-    saveRates(next)
+    const store = { ...rateStore, [baseCurrency]: next }
+    setRateStore(store)
+    saveRateStore(store)
   }
 
   const processTransactions = (raw: RawTransaction[], anonymize: boolean) => {
@@ -197,7 +204,7 @@ function App() {
         
         const beforeCount = rawTransactions.length
         rawTransactions = rawTransactions.filter(tx => {
-          const txTime = new Date(tx.date).getTime()
+          const txTime = parseLocalDate(tx.date).getTime()
           return txTime >= startTime && txTime <= endTime
         })
         
@@ -213,7 +220,7 @@ function App() {
       
       // Auto-detect date range from the actual transaction data
       if (processed.length > 0) {
-        const dates = processed.map(tx => new Date(tx.date).getTime())
+        const dates = processed.map(tx => parseLocalDate(tx.date).getTime())
         const minDate = new Date(Math.min(...dates))
         const maxDate = new Date(Math.max(...dates))
         
@@ -237,13 +244,18 @@ function App() {
   // Re-run processing over raw rows, keeping the user's manual edits (matched by stable id)
   const reprocess = (raw: RawTransaction[], anonymize: boolean): Transaction[] => {
     const manual = new Map(
-      transactionsRef.current.filter(t => t.categorySource === 'manual').map(t => [t.id, t])
+      transactionsRef.current.filter(t => t.categorySource === 'manual' && !t.splitOf).map(t => [t.id, t])
+    )
+    const excluded = new Map(
+      transactionsRef.current.filter(t => t.excludedManually && !t.splitOf).map(t => [t.id, t])
     )
     const processed = processTransactions(raw, anonymize).map(t => {
       const old = manual.get(t.id)
-      return old
-        ? { ...t, category: old.category, isExcluded: old.isExcluded, categorySource: 'manual' as const }
-        : t
+      const keepExcluded = excluded.get(t.id)
+      let out = t
+      if (old) out = { ...out, category: old.category, categorySource: 'manual' as const }
+      if (keepExcluded) out = { ...out, isExcluded: keepExcluded.isExcluded, excludedManually: true }
+      return out
     })
     // Splits are stored separately, so they're re-applied to the fresh parents
     const fresh: SplitMap = {}
@@ -282,7 +294,7 @@ function App() {
     const next = reprocess(merged, anonymizationEnabled)
     commit(next)
     // Widen the date range to include the new rows
-    const times = next.map(t => new Date(t.date).getTime())
+    const times = next.map(t => parseLocalDate(t.date).getTime())
     const min = new Date(Math.min(...times))
     const max = new Date(Math.max(...times))
     const end = new Date(max.getFullYear(), max.getMonth() + 1, 0)
@@ -389,6 +401,14 @@ function App() {
     })
   }
 
+  // Excluding a row is its own kind of edit: it must survive re-processing, but it must not make
+  // the category "manual" (which would stop merchant-wide recategorizing from reaching it)
+  const withEdit = (t: Transaction, updates: Partial<Transaction>): Transaction => ({
+    ...t,
+    ...updates,
+    ...('isExcluded' in updates ? { excludedManually: true } : {}),
+  })
+
   const handleUpdateTransaction = (id: string, updates: Partial<Transaction>) => {
     const { category, ...rest } = updates
     const current = transactionsRef.current
@@ -396,11 +416,11 @@ function App() {
     if (!existing) return
 
     if (category && category !== existing.category) {
-      recategorize([id], category, rest)
+      recategorize([id], category, 'isExcluded' in rest ? { ...rest, excludedManually: true } : rest)
       return
     }
 
-    commit(current.map(t => (t.id === id ? { ...t, ...updates, categorySource: 'manual' as const } : t)))
+    commit(current.map(t => (t.id === id ? withEdit(t, updates) : t)))
     if ('isExcluded' in updates) {
       pushToast({
         message: updates.isExcluded ? 'Excluded from totals' : 'Included in totals',
@@ -414,12 +434,12 @@ function App() {
   const handleBulkUpdate = (ids: string[], updates: Partial<Transaction>) => {
     const { category, ...rest } = updates
     if (category) {
-      recategorize(ids, category, rest)
+      recategorize(ids, category, 'isExcluded' in rest ? { ...rest, excludedManually: true } : rest)
       return
     }
     const current = transactionsRef.current
     const idSet = new Set(ids)
-    commit(current.map(t => (idSet.has(t.id) ? { ...t, ...updates, categorySource: 'manual' as const } : t)))
+    commit(current.map(t => (idSet.has(t.id) ? withEdit(t, updates) : t)))
     pushToast({
       message: `${updates.isExcluded ? 'Excluded' : 'Included'} ${ids.length} transactions`,
       tone: 'success',

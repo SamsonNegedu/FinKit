@@ -241,7 +241,7 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-midnight-900 border border-midnight-700 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
         {/* Header - fixed */}
         <div className="flex items-center justify-between p-6 border-b border-midnight-700 shrink-0">
@@ -453,7 +453,7 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
                         onChange={(e) => handleMappingChange(index, 'appCategory', e.target.value)}
                         className="input text-sm"
                       >
-                        {getAvailableCategories().filter(c => c !== 'Transfer' && c !== 'Income').map(cat => (
+                        {[...new Set([mapping.appCategory, ...getAvailableCategories().filter(c => c !== 'Transfer' && c !== 'Income')])].map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
@@ -488,11 +488,13 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
                   type="text"
                   value={constantColumns.join(', ')}
                   onChange={(e) => setConstantColumns(e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean))}
-                  placeholder="S, T, U, V, W, X"
+                  placeholder="S, U, X"
                   className="input w-full"
                 />
                 <p className="text-xs text-midnight-500 mt-1">
-                  Default: S (Total Expenditure), T (Income), U-X (calculated columns)
+                  {layout
+                    ? `From your sheet: ${layout.filter(c => constantColumns.includes(c.column)).map(c => `${c.column} (${c.name})`).join(', ') || 'none'}`
+                    : 'Default: S (Total Expenditure), U (Income After Expenditure), X (Net Income)'}
                 </p>
               </section>
               </>

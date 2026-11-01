@@ -106,7 +106,7 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
 
       {/* Import Options Modal */}
       {showOptions && pendingFile && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-midnight-900 border border-midnight-700 rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-semibold text-white mb-2">Import Options</h3>
             <p className="text-midnight-400 text-sm mb-6">

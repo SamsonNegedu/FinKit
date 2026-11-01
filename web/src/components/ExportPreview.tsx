@@ -3,6 +3,7 @@ import { X, Copy, Check } from 'lucide-react'
 import { Transaction, SheetConfig, DateRange } from '../types'
 import { buildSheetRow, getLayout } from '../lib/sheetLayout'
 import { formatCurrency, formatForSheet } from '../lib/format'
+import { parseLocalDate } from '../lib/dates'
 
 interface ExportPreviewProps {
   transactions: Transaction[]
@@ -24,7 +25,7 @@ export default function ExportPreview({
   const months = useMemo(() => {
     const byMonth = new Map<string, { label: string; txs: Transaction[] }>()
     for (const tx of transactions) {
-      const d = new Date(tx.date)
+      const d = parseLocalDate(tx.date)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const entry = byMonth.get(key) ?? {
         label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
@@ -92,7 +93,7 @@ export default function ExportPreview({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-midnight-900 border border-midnight-700 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-midnight-700">
           <h2 className="text-xl font-semibold text-white">Export Preview</h2>

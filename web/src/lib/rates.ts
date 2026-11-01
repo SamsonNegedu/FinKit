@@ -5,17 +5,23 @@ const KEY = 'finkit.rates'
 
 export type RateMap = Record<string, number>
 
-export function loadRates(): RateMap {
+// Rates are stored per base currency: "1 USD = 0.9" means 0.9 EUR only while EUR is the base.
+// The base is the most common currency in the data, so it can change when data is added.
+export type RateStore = Record<string, RateMap>
+
+export function loadRateStore(): RateStore {
   try {
-    return JSON.parse(localStorage.getItem(KEY) || '{}')
+    const parsed = JSON.parse(localStorage.getItem(KEY) || '{}')
+    // Ignore the old flat format ({ USD: 0.9 }): we can't tell which base it meant
+    return Object.values(parsed).every(v => v && typeof v === 'object') ? parsed : {}
   } catch {
     return {}
   }
 }
 
-export function saveRates(rates: RateMap): void {
+export function saveRateStore(store: RateStore): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(rates))
+    localStorage.setItem(KEY, JSON.stringify(store))
   } catch {
     // preference just won't persist
   }

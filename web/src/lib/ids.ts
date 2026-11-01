@@ -1,7 +1,7 @@
 import { RawTransaction, Transaction } from '../types'
 
 // Small non-crypto hash (FNV-1a) - ids only need to be stable, not secret
-function hash(input: string): string {
+export function hashKey(input: string): string {
   let h = 0x811c9dc5
   for (let i = 0; i < input.length; i++) {
     h ^= input.charCodeAt(i)
@@ -25,6 +25,31 @@ export function assignStableIds(processed: Transaction[], raw: RawTransaction[])
     const key = rawKey(raw[i])
     const n = (seen.get(key) || 0) + 1
     seen.set(key, n)
-    return { ...tx, id: `tx_${hash(key)}_${n}` }
+    return { ...tx, id: `tx_${hashKey(key)}_${n}` }
   })
 }
+
+// Sessions saved before stable ids used "tx_<timestamp>_<row index>". Map each to the new
+// content-based id (via the raw row at that index) so earlier manual edits keep working.
+export function migrateOldIds(txs: Transaction[], raw: RawTransaction[]): Transaction[] {
+  const old = /^tx_\d{12,}_(\d+)$/
+  if (!txs.some(t => old.test(t.id))) return txs
+  const seen = new Map<string, number>()
+  const newIds = raw.map(r => {
+    const key = rawKey(r)
+    const n = (seen.get(key) || 0) + 1
+    seen.set(key, n)
+    return `tx_${hashKey(key)}_${n}`
+  })
+  const idMap = new Map<string, string>()
+  for (const t of txs) {
+    const m = old.exec(t.id)
+    if (m && newIds[Number(m[1])]) idMap.set(t.id, newIds[Number(m[1])])
+  }
+  return txs.map(t => ({
+    ...t,
+    id: idMap.get(t.id) ?? t.id,
+    doubleBookingMatch: t.doubleBookingMatch ? idMap.get(t.doubleBookingMatch) ?? t.doubleBookingMatch : undefined,
+  }))
+}
+

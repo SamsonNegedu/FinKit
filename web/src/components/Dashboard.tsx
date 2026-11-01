@@ -15,6 +15,7 @@ import { displayNameOf } from '../lib/aliases'
 import { RateMap } from '../lib/rates'
 import { SplitPart } from '../lib/splits'
 import { getCategoryColor } from '../lib/categorizer'
+import { parseLocalDate } from '../lib/dates'
 
 interface DashboardProps {
   transactions: Transaction[]
@@ -62,7 +63,7 @@ export default function Dashboard({
   const dateFilteredTransactions = useMemo(() => {
     if (!dateRange) return transactions
     return transactions.filter(tx => {
-      const txDate = new Date(tx.date)
+      const txDate = parseLocalDate(tx.date)
       return txDate >= dateRange.startDate && txDate <= dateRange.endDate
     })
   }, [transactions, dateRange])

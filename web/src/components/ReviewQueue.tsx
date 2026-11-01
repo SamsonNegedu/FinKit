@@ -80,7 +80,9 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const el = e.target as HTMLElement | null
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return
+      // Never act behind an open dialog (settings, split, import confirm...)
+      if (document.querySelector('[aria-modal="true"]')) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
       if (/^[1-9]$/.test(e.key)) {
         const category = quickPicks[Number(e.key) - 1]

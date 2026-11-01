@@ -9,6 +9,7 @@ import SplitDialog from './SplitDialog'
 import { displayNameOf } from '../lib/aliases'
 import { SplitPart } from '../lib/splits'
 import { formatCurrency } from '../lib/format'
+import { parseLocalDate, formatDay } from '../lib/dates'
 
 interface TransactionTableProps {
   transactions: Transaction[]
@@ -30,10 +31,7 @@ type SortField = 'date' | 'amount' | 'category' | 'description'
 type SortDirection = 'asc' | 'desc'
 
 function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: 'short',
-  })
+  return formatDay(date)
 }
 
 export default function TransactionTable({
@@ -125,7 +123,7 @@ export default function TransactionTable({
     let comparison = 0
     switch (sortField) {
       case 'date':
-        comparison = new Date(a.date).getTime() - new Date(b.date).getTime()
+        comparison = parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
         break
       case 'amount':
         comparison = a.amount - b.amount
