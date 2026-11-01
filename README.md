@@ -85,6 +85,24 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+### Key files (only for bank sync or Google Sheets)
+
+The `.env` values `EB_PRIVATE_KEY_PATH` and `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` are paths **inside** the API container. The compose file mounts the `secrets/` folder next to it, read-only, at `/run/secrets`, so a file at `secrets/enablebanking.pem` on your server is `/run/secrets/enablebanking.pem` for the API.
+
+```bash
+[ -e secrets/enablebanking.pem ] && echo "already exists, not overwriting" || {
+  mkdir -p secrets &&
+  openssl genrsa -out secrets/enablebanking.pem 4096 2>/dev/null &&
+  openssl req -new -x509 -days 1095 -key secrets/enablebanking.pem -out secrets/enablebanking.crt -subj "/C=DE/O=FinKit/CN=finkit" &&
+  chmod 644 secrets/enablebanking.pem secrets/enablebanking.crt &&
+  cat secrets/enablebanking.crt
+}
+```
+
+Run it from the folder with `docker-compose.prod.yml`. It creates `secrets/`, generates the Enable Banking signing key there, and prints the certificate to paste into the Enable Banking form. The private key never leaves the server. For Sheets export, save the JSON key Google gives you as `secrets/google-sa.json`. The API runs as a non-root user, hence the `644`.
+
+Then set `EB_PRIVATE_KEY_PATH=/run/secrets/enablebanking.pem` and/or `GOOGLE_SERVICE_ACCOUNT_KEY_PATH=/run/secrets/google-sa.json` in `.env` and restart. The folder is gitignored; copy the files to the server yourself.
+
 API health: `GET /health`. Persistent SQLite data uses the `finkit-api-data` volume on **your** host.
 
 Root [docker-compose.yml](./docker-compose.yml) builds the same web and API images for local or CI use; wire ports or a reverse proxy so the browser can reach the web container and `/api` can reach the API.
@@ -96,7 +114,7 @@ Only runs when you set credentials and export from the app:
 1. In [Google Cloud Console](https://console.cloud.google.com/), enable the Sheets API and create a service account.
 2. Share **only** the spreadsheet FinKit should use with the service account email (Editor). Export calls pass a spreadsheet id from the app; **narrow sharing on the SA** is what limits where it can write ([users and access — Sheets](./docs/users-and-access.md#google-sheets-export)).
 3. **Local API**: `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` in `api/.env`.
-4. **Docker production**: `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY` in root `.env` (see [example.env](./example.env)).
+4. **Docker production**: mount the JSON key as a secret and set `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` in the root `.env` (see [example.env](./example.env)).
 5. In **Settings**, set sheet URL/ID, tab name, and category column mappings.
 
 Tab names and column letters are validated before any Google API call. The export expects a monthly summary layout (month row plus category columns and totals).

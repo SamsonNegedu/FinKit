@@ -51,11 +51,9 @@ case "${1:-update}" in
     # Load env
     set -a; source .env 2>/dev/null || true; set +a
 
-    # GHCR login if credentials provided
-    if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USER" ]; then
-      info "🔐 Logging in to ghcr.io..."
-      echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_USER" --password-stdin
-    fi
+    # Key files for the API live here (mounted read-only at /run/secrets). Create it ourselves so
+    # Docker doesn't create it owned by root.
+    mkdir -p secrets
 
     info "📦 Pulling latest images..."
     docker compose -f $COMPOSE_FILE pull

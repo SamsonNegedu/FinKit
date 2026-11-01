@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import request from 'supertest'
-import { SIGNED_IN_HEADERS as H, TestAppOptions, createTestApp } from '../../testing/test-app'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { encrypt } from '../../shared/crypto/encryption'
+import { SIGNED_IN_HEADERS as H, TEST_KEY, TestAppOptions, createTestApp } from '../../testing/test-app'
 import { BankAutoSync } from '../sync/bank-auto-sync'
 import { BankSyncService } from '../sync/bank-sync.service'
 import { TestBankProvider } from '../providers/test-bank.provider'
@@ -76,16 +80,28 @@ describe('stored transactions', () => {
     await request(t.server).get('/api/banking/transactions?from=yesterday').set(as(ALICE)).expect(400)
   })
 
-  it('keeps descriptions, names and IBANs encrypted at rest', async () => {
+  it('keeps every part of a transaction encrypted at rest, with an opaque repeat key', async () => {
     const t = await make()
 
     await sync(t, ALICE, await connect(t, ALICE))
-    const dump = JSON.stringify(t.db.prepare('SELECT * FROM bank_transactions').all())
+    const rows = t.db.prepare('SELECT * FROM bank_transactions').all() as Array<Record<string, unknown>>
+    // created_at is when we stored the row (it can coincide with a booking date), so it is left out of the content check
+    const dump = JSON.stringify(rows.map(r => ({ ...r, created_at: undefined })))
+    const first = (await stored(t, ALICE)).transactions[0]
 
+    expect(Object.keys(rows[0]).toSorted()).toEqual([
+      'connection_id',
+      'created_at',
+      'ext_key',
+      'id',
+      'payload',
+      'user_id',
+    ])
     expect(dump).not.toMatch(/REWE|Netflix|Salary|Acme|Amazon|Shell|DE\d{20}/)
-    expect(t.db.prepare('SELECT payload FROM bank_transactions LIMIT 1').get()).toMatchObject({
-      payload: expect.stringMatching(/^v1\./),
-    })
+    expect(dump).not.toContain(first.date) // dates are not readable either
+    expect(String(rows[0].payload)).toMatch(/^v1\./)
+    expect(String(rows[0].ext_key)).toMatch(/^[0-9a-f]{64}$/) // not the bank's reference, nor derived readably from it
+    expect(dump).not.toContain(String(first.externalId))
   })
 
   it('shows each person only their own, and one person cannot delete another’s', async () => {
@@ -119,6 +135,55 @@ describe('stored transactions', () => {
     expect((await stored(t, ALICE)).count).toBe(before) // history carried over
     await request(t.server).delete(`/api/banking/connections/${second}`).set(as(ALICE)).expect(200)
     expect((await stored(t, ALICE)).count).toBe(0)
+  })
+})
+
+describe('upgrading older stored data', () => {
+  it('moves rows from the layout that kept date and amount readable, without losing or duplicating any', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'finkit-'))
+    const file = join(dir, 'db.sqlite')
+
+    try {
+      const first = await createTestApp({ databaseFile: file, env: { ALLOWED_USER_EMAILS: ALICE } })
+
+      await request(first.server).get('/api/banking/connections').set(as(ALICE)).expect(200)
+      const userId = (first.db.prepare('SELECT id FROM users WHERE email = ?').get(ALICE) as { id: string }).id
+
+      // Put it back the way the first version stored it
+      first.db.exec('DROP TABLE bank_transactions')
+      first.db.exec(`CREATE TABLE bank_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+        connection_id TEXT NOT NULL, ext_key TEXT NOT NULL, date TEXT NOT NULL, amount REAL NOT NULL,
+        currency TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL);
+        CREATE UNIQUE INDEX idx_bank_tx_unique ON bank_transactions(user_id, ext_key);
+        CREATE INDEX idx_bank_tx_user_date ON bank_transactions(user_id, date)`)
+      const put = first.db.prepare('INSERT INTO bank_transactions VALUES (NULL,?,?,?,?,?,?,?,?)')
+      const body = (d: string) =>
+        encrypt(JSON.stringify({ description: d, externalId: `acc:${d}`, rawData: {} }), TEST_KEY)
+
+      put.run(userId, 'c1', 'acc:old1', '2026-09-01', -12.5, 'EUR', body('old1'), '2026-09-02T00:00:00Z')
+      put.run(userId, 'c1', 'acc:old2', '2026-09-03', 99, 'EUR', body('old2'), '2026-09-04T00:00:00Z')
+      await first.close()
+
+      const second = await createTestApp({ databaseFile: file, env: { ALLOWED_USER_EMAILS: ALICE } })
+
+      open.push(second)
+      const list = (await stored(second, ALICE)).transactions
+
+      expect(
+        list.map((x: { description: string; date: string; amount: number }) => [x.description, x.date, x.amount]),
+      ).toEqual([
+        ['old2', '2026-09-03', 99],
+        ['old1', '2026-09-01', -12.5],
+      ])
+      expect(Object.keys(second.db.prepare('SELECT * FROM bank_transactions LIMIT 1').get() as object)).not.toContain(
+        'date',
+      )
+      expect(
+        second.db.prepare("SELECT name FROM sqlite_master WHERE name = 'bank_transactions_v1'").get(),
+      ).toBeUndefined()
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 
