@@ -2,15 +2,17 @@ import { Inject, Injectable } from '@nestjs/common'
 import { createHmac } from 'node:crypto'
 import { DatabaseService } from '../../shared/database/database.service'
 import { decrypt, encrypt } from '../../shared/crypto/encryption'
-import { hasColumn } from '../../shared/database/migrate'
+import { ensureColumn, hasColumn } from '../../shared/database/migrate'
 import { BankTransaction } from '../providers/bank-provider'
 import { BANKING_CONFIG, BankingConfig } from '../config/bank-connections.tokens'
 
 /**
  * Synced transactions, kept per person. Every query filters by user_id; nothing here takes an
- * identity from a request. Everything about a transaction (date, amount, text, names, IBANs,
- * account details) is encrypted in one value. What stays readable is only who owns the row, which
- * connection it came from, when it was stored, and an opaque key used to skip repeats.
+ * identity from a request. Everything about a transaction (amount, text, names, IBANs, account
+ * details) is encrypted in one value. What stays readable is who owns the row, which connection it
+ * came from, when it was stored, an opaque key used to skip repeats, and the booking date (tx_date).
+ * The date is readable on purpose: it lets the database filter and sort by range, so a read only
+ * decrypts the rows it returns instead of every row the person has ever synced.
  */
 @Injectable()
 export class BankTransactionsStore {
@@ -41,16 +43,28 @@ export class BankTransactionsStore {
         connection_id TEXT NOT NULL,
         ext_key TEXT NOT NULL,
         payload TEXT NOT NULL,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        tx_date TEXT
       );
       CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_tx_unique ON bank_transactions(user_id, ext_key);
     `)
+    // Rows stored before tx_date existed get it filled in below
+    ensureColumn(db, 'bank_transactions', 'tx_date', 'TEXT')
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_bank_tx_user_txdate ON bank_transactions(user_id, tx_date DESC, id DESC);
+      CREATE INDEX IF NOT EXISTS idx_bank_tx_user_conn ON bank_transactions(user_id, connection_id);
+    `)
     this.q = {
       insert: db.prepare(
-        `INSERT OR IGNORE INTO bank_transactions (user_id, connection_id, ext_key, payload, created_at)
-         VALUES (?,?,?,?,?)`,
+        `INSERT OR IGNORE INTO bank_transactions (user_id, connection_id, ext_key, payload, created_at, tx_date)
+         VALUES (?,?,?,?,?,?)`,
       ),
-      list: db.prepare('SELECT payload FROM bank_transactions WHERE user_id = ? ORDER BY id DESC'),
+      // Same-day rows keep newest-stored first
+      list: db.prepare(
+        `SELECT payload FROM bank_transactions
+         WHERE user_id = ? AND tx_date >= ? AND tx_date <= ?
+         ORDER BY tx_date DESC, id DESC`,
+      ),
       count: db.prepare('SELECT COUNT(*) AS n FROM bank_transactions WHERE user_id = ?'),
       move: db.prepare('UPDATE bank_transactions SET connection_id = ? WHERE user_id = ? AND connection_id = ?'),
       deleteConn: db.prepare('DELETE FROM bank_transactions WHERE user_id = ? AND connection_id = ?'),
@@ -66,6 +80,7 @@ export class BankTransactionsStore {
           this.fingerprint(tx),
           encrypt(JSON.stringify(tx), this.key),
           new Date().toISOString(),
+          tx.date,
         ).changes
       }
 
@@ -97,11 +112,32 @@ export class BankTransactionsStore {
             this.fingerprint(tx),
             encrypt(JSON.stringify(tx), this.key),
             r.created_at,
+            tx.date,
           )
         }
         db.exec('DROP TABLE bank_transactions_v1')
       })()
     }
+    this.backfillDates(db)
+  }
+
+  /** One-time: rows from before tx_date existed take their date from the encrypted payload. */
+  private backfillDates(db: DatabaseService['db']) {
+    const missing = db.prepare('SELECT id, payload FROM bank_transactions WHERE tx_date IS NULL').all() as Array<{
+      id: number
+      payload: string
+    }>
+
+    if (missing.length === 0) {
+      return
+    }
+    const set = db.prepare('UPDATE bank_transactions SET tx_date = ? WHERE id = ?')
+
+    db.transaction(() => {
+      for (const r of missing) {
+        set.run((JSON.parse(decrypt(r.payload, this.key)) as BankTransaction).date, r.id)
+      }
+    })()
   }
 
   private readonly insertMany: (userId: string, connectionId: string, txs: BankTransaction[]) => number
@@ -111,14 +147,11 @@ export class BankTransactionsStore {
     return this.insertMany(userId, connectionId, txs)
   }
 
-  /** Newest first. The date range is applied after decrypting, because dates are not readable in the database. */
+  /** Newest first. The database applies the date range, so only matching rows are decrypted. */
   list(userId: string, from = '0000-01-01', to = '9999-12-31'): BankTransaction[] {
-    const rows = this.q.list.all(userId) as Array<{ payload: string }>
+    const rows = this.q.list.all(userId, from, to) as Array<{ payload: string }>
 
-    return rows
-      .map(r => JSON.parse(decrypt(r.payload, this.key)) as BankTransaction)
-      .filter(t => t.date >= from && t.date <= to)
-      .toSorted((a, b) => b.date.localeCompare(a.date)) // stable: same-day rows keep newest-stored first
+    return rows.map(r => JSON.parse(decrypt(r.payload, this.key)) as BankTransaction)
   }
 
   count(userId: string): number {

@@ -10,7 +10,8 @@ A factual list of what FinKit does with personal data, taken from the code. It i
 | Learned merchant rules, sheet and display settings | `merchant_categories`, `settings` | Plain | Until the user deletes the rule or setting |
 | Bank connection: bank name, status, consent end date, masked account labels (last 4 of IBAN) | `bank_connections` | Plain | Until disconnected (the secret below is erased on disconnect) |
 | Bank session id and the accounts' full IBANs | `bank_connections.secret_blob` | Encrypted (AES-256-GCM, key from `BANKING_ENCRYPTION_KEY`) | Until disconnected or replaced, then erased |
-| Synced bank transactions: date, amount, currency, description, counterparty name and IBAN, own IBAN, bank and account details | `bank_transactions.payload` | Encrypted (same key), one value per transaction | Until the user deletes them or disconnects the bank |
+| Synced bank transactions: amount, currency, description, counterparty name and IBAN, own IBAN, bank and account details | `bank_transactions.payload` | Encrypted (same key), one value per transaction | Until the user deletes them or disconnects the bank |
+| Synced bank transactions: booking date | `bank_transactions.tx_date` | Plain text, so the database can filter and sort by date range without decrypting every row | Same as above |
 | Alongside each transaction: owner id, connection id, when it was stored, and an opaque keyed fingerprint used to skip repeats | `bank_transactions` | Plain (the fingerprint reveals nothing about the transaction) | Same as above |
 | Sync history (when, which bank, how many, error kind) | `bank_sync_log` | Plain | 90 days |
 | Audit trail (who did what, with emails) | `bank_audit_log` | Plain | 365 days |

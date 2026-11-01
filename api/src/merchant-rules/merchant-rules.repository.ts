@@ -50,6 +50,7 @@ export class MerchantRulesRepository {
     } else {
       this.createTable()
     }
+    this.createIndexes()
     users.onLegacyOwnerCreated(userId =>
       db.prepare('UPDATE merchant_categories SET user_id = ? WHERE user_id IS NULL').run(userId),
     )
@@ -79,7 +80,20 @@ export class MerchantRulesRepository {
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (user_id, merchant_key)
       );
-      CREATE INDEX IF NOT EXISTS idx_merchant_user ON merchant_categories(user_id, merchant_key);
+    `)
+  }
+
+  /**
+   * UNIQUE (user_id, merchant_key) already indexes lookups by person and merchant, so the old
+   * idx_merchant_user duplicate is dropped. These serve the list (best-known first), the
+   * "recent" panel, and the per-category counts.
+   */
+  private createIndexes() {
+    this.database.db.exec(`
+      DROP INDEX IF EXISTS idx_merchant_user;
+      CREATE INDEX IF NOT EXISTS idx_merchant_user_rank ON merchant_categories(user_id, confidence DESC, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_merchant_user_recent ON merchant_categories(user_id, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_merchant_user_category ON merchant_categories(user_id, category);
     `)
   }
 

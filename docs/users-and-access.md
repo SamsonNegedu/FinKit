@@ -15,7 +15,7 @@ One list: `ALLOWED_USER_EMAILS`. Anyone on it is let in. Anyone else is refused,
 
 ## What each person sees
 
-Only their own: learned merchant rules, settings (including the Google Sheet layout), bank connections, and the Back office (their sync history, their activity, their connection counts). Asking for someone else's bank connection returns 404. Synced bank transactions are stored on the server, each row tagged with its owner. Every read and delete is limited to the signed-in user, and the descriptive fields (text, names, IBANs) are encrypted at rest. Disconnecting a bank deletes what came through it; Banks → Stored bank data deletes everything. Transactions from imported files are never sent to the server.
+Only their own: learned merchant rules, settings (including the Google Sheet layout), bank connections, and the Back office (their sync history, their activity, their connection counts). Asking for someone else's bank connection returns 404. Synced bank transactions are stored on the server, each row tagged with its owner. Every read and delete is limited to the signed-in user, and the descriptive fields (amount, text, names, IBANs) are encrypted at rest; only the booking date is stored readable, to keep reads fast. Disconnecting a bank deletes what came through it; Banks → Stored bank data deletes everything. Transactions from imported files are never sent to the server.
 
 The bank's return after approval carries no sign-in, so the connection belongs to whoever started it.
 
@@ -39,7 +39,7 @@ The email in the sign-in token isn't on `ALLOWED_USER_EMAILS`. Fix the variable 
 
 ## Google Sheets export
 
-Export, layout and metadata calls take the spreadsheet id from the request, on purpose: any signed-in person on the allowed list may export to any spreadsheet the Google service account can open. So the service account must only be shared on the one spreadsheet FinKit should write to (the README's Google Sheets steps do this). Tab names and column letters are validated before they reach Google.
+Export, layout and metadata calls take the spreadsheet id from the request, on purpose: any signed-in person on the allowed list may export to any spreadsheet the Google service account can open. So the service account must only be shared on the one spreadsheet FinKit should write to (the [Google Sheets guide](./google-sheets.md) covers this). Tab names and column letters are validated before they reach Google.
 
 ## Not built yet
 

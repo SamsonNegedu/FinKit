@@ -80,6 +80,22 @@ describe('stored transactions', () => {
     await request(t.server).get('/api/banking/transactions?from=yesterday').set(as(ALICE)).expect(400)
   })
 
+  it('answers a date range from the index and decrypts only the rows in it', async () => {
+    const t = await make()
+
+    await sync(t, ALICE, await connect(t, ALICE))
+    const plan = t.db
+      .prepare(
+        `EXPLAIN QUERY PLAN SELECT payload FROM bank_transactions
+         WHERE user_id = ? AND tx_date >= ? AND tx_date <= ? ORDER BY tx_date DESC, id DESC`,
+      )
+      .all('u', '2026-01-01', '2026-12-31') as Array<{ detail: string }>
+    const detail = plan.map(p => p.detail).join(' ')
+
+    expect(detail).toContain('idx_bank_tx_user_txdate')
+    expect(detail).not.toContain('TEMP B-TREE') // no separate sort step
+  })
+
   it('keeps every part of a transaction encrypted at rest, with an opaque repeat key', async () => {
     const t = await make()
 
@@ -95,10 +111,12 @@ describe('stored transactions', () => {
       'ext_key',
       'id',
       'payload',
+      'tx_date',
       'user_id',
     ])
     expect(dump).not.toMatch(/REWE|Netflix|Salary|Acme|Amazon|Shell|DE\d{20}/)
-    expect(dump).not.toContain(first.date) // dates are not readable either
+    expect(rows.every(r => /^\d{4}-\d{2}-\d{2}$/.test(String(r.tx_date)))).toBe(true) // the date is readable on purpose
+    expect(rows.map(r => r.tx_date)).toContain(first.date)
     expect(String(rows[0].payload)).toMatch(/^v1\./)
     expect(String(rows[0].ext_key)).toMatch(/^[0-9a-f]{64}$/) // not the bank's reference, nor derived readably from it
     expect(dump).not.toContain(String(first.externalId))
@@ -181,6 +199,39 @@ describe('upgrading older stored data', () => {
       expect(
         second.db.prepare("SELECT name FROM sqlite_master WHERE name = 'bank_transactions_v1'").get(),
       ).toBeUndefined()
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('rows stored before the booking date was kept readable', () => {
+  it('fills it in from the encrypted payload on start', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'finkit-'))
+    const file = join(dir, 'db.sqlite')
+
+    try {
+      const first = await createTestApp({ databaseFile: file, env: { ALLOWED_USER_EMAILS: ALICE } })
+
+      await request(first.server).get('/api/banking/connections').set(as(ALICE)).expect(200)
+      const userId = (first.db.prepare('SELECT id FROM users WHERE email = ?').get(ALICE) as { id: string }).id
+      const payload = encrypt(JSON.stringify({ date: '2026-08-05', description: 'x', rawData: {} }), TEST_KEY)
+
+      first.db
+        .prepare(
+          'INSERT INTO bank_transactions (user_id, connection_id, ext_key, payload, created_at) VALUES (?,?,?,?,?)',
+        )
+        .run(userId, 'c1', 'k1', payload, '2026-08-06T00:00:00Z')
+      await first.close()
+
+      const second = await createTestApp({ databaseFile: file, env: { ALLOWED_USER_EMAILS: ALICE } })
+
+      open.push(second)
+      const day = (
+        await request(second.server).get('/api/banking/transactions?from=2026-08-05&to=2026-08-05').set(as(ALICE))
+      ).body
+
+      expect(day.count).toBe(1)
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
