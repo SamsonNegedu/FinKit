@@ -9,6 +9,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Two entry pages: the public landing page at / and the app itself at /app/
+  build: {
+    rollupOptions: {
+      input: {
+        landing: path.resolve(__dirname, 'index.html'),
+        app: path.resolve(__dirname, 'app/index.html'),
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

@@ -354,14 +354,17 @@ export default function TransactionTable({
                     ${tx.isExcluded ? 'opacity-50' : ''}
                   `}
                 >
-                  <td className="py-3 px-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(tx.id)}
-                      aria-label={`Select ${tx.merchant || tx.recipient || tx.description.slice(0, 30)}`}
-                      onChange={() => handleToggleSelect(tx.id)}
-                      className="rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
-                    />
+                  {/* The label fills the whole cell, so the click target is the full cell, not just the box */}
+                  <td className="relative p-0">
+                    <label className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-midnight-700/40">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(tx.id)}
+                        aria-label={`Select ${tx.merchant || tx.recipient || tx.description.slice(0, 30)}`}
+                        onChange={() => handleToggleSelect(tx.id)}
+                        className="w-5 h-5 cursor-pointer rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
+                      />
+                    </label>
                   </td>
                   <td className="py-3 px-4 whitespace-nowrap">
                     <span className="text-sm text-midnight-300">{formatDate(tx.date)}</span>
@@ -502,14 +505,16 @@ export default function TransactionTable({
         <table className="w-full table-fixed min-w-[640px]">
           <thead>
             <tr className="border-b border-midnight-700">
-              <th className="py-3 px-4 w-12">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.size === transactions.length && transactions.length > 0}
-                  aria-label="Select all"
-                  onChange={onSelectAll}
-                  className="rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
-                />
+              <th className="relative p-0 w-14">
+                <label className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-midnight-700/40">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === transactions.length && transactions.length > 0}
+                    aria-label="Select all"
+                    onChange={onSelectAll}
+                    className="w-5 h-5 cursor-pointer rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
+                  />
+                </label>
               </th>
               <th className="py-3 px-4 w-28 text-left text-sm font-medium text-midnight-400">
                 <SortButton field="date">Date</SortButton>

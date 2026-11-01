@@ -1,0 +1,40 @@
+/* Shared look for the public pages (landing, privacy, terms). Matches the app: dark midnight + green accent. */
+:root { --bg:#0a1929; --panel:#102a43; --line:#243b53; --fg:#e6edf5; --muted:#9fb3c8; --accent:#10b981; --accent-ink:#04271c; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif; min-height:100vh; display:flex; flex-direction:column; }
+a { color:var(--accent); }
+a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+header, footer { width:100%; }
+header { border-bottom:1px solid var(--line); padding-block:20px; }
+footer { border-top:1px solid var(--line); padding-block:24px 32px; color:var(--muted); font-size:14px; }
+.bar, .foot { width:100%; max-width:960px; margin:0 auto; padding-inline:max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px)); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 18px; }
+.foot { justify-content:flex-start; }
+.foot a { color:var(--muted); }
+.foot a:hover { color:var(--fg); }
+.brand { display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--fg); }
+.brand b { font-size:18px; }
+.logo { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#10b981,#059669); display:grid; place-items:center; font-weight:700; color:#fff; }
+
+.btn { display:inline-block; padding:9px 16px; border-radius:9px; font-weight:500; font-size:15px; text-decoration:none; border:1px solid var(--line); color:var(--fg); background:var(--panel); }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:700; }
+.btn:hover { filter:brightness(1.1); }
+
+main { flex:1; width:100%; max-width:960px; margin:0 auto; padding:56px max(20px, env(safe-area-inset-left, 0px)) 40px max(20px, env(safe-area-inset-right, 0px)); }
+
+/* Landing */
+h1 { font-size:clamp(28px,5vw,44px); line-height:1.15; letter-spacing:-0.02em; margin:0 0 16px; max-width:18ch; text-wrap:balance; }
+.lead { color:var(--muted); font-size:18px; max-width:56ch; margin:0 0 28px; }
+.actions { display:flex; flex-wrap:wrap; gap:12px; }
+.facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:56px; }
+.fact { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; }
+.fact h2 { font-size:16px; margin:0 0 6px; }
+.fact p { margin:0; color:var(--muted); font-size:15px; }
+
+/* Documents (privacy, terms) */
+.doc > * { max-width:680px; }  /* keep lines readable, left edge aligned with the header */
+.doc h1 { font-size:clamp(26px,4vw,34px); max-width:none; margin-bottom:6px; }
+.doc h2 { font-size:18px; margin:30px 0 6px; }
+.doc .meta { color:var(--muted); font-size:14px; margin:0 0 20px; }
+.doc p, .doc li { color:var(--muted); }
+.doc ul { padding-left:20px; display:grid; gap:6px; }

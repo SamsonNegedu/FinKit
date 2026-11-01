@@ -2,22 +2,28 @@
 
 Do these in order. Steps marked **you** need your accounts; the rest is already in the repo.
 
-## 1. Make the public pages reachable (you)
+## 1. Public site, protected app (you)
 
-Enable Banking's form requires a Privacy URL and a Terms URL, and its reviewers must be able to open them without logging in.
+The site has two parts. The landing page at `/`, plus `/privacy.html` and `/terms.html`, are public: Enable Banking's reviewers must be able to open them without logging in. The app itself lives at `/app/` and the API at `/api/`, and both stay behind Cloudflare Access.
 
 1. Deploy the latest images: on the Pi run `./deploy.sh`.
-2. In Cloudflare Zero Trust, add a **Bypass** rule for exactly these two paths:
-   - Access, Applications, Add an application, Self-hosted
-   - Hostname: your FinKit domain. Paths: `/privacy.html` and `/terms.html`
-   - Policy: action **Bypass**, include **Everyone**
-   - (Labels can differ slightly in the dashboard. The more specific path takes precedence over the main app.)
-3. Check from a logged-out context (private window or `curl`):
+2. In Cloudflare Zero Trust, change the existing Access application so it protects only the app and the API:
+   - Access, Applications, your FinKit application, Edit
+   - Hostname: your FinKit domain. Add two paths: `/app` (also covers `/app/*`) and `/api`
+   - Remove any rule that covers the whole hostname. Keep your existing "only my email" policy on these two paths.
+   - Everything else (`/`, `/privacy.html`, `/terms.html`) is then public.
+   - (Labels can differ slightly in the dashboard. If paths are entered as separate applications, create one for `/app` and one for `/api`, each with the same policy.)
+3. Check from a logged-out context (private window or `curl`). Public pages must return `200`; protected ones must redirect to Cloudflare's login:
    ```
-   curl -sI https://YOUR-DOMAIN/privacy.html | head -1   # expect: HTTP/2 200
-   curl -sI https://YOUR-DOMAIN/terms.html   | head -1   # expect: HTTP/2 200
+   curl -sI https://YOUR-DOMAIN/            | head -1   # expect: HTTP/2 200
+   curl -sI https://YOUR-DOMAIN/privacy.html | head -1  # expect: HTTP/2 200
+   curl -sI https://YOUR-DOMAIN/terms.html   | head -1  # expect: HTTP/2 200
+   curl -sI https://YOUR-DOMAIN/app/         | head -1  # expect: HTTP/2 302 (login)
+   curl -sI https://YOUR-DOMAIN/api/health   | head -1  # expect: HTTP/2 302 (login)
    ```
-   A `302` to `cloudflareaccess.com` means the bypass isn't applied yet.
+   If `/api/health` returns `200` or JSON, the API is unprotected. Fix that before anything else.
+
+The old address `/` used to be the app. Bookmarks should now point to `/app/`.
 
 ## 2. Generate the signing key (you)
 

@@ -96,11 +96,9 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
   return (
     <div className="max-w-2xl mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-white mb-3">
-          Analyse Your Transactions
-        </h2>
-        <p className="text-midnight-300">
-          Upload your bank export. Large files? No problem - filter by date on import.
+        <h2 className="text-2xl font-semibold text-white mb-2">Add transactions</h2>
+        <p className="text-midnight-400 text-sm">
+          Drop a bank export. You can filter by date as you import.
         </p>
       </div>
 
@@ -242,10 +240,10 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
 
       {!isLoading && (
         <div className="mt-6 text-center">
-          <p className="text-sm text-midnight-400">No bank export handy?</p>
+          <p className="text-xs text-midnight-500">No export handy?</p>
           <button
             onClick={() => onFileUpload(createSampleFile(), { dateFilter: 'all' })}
-            className="mt-2 btn-secondary text-sm"
+            className="mt-2 text-sm text-midnight-300 hover:text-white underline underline-offset-2"
           >
             Try with sample data
           </button>
@@ -257,34 +255,7 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
           <DashboardSkeleton />
         </div>
       )}
-
-      <div className="mt-8 grid grid-cols-3 gap-4">
-        <Feature
-          icon="📅"
-          title="Date Filtering"
-          description="Import only the months you need"
-        />
-        <Feature
-          icon="⚡"
-          title="Smart Categories"
-          description="Auto-categorizes based on merchant patterns"
-        />
-        <Feature
-          icon="📊"
-          title="Visual Analytics"
-          description="Charts, trends, and spending breakdowns"
-        />
-      </div>
     </div>
   )
 }
 
-function Feature({ icon, title, description }: { icon: string; title: string; description: string }) {
-  return (
-    <div className="p-4 bg-midnight-900/50 rounded-xl border border-midnight-800">
-      <span className="text-2xl">{icon}</span>
-      <h3 className="font-medium text-white mt-2">{title}</h3>
-      <p className="text-sm text-midnight-400 mt-1">{description}</p>
-    </div>
-  )
-}
