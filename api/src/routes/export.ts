@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { exportToSheets, verifySheetStructure, getSheetMetadata } from '../services/sheets'
+import { exportToSheets, getSheetLayout, getSheetMetadata } from '../services/sheets'
 
 const exportRoute = new Hono()
 
@@ -19,6 +19,9 @@ const ExportRequestSchema = z.object({
   savings: z.number().optional(),
   investment: z.number().optional(),
   constantColumns: z.array(z.string()).optional(),
+  incomeColumn: z.string().optional(),
+  savingsColumn: z.string().optional(),
+  investmentColumn: z.string().optional(),
 })
 
 // Export data to Google Sheets
@@ -44,8 +47,8 @@ exportRoute.post('/sheets', async (c) => {
   }
 })
 
-// Verify sheet structure matches expected format
-exportRoute.post('/verify', async (c) => {
+// Read the sheet's header row so the app mirrors the real column layout
+exportRoute.post('/sheets/layout', async (c) => {
   try {
     const body = await c.req.json()
     const { sheetId, tabName } = body
@@ -54,15 +57,12 @@ exportRoute.post('/verify', async (c) => {
       return c.json({ error: 'Missing sheetId or tabName' }, 400)
     }
 
-    const result = await verifySheetStructure(sheetId, tabName)
+    const result = await getSheetLayout(sheetId, tabName)
     
-    return c.json({ 
-      success: true, 
-      data: result 
-    })
+    return c.json({ success: true, data: result })
   } catch (error) {
-    console.error('Verify error:', error)
-    const message = error instanceof Error ? error.message : 'Failed to verify sheet structure'
+    console.error('Layout error:', error)
+    const message = error instanceof Error ? error.message : 'Failed to read sheet layout'
     return c.json({ error: message }, 500)
   }
 })

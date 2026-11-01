@@ -12,8 +12,10 @@ const app = new Hono()
 // Middleware
 app.use('*', logger())
 app.use('*', cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? '*'  // Allow all origins in production
+  // In production, set ALLOWED_ORIGIN (e.g. https://finkit.example.com) to lock this down.
+  // Unset keeps the old behaviour (any origin), which is fine behind Cloudflare Access.
+  origin: process.env.NODE_ENV === 'production'
+    ? (process.env.ALLOWED_ORIGIN || '*')
     : ['http://localhost:5173', 'http://localhost:3000'],
   allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type'],

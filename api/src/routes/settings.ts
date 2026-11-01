@@ -15,6 +15,13 @@ const CategoryMappingSchema = z.object({
   sheetColumn: z.string(),
 })
 
+// Column layout read from the sheet's header row (source of truth when present)
+const SheetColumnSchema = z.object({
+  column: z.string(),
+  name: z.string(),
+  kind: z.enum(['month', 'category', 'total', 'income', 'incomeAfter', 'savings', 'investment', 'net', 'other']),
+})
+
 // Default category mappings matching your Google Sheet structure
 const DEFAULT_CATEGORY_MAPPINGS = [
   { appCategory: 'Rent', sheetColumn: 'B' },
@@ -49,6 +56,10 @@ const SheetConfigSchema = z.object({
   incomeColumn: z.string().default('T'),
   savingsColumn: z.string().default('V'),
   investmentColumn: z.string().default('W'),
+  // Synced from the sheet; undefined until the first sync
+  layout: z.array(SheetColumnSchema).optional(),
+  headerRow: z.number().optional(),
+  layoutSyncedAt: z.number().optional(),
 })
 
 // Infer the type from schema

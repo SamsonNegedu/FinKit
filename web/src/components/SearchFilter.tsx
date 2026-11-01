@@ -1,7 +1,7 @@
 import { Search, X, Calendar, ChevronDown } from 'lucide-react'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { DateRange, Transaction } from '../types'
-import { AVAILABLE_CATEGORIES } from '../lib/categorizer'
+import { getAvailableCategories } from '../lib/categorizer'
 
 // Helper function to set a date to end of day (23:59:59.999) to include all transactions on that day
 function setEndOfDay(date: Date): Date {
@@ -269,7 +269,7 @@ export default function SearchFilter({
                             >
                                 Clear All
                             </button>
-                            {AVAILABLE_CATEGORIES.filter(c => c !== 'Transfer').map((category) => (
+                            {getAvailableCategories().filter(c => c !== 'Transfer').map((category) => (
                                 <label
                                     key={category}
                                     className="flex items-center gap-3 px-4 py-2 hover:bg-midnight-700 cursor-pointer"

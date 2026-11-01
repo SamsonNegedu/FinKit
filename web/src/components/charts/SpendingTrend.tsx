@@ -1,20 +1,12 @@
 import { useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts'
 import { Transaction, DateRange } from '../../types'
+import { formatCurrency } from '../../lib/format'
 
 interface SpendingTrendProps {
   transactions: Transaction[]
   dateRange: DateRange | null
   currency: string
-}
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
 }
 
 export default function SpendingTrend({ transactions, dateRange, currency }: SpendingTrendProps) {

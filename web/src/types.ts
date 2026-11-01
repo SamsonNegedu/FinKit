@@ -23,6 +23,10 @@ export interface Transaction extends RawTransaction {
   isExcluded?: boolean;
   categorySource?: 'rule' | 'ai' | 'manual' | 'learned';
   doubleBookingMatch?: string; // ID of the matching transaction in a double-booking pair
+  displayName?: string;        // user-chosen merchant name (grouping and learning still use the original)
+  splitOf?: string;            // id of the transaction this one was split from
+  originalAmount?: number;     // amount before currency conversion
+  originalCurrency?: string;   // currency before conversion
 }
 
 // Anonymization types
@@ -43,6 +47,16 @@ export interface CategoryMapping {
   sheetColumn: string;
 }
 
+// One column of the Google Sheet, in sheet order
+export type SheetColumnKind =
+  | 'month' | 'category' | 'total' | 'income' | 'incomeAfter' | 'savings' | 'investment' | 'net' | 'other';
+
+export interface SheetColumn {
+  column: string; // letter, e.g. "P"
+  name: string;   // header text exactly as in the sheet
+  kind: SheetColumnKind;
+}
+
 // Sheet configuration
 export interface SheetConfig {
   sheetId: string;
@@ -55,6 +69,10 @@ export interface SheetConfig {
   incomeColumn?: string;    // Default: T
   savingsColumn?: string;   // Default: V
   investmentColumn?: string; // Default: W
+  // Mirrors the sheet's header row. Synced from the sheet; falls back to a built-in default.
+  layout?: SheetColumn[];
+  headerRow?: number;
+  layoutSyncedAt?: number;
 }
 
 // Analytics types
@@ -82,10 +100,3 @@ export interface DateRange {
   endDate: Date;
 }
 
-// Export preview
-export interface ExportPreviewData {
-  month: string;
-  columns: { name: string; value: number; isConstant: boolean }[];
-  totalExpenditure: number;
-  income: number;
-}

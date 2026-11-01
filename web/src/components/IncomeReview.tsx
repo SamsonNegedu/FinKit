@@ -1,19 +1,12 @@
 import { useState } from 'react'
 import { Transaction } from '../types'
 import { ArrowLeftRight, Check, X, Eye, EyeOff, TrendingUp } from 'lucide-react'
+import { formatCurrency } from '../lib/format'
 
 interface IncomeReviewProps {
   transactions: Transaction[]
   onUpdateTransaction: (id: string, updates: Partial<Transaction>) => void
   currency: string
-}
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount)
 }
 
 function formatDate(date: string): string {

@@ -15,6 +15,9 @@ interface ExportData {
   savings?: number;
   investment?: number;
   constantColumns?: string[];
+  incomeColumn?: string;
+  savingsColumn?: string;
+  investmentColumn?: string;
 }
 
 interface ExportResult {
@@ -23,33 +26,11 @@ interface ExportResult {
   rowNumber: number;
 }
 
-// Sheet column mapping (matching user's sheet structure)
-const SHEET_COLUMNS = {
-  MONTH: 'A',
-  RENT: 'B',
-  EATING_OUT: 'C',
-  PERSONAL_ENTERTAINMENT: 'D',
-  SUBSCRIPTIONS: 'E',
-  CAR: 'F',
-  PUBLIC_TRANSPORT: 'G',
-  INTERNET: 'H',
-  ELECTRICITY: 'I',
-  INSURANCE: 'J',
-  TRAVEL: 'K',
-  GROCERIES: 'L',
-  FAMILY: 'M',
-  RADIO_TAX: 'N',
-  HEALTH_WELLBEING: 'O',
-  SHOPPING: 'P',
-  OTHER: 'Q',
-  GIFTS: 'R',
-  TOTAL_EXPENDITURE: 'S',  // Formula - don't overwrite
-  INCOME: 'T',
-  INCOME_AFTER_EXPENDITURE: 'U',  // Formula - don't overwrite
-  GROSS_SAVINGS: 'V',
-  GROSS_INVESTMENT: 'W',
-  NET_INCOME: 'X',  // Formula - don't overwrite
-};
+// Fallbacks used only when the caller doesn't say which columns hold these values.
+// Category columns are never hardcoded: they come from the request (read from the sheet header row).
+const DEFAULT_INCOME_COLUMN = 'T';
+const DEFAULT_SAVINGS_COLUMN = 'V';
+const DEFAULT_INVESTMENT_COLUMN = 'W';
 
 async function getAuthClient() {
   const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
@@ -122,7 +103,7 @@ export async function exportToSheets(data: ExportData): Promise<ExportResult> {
   const updateData: sheets_v4.Schema$ValueRange[] = [];
   const constantCols = new Set(data.constantColumns || ['S', 'U', 'X']); // Default: skip formula columns
 
-  // Add category values (B-R)
+  // Category values (columns come from the sheet's header row)
   for (const { column, value } of data.categoryValues) {
     // Skip constant/formula columns
     if (constantCols.has(column)) {
@@ -135,26 +116,27 @@ export async function exportToSheets(data: ExportData): Promise<ExportResult> {
     });
   }
 
-  // Add Income to column T (not S!)
-  if (!constantCols.has('T')) {
+  const incomeColumn = data.incomeColumn || DEFAULT_INCOME_COLUMN;
+  const savingsColumn = data.savingsColumn || DEFAULT_SAVINGS_COLUMN;
+  const investmentColumn = data.investmentColumn || DEFAULT_INVESTMENT_COLUMN;
+
+  if (!constantCols.has(incomeColumn)) {
     updateData.push({
-      range: `${data.tabName}!${SHEET_COLUMNS.INCOME}${rowNumber}`,
+      range: `${data.tabName}!${incomeColumn}${rowNumber}`,
       values: [[data.income]],
     });
   }
 
-  // Add Gross Savings to column V if provided
-  if (data.savings !== undefined && !constantCols.has('V')) {
+  if (data.savings !== undefined && !constantCols.has(savingsColumn)) {
     updateData.push({
-      range: `${data.tabName}!${SHEET_COLUMNS.GROSS_SAVINGS}${rowNumber}`,
+      range: `${data.tabName}!${savingsColumn}${rowNumber}`,
       values: [[data.savings]],
     });
   }
 
-  // Add Gross Investment to column W if provided
-  if (data.investment !== undefined && !constantCols.has('W')) {
+  if (data.investment !== undefined && !constantCols.has(investmentColumn)) {
     updateData.push({
-      range: `${data.tabName}!${SHEET_COLUMNS.GROSS_INVESTMENT}${rowNumber}`,
+      range: `${data.tabName}!${investmentColumn}${rowNumber}`,
       values: [[data.investment]],
     });
   }
@@ -200,43 +182,66 @@ export async function getSheetMetadata(sheetId: string) {
   };
 }
 
-// Verify sheet structure matches expected format
-export async function verifySheetStructure(sheetId: string, tabName: string): Promise<{
-  valid: boolean;
-  headers: string[];
-  issues: string[];
-}> {
+function columnLetter(index: number): string {
+  let n = index + 1;
+  let out = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+function normalizeHeader(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+export interface SheetHeaderColumn {
+  column: string;
+  name: string;
+}
+
+export interface SheetLayoutResult {
+  headerRow: number; // 1-indexed
+  columns: SheetHeaderColumn[];
+}
+
+/**
+ * Read the header row of a tab so the app can mirror the sheet instead of hardcoding columns.
+ * Sheets often have a banner above the headers ("ACTUAL EXPENSES"), so we look through the
+ * first rows for the one that contains "Total Expenditure", falling back to the fullest row.
+ */
+export async function getSheetLayout(sheetId: string, tabName: string): Promise<SheetLayoutResult> {
   const authClient = await getAuthClient();
   const sheets = google.sheets({ version: 'v4', auth: authClient as any });
 
+  const quotedTab = `'${tabName.replace(/'/g, "''")}'`;
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetId,
-    range: `${tabName}!A1:X1`,
+    range: `${quotedTab}!A1:ZZ10`,
   });
 
-  const headers = (response.data.values?.[0] || []).map((h: string) => h?.toString() || '');
-  const issues: string[] = [];
-
-  const expectedHeaders = [
-    'Month', 'Rent', 'Eating Out', 'Personal Entertainment', 'Subscriptions',
-    'Car', 'Public Transport', 'Internet', 'Electricity', 'Insurance',
-    'Travel', 'Groceries', 'Family', 'Radio Tax', 'Health & Wellbeing',
-    'Shopping', 'Other', 'Gifts', 'Total Expenditure', 'Income',
-    'Income After Expenditure', 'Gross Savings', 'Gross Investment', 'Net Income'
-  ];
-
-  for (let i = 0; i < expectedHeaders.length; i++) {
-    const expected = expectedHeaders[i].toLowerCase();
-    const actual = headers[i]?.toLowerCase() || '';
-    
-    if (!actual.includes(expected.split(' ')[0])) {
-      issues.push(`Column ${String.fromCharCode(65 + i)}: expected "${expectedHeaders[i]}", found "${headers[i] || '(empty)'}"`);
-    }
+  const rows = (response.data.values || []).map(r => r.map((c: unknown) => (c ?? '').toString().trim()));
+  if (rows.length === 0) {
+    throw new Error(`Tab "${tabName}" is empty.`);
   }
 
-  return {
-    valid: issues.length === 0,
-    headers,
-    issues,
-  };
+  let headerIndex = rows.findIndex(r => r.some(c => normalizeHeader(c) === 'totalexpenditure'));
+  if (headerIndex === -1) {
+    let best = -1;
+    rows.forEach((r, i) => {
+      const filled = r.filter(Boolean).length;
+      if (filled > best) {
+        best = filled;
+        headerIndex = i;
+      }
+    });
+  }
+
+  const columns = rows[headerIndex]
+    .map((name, i) => ({ column: columnLetter(i), name }))
+    .filter(c => c.name);
+
+  return { headerRow: headerIndex + 1, columns };
 }

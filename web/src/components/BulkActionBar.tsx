@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, ChevronDown, Tag, EyeOff, Eye } from 'lucide-react'
-import { AVAILABLE_CATEGORIES, CATEGORY_COLORS } from '../lib/categorizer'
+import { getAvailableCategories, getCategoryColor } from '../lib/categorizer'
 
 interface BulkActionBarProps {
   selectedCount: number
@@ -52,7 +52,7 @@ export default function BulkActionBar({
 
           {showDropdown && (
             <div className="absolute bottom-full left-0 mb-2 bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl min-w-[200px] max-h-[300px] overflow-y-auto">
-              {AVAILABLE_CATEGORIES.map((category) => (
+              {getAvailableCategories().map((category) => (
                 <button
                   key={category}
                   onClick={() => {
@@ -63,7 +63,7 @@ export default function BulkActionBar({
                 >
                   <span
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: CATEGORY_COLORS[category] }}
+                    style={{ backgroundColor: getCategoryColor(category) }}
                   />
                   <span className="text-sm">{category}</span>
                 </button>

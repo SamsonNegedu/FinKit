@@ -1,4 +1,4 @@
-import { Transaction, SheetConfig, ExportPreviewData } from '../types'
+import { Transaction, SheetConfig } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -18,14 +18,6 @@ interface CategorizeResponse {
     category: string;
     merchant?: string;
   }>;
-}
-
-interface ExportResponse {
-  success: boolean;
-  data: {
-    updatedCells: number;
-    rowNumber: number;
-  };
 }
 
 export async function categorizeWithAI(transactions: Transaction[]): Promise<Transaction[]> {
@@ -66,111 +58,31 @@ export async function categorizeWithAI(transactions: Transaction[]): Promise<Tra
   })
 }
 
-export async function exportToSheets(
-  transactions: Transaction[],
-  config: SheetConfig,
-  month: string
-): Promise<ExportResponse> {
-  // Aggregate transactions by category
-  const categoryTotals = new Map<string, number>()
-  let totalIncome = 0
-  
-  for (const tx of transactions) {
-    if (tx.category === 'Transfer' || tx.isExcluded) continue
-    
-    if (tx.type === 'income') {
-      totalIncome += tx.amount
-    } else {
-      const sheetColumn = config.categoryMappings.find(
-        m => m.appCategory === tx.category
-      )?.sheetColumn
-      
-      if (sheetColumn) {
-        categoryTotals.set(
-          sheetColumn,
-          (categoryTotals.get(sheetColumn) || 0) + tx.amount
-        )
-      }
-    }
-  }
-  
-  const categoryValues = Array.from(categoryTotals.entries()).map(([column, value]) => ({
-    column,
-    value: Math.round(value * 100) / 100,
-  }))
-  
-  const response = await fetch(`${API_BASE}/export/sheets`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      sheetId: config.sheetId,
-      tabName: config.tabName,
-      month,
-      monthFormat: config.monthFormat,
-      categoryValues,
-      income: Math.round(totalIncome * 100) / 100,
-      constantColumns: config.constantColumns,
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to export to Google Sheets')
-  }
-
-  return response.json()
+export interface SheetHeaderColumn {
+  column: string
+  name: string
 }
 
-export function generateExportPreview(
-  transactions: Transaction[],
-  config: SheetConfig,
-  month: string
-): ExportPreviewData {
-  const categoryTotals = new Map<string, number>()
-  let totalIncome = 0
-  let totalExpenditure = 0
-  
-  for (const tx of transactions) {
-    if (tx.category === 'Transfer' || tx.isExcluded) continue
-    
-    if (tx.type === 'income') {
-      totalIncome += tx.amount
-    } else {
-      totalExpenditure += tx.amount
-      
-      const sheetColumn = config.categoryMappings.find(
-        m => m.appCategory === tx.category
-      )?.sheetColumn
-      
-      if (sheetColumn) {
-        categoryTotals.set(
-          sheetColumn,
-          (categoryTotals.get(sheetColumn) || 0) + tx.amount
-        )
-      }
-    }
-  }
-  
-  // Build columns array with constant indication
-  const constantSet = new Set(config.constantColumns || [])
-  const columns = config.categoryMappings.map(mapping => ({
-    name: mapping.sheetColumn,
-    value: Math.round((categoryTotals.get(mapping.sheetColumn) || 0) * 100) / 100,
-    isConstant: constantSet.has(mapping.sheetColumn),
-  }))
-  
-  return {
-    month,
-    columns,
-    totalExpenditure: Math.round(totalExpenditure * 100) / 100,
-    income: Math.round(totalIncome * 100) / 100,
-  }
+// Read the header row of a sheet tab (so the app mirrors the sheet instead of hardcoding columns)
+export async function fetchSheetLayout(
+  sheetId: string,
+  tabName: string
+): Promise<{ headerRow: number; columns: SheetHeaderColumn[] }> {
+  const response = await fetch(`${API_BASE}/export/sheets/layout`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ sheetId, tabName }),
+  })
+  const result = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(result.error || 'Failed to read the sheet')
+  return result.data
 }
 
 // ============ Learning API ============
 
 export interface LearnedMapping {
   merchant: string
+  merchantDisplay?: string
   category: string
   confidence: number
 }
@@ -193,31 +105,46 @@ export async function getLearnedMappings(): Promise<LearnedMapping[]> {
 }
 
 // Save a merchant → category mapping (called when user manually recategorizes)
-export async function saveLearnedMapping(merchant: string, category: string): Promise<void> {
+// Returns true when the server confirmed the save
+export async function saveLearnedMapping(merchant: string, category: string): Promise<boolean> {
   try {
-    await fetch(`${API_BASE}/learn/mapping`, {
+    const response = await fetch(`${API_BASE}/learn/mapping`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ merchant, category }),
     })
+    return response.ok
   } catch {
-    // Silently fail - learning is optional
-    console.log('Failed to save learned mapping (API may not be available)')
+    return false
+  }
+}
+
+// Remove a learned mapping (used by undo)
+export async function deleteLearnedMapping(merchant: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/learn/mapping/${encodeURIComponent(merchant)}`, {
+      method: 'DELETE',
+      headers: getHeaders(false),
+    })
+    return response.ok
+  } catch {
+    return false
   }
 }
 
 // Save multiple mappings at once
 export async function saveBatchLearnedMappings(
   mappings: Array<{ merchant: string; category: string }>
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await fetch(`${API_BASE}/learn/mappings/batch`, {
+    const response = await fetch(`${API_BASE}/learn/mappings/batch`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ mappings }),
     })
+    return response.ok
   } catch {
-    console.log('Failed to save batch mappings')
+    return false
   }
 }
 

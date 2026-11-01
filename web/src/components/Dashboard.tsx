@@ -9,7 +9,12 @@ import TopExpenses from './charts/TopExpenses'
 import SettingsPanel from './SettingsPanel'
 import ExportButton from './ExportButton'
 import IncomeReview from './IncomeReview'
-import { CATEGORY_COLORS } from '../lib/categorizer'
+import ReviewQueue, { needsReview } from './ReviewQueue'
+import CurrencyRates from './CurrencyRates'
+import { displayNameOf } from '../lib/aliases'
+import { RateMap } from '../lib/rates'
+import { SplitPart } from '../lib/splits'
+import { getCategoryColor } from '../lib/categorizer'
 
 interface DashboardProps {
   transactions: Transaction[]
@@ -19,9 +24,16 @@ interface DashboardProps {
   onBulkUpdate: (ids: string[], updates: Partial<Transaction>) => void
   sheetConfig: SheetConfig | null
   onSheetConfigChange: (config: SheetConfig | null) => void
+  baseCurrency: string
+  foreignCurrencies: string[]
+  rates: RateMap
+  onRatesChange: (rates: RateMap) => void
+  onSplit: (id: string, parts: SplitPart[]) => void
+  onUnsplit: (parentId: string) => void
+  onRenameMerchant: (merchantKey: string, name: string) => void
 }
 
-type Tab = 'transactions' | 'income' | 'analytics' | 'trends'
+type Tab = 'transactions' | 'review' | 'income' | 'analytics' | 'trends'
 
 export default function Dashboard({
   transactions,
@@ -31,6 +43,13 @@ export default function Dashboard({
   onBulkUpdate,
   sheetConfig,
   onSheetConfigChange,
+  baseCurrency,
+  foreignCurrencies,
+  rates,
+  onRatesChange,
+  onSplit,
+  onUnsplit,
+  onRenameMerchant,
 }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('transactions')
   const [searchQuery, setSearchQuery] = useState('')
@@ -59,7 +78,7 @@ export default function Dashboard({
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
-        const searchableText = `${tx.description} ${tx.merchant || ''} ${tx.category || ''} ${tx.recipient || ''}`.toLowerCase()
+        const searchableText = `${tx.description} ${tx.displayName || ''} ${tx.merchant || ''} ${tx.category || ''} ${tx.recipient || ''}`.toLowerCase()
         if (!searchableText.includes(query)) {
           return false
         }
@@ -99,14 +118,14 @@ export default function Dashboard({
         total: data.total,
         count: data.count,
         percentage: totalExpense > 0 ? (data.total / totalExpense) * 100 : 0,
-        color: CATEGORY_COLORS[category] || '#64748b',
+        color: getCategoryColor(category),
       }))
       .sort((a, b) => b.total - a.total)
 
     // Top merchants
     const merchantMap = new Map<string, { total: number; count: number }>()
     for (const tx of expenses) {
-      const merchant = tx.merchant || tx.recipient || tx.description.slice(0, 20)
+      const merchant = displayNameOf(tx)
       const existing = merchantMap.get(merchant) || { total: 0, count: 0 }
       merchantMap.set(merchant, {
         total: existing.total + tx.amount,
@@ -132,9 +151,9 @@ export default function Dashboard({
       avgDailySpend,
       categorySummary,
       topMerchants,
-      currency: transactions[0]?.currency || 'EUR',
+      currency: baseCurrency,
     }
-  }, [filteredTransactions, dateRange, transactions])
+  }, [filteredTransactions, dateRange, baseCurrency])
 
   const handleSelectAll = () => {
     if (selectedIds.size === filteredTransactions.length) {
@@ -159,8 +178,14 @@ export default function Dashboard({
     setSelectedIds(new Set())
   }
 
+  const reviewCount = useMemo(
+    () => dateFilteredTransactions.filter(tx => tx.category !== 'Transfer' && needsReview(tx)).length,
+    [dateFilteredTransactions]
+  )
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'transactions', label: 'Transactions' },
+    { id: 'review', label: reviewCount > 0 ? `Review (${reviewCount})` : 'Review' },
     { id: 'income', label: 'Income Review' },
     { id: 'analytics', label: 'Analytics' },
     { id: 'trends', label: 'Trends' },
@@ -168,6 +193,8 @@ export default function Dashboard({
 
   return (
     <div className="space-y-6">
+      <CurrencyRates base={baseCurrency} foreign={foreignCurrencies} rates={rates} onChange={onRatesChange} />
+
       {/* Summary Cards */}
       <SummaryCards summary={summary} />
 
@@ -227,8 +254,20 @@ export default function Dashboard({
           onSelectAll={handleSelectAll}
           onUpdateTransaction={onUpdateTransaction}
           onBulkCategoryChange={handleBulkCategoryChange}
+          onSetCategoryForIds={(ids, category) => onBulkUpdate(ids, { category })}
+          onSplit={onSplit}
+          onUnsplit={onUnsplit}
+          onRenameMerchant={onRenameMerchant}
           onBulkExclude={handleBulkExclude}
           onBulkInclude={handleBulkInclude}
+          currency={summary.currency}
+        />
+      )}
+
+      {activeTab === 'review' && (
+        <ReviewQueue
+          transactions={dateFilteredTransactions.filter(tx => tx.category !== 'Transfer')}
+          onBulkUpdate={onBulkUpdate}
           currency={summary.currency}
         />
       )}
@@ -243,8 +282,22 @@ export default function Dashboard({
 
       {activeTab === 'analytics' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <CategoryChart categorySummary={summary.categorySummary} currency={summary.currency} />
-          <TopExpenses topMerchants={summary.topMerchants} currency={summary.currency} />
+          <CategoryChart
+            categorySummary={summary.categorySummary}
+            currency={summary.currency}
+            onSelectCategory={(category) => {
+              setSelectedCategories([category])
+              setActiveTab('transactions')
+            }}
+          />
+          <TopExpenses
+            topMerchants={summary.topMerchants}
+            currency={summary.currency}
+            onSelectMerchant={(merchant) => {
+              setSearchQuery(merchant)
+              setActiveTab('transactions')
+            }}
+          />
         </div>
       )}
 

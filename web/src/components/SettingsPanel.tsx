@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Plus, Trash2, Loader2, RefreshCw } from 'lucide-react'
-import { SheetConfig, CategoryMapping } from '../types'
-import { AVAILABLE_CATEGORIES } from '../lib/categorizer'
+import { SheetConfig, CategoryMapping, SheetColumn } from '../types'
+import { configPartsFromLayout, syncSheetLayout, layoutCategories, layoutFromPaste } from '../lib/sheetLayout'
+import { getAvailableCategories } from '../lib/categorizer'
 import { getSheetConfig, saveSheetConfig } from '../lib/api'
+import RulesManager from './RulesManager'
 
 interface SettingsPanelProps {
   config: SheetConfig | null
@@ -53,6 +55,13 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
   const [loadingTabs, setLoadingTabs] = useState(false)
   const [sheetError, setSheetError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [layout, setLayout] = useState<SheetColumn[] | undefined>(config?.layout)
+  const [headerRow, setHeaderRow] = useState<number | undefined>(config?.headerRow)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState('')
+  const [tab, setTab] = useState<'sheet' | 'columns' | 'rules'>('sheet')
+  const [pasteText, setPasteText] = useState('')
+  const [pasteStart, setPasteStart] = useState('A')
   const [loading, setLoading] = useState(!config) // Load from API if no config passed
   const hasFetched = useRef(false)
 
@@ -68,6 +77,8 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
           setMonthFormat(serverConfig.monthFormat || 'short')
           setMappings(serverConfig.categoryMappings || DEFAULT_MAPPINGS)
           setConstantColumns(serverConfig.constantColumns || DEFAULT_CONSTANTS)
+          setLayout(serverConfig.layout)
+          setHeaderRow(serverConfig.headerRow)
         }
         setLoading(false)
       })
@@ -133,8 +144,52 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
     }
   }
 
+  // Paste your sheet's header row (no API access or credentials needed)
+  const handleApplyPaste = () => {
+    const result = layoutFromPaste(pasteText, pasteStart)
+    if (!result) {
+      setSyncMessage('')
+      setSheetError("Couldn't find a header row. Copy the cells of your header row in Google Sheets and paste them here.")
+      return
+    }
+    const parts = configPartsFromLayout(result.layout)
+    setLayout(result.layout)
+    setHeaderRow(undefined)
+    setMappings(parts.categoryMappings)
+    setConstantColumns(parts.constantColumns)
+    setSheetError('')
+    setPasteText('')
+    setSyncMessage(`Applied ${parts.categoryMappings.length} categories from your pasted header row`)
+  }
+
+  // Read the real column layout from the sheet (needs the API to have Google access): categories, order and formula columns follow it
+  const handleSyncLayout = async () => {
+    if (!sheetId || !tabName) {
+      setSheetError('Enter a Sheet ID and tab first')
+      return
+    }
+    setSyncing(true)
+    setSheetError('')
+    setSyncMessage('')
+    try {
+      const synced = await syncSheetLayout({
+        sheetId, tabName, monthFormat, monthColumn: 'A', categoryMappings: mappings, constantColumns,
+      })
+      setLayout(synced.layout)
+      setHeaderRow(synced.headerRow)
+      setMappings(synced.categoryMappings)
+      setConstantColumns(synced.constantColumns)
+      const names = layoutCategories(synced.layout || [])
+      setSyncMessage(`Synced ${names.length} categories from row ${synced.headerRow}`)
+    } catch (err) {
+      setSheetError(err instanceof Error ? err.message : 'Failed to read the sheet')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const handleAddMapping = () => {
-    const unmappedCategories = AVAILABLE_CATEGORIES.filter(
+    const unmappedCategories = getAvailableCategories().filter(
       c => !mappings.find(m => m.appCategory === c) && c !== 'Transfer' && c !== 'Income'
     )
     if (unmappedCategories.length > 0) {
@@ -165,7 +220,12 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
       monthColumn: 'A',
       categoryMappings: mappings.filter(m => m.sheetColumn),
       constantColumns,
+      ...(layout ? { ...configPartsFromLayout(layout), layout, headerRow } : {}),
+      layoutSyncedAt: layout ? Date.now() : undefined,
     }
+    // Keep any manual tweaks to the mapping table over the derived ones
+    newConfig.categoryMappings = mappings.filter(m => m.sheetColumn)
+    newConfig.constantColumns = constantColumns
 
     setSaving(true)
 
@@ -194,6 +254,25 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pt-3 border-b border-midnight-700 shrink-0" role="tablist" aria-label="Settings sections">
+          {([['sheet', 'Google Sheet'], ['columns', 'Columns'], ['rules', 'Learned rules']] as const).map(([id, label]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 -mb-px transition-colors ${
+                tab === id
+                  ? 'border-accent text-white'
+                  : 'border-transparent text-midnight-400 hover:text-midnight-200'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Scrollable content */}
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
           {loading ? (
@@ -203,6 +282,8 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
             </div>
           ) : (
             <>
+              {tab === 'sheet' && (
+              <>
               {/* Sheet Configuration */}
               <section>
                 <h3 className="text-sm font-medium text-midnight-300 mb-3">Google Sheet</h3>
@@ -289,6 +370,62 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
                 </div>
               </section>
 
+              </>
+              )}
+
+              {tab === 'columns' && (
+              <>
+              {/* Match my sheet */}
+              <section className="p-4 bg-midnight-800 rounded-lg space-y-3">
+                <div>
+                  <h3 className="text-sm font-medium text-midnight-200">Match my sheet</h3>
+                  <p className="text-xs text-midnight-400 mt-1">
+                    In Google Sheets, select your header row (Month … Net Income), copy it, and paste it below.
+                    Categories, their order and the preview row will follow your sheet. When you add a column,
+                    paste the row again.
+                  </p>
+                </div>
+                <textarea
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  placeholder="Paste header row here"
+                  rows={2}
+                  className="input w-full text-sm font-mono"
+                />
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-midnight-400 flex items-center gap-2">
+                    First copied cell is in column
+                    <input
+                      type="text"
+                      value={pasteStart}
+                      onChange={(e) => setPasteStart(e.target.value.toUpperCase())}
+                      maxLength={2}
+                      className="input w-14 text-center text-sm py-1"
+                    />
+                  </label>
+                  <button onClick={handleApplyPaste} disabled={!pasteText.trim()} className="btn-primary text-sm ml-auto">
+                    Apply
+                  </button>
+                </div>
+                {syncMessage && <p className="text-xs text-income">{syncMessage}</p>}
+                {!syncMessage && layout && (
+                  <p className="text-xs text-midnight-500">
+                    Using your sheet layout ({layoutCategories(layout).length} categories)
+                  </p>
+                )}
+                <details className="text-xs text-midnight-400">
+                  <summary className="cursor-pointer">Or read it automatically (needs API Google access)</summary>
+                  <button
+                    onClick={handleSyncLayout}
+                    disabled={syncing || !sheetId}
+                    className="btn-secondary text-sm flex items-center gap-2 mt-2"
+                  >
+                    {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    Sync from sheet
+                  </button>
+                </details>
+              </section>
+
               {/* Category Mappings */}
               <section>
                 <div className="flex items-center justify-between mb-3">
@@ -316,7 +453,7 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
                         onChange={(e) => handleMappingChange(index, 'appCategory', e.target.value)}
                         className="input text-sm"
                       >
-                        {AVAILABLE_CATEGORIES.filter(c => c !== 'Transfer' && c !== 'Income').map(cat => (
+                        {getAvailableCategories().filter(c => c !== 'Transfer' && c !== 'Income').map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
@@ -358,6 +495,10 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
                   Default: S (Total Expenditure), T (Income), U-X (calculated columns)
                 </p>
               </section>
+              </>
+              )}
+
+              {tab === 'rules' && <RulesManager />}
             </>
           )}
         </div>
@@ -365,9 +506,9 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
         {/* Footer - fixed */}
         <div className="flex justify-end gap-3 p-6 border-t border-midnight-700 shrink-0 bg-midnight-900">
           <button onClick={onClose} className="btn-secondary" disabled={saving}>
-            Cancel
+            {tab === 'rules' ? 'Close' : 'Cancel'}
           </button>
-          <button onClick={handleSave} className="btn-primary flex items-center gap-2" disabled={saving || loading}>
+          {tab !== 'rules' && <button onClick={handleSave} className="btn-primary flex items-center gap-2" disabled={saving || loading}>
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -376,7 +517,7 @@ export default function SettingsPanel({ config, onSave, onClose }: SettingsPanel
             ) : (
               'Save Settings'
             )}
-          </button>
+          </button>}
         </div>
       </div>
     </div>

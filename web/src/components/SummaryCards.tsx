@@ -1,17 +1,9 @@
 import { TrendingUp, TrendingDown, Wallet, CalendarDays } from 'lucide-react'
 import { AnalysisSummary } from '../types'
+import { formatCurrency } from '../lib/format'
 
 interface SummaryCardsProps {
   summary: AnalysisSummary
-}
-
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount)
 }
 
 export default function SummaryCards({ summary }: SummaryCardsProps) {

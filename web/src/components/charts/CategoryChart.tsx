@@ -1,21 +1,18 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { CategorySummary } from '../../types'
+import { formatCurrency } from '../../lib/format'
 
 interface CategoryChartProps {
   categorySummary: CategorySummary[]
   currency: string
+  onSelectCategory?: (category: string) => void
 }
 
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-export default function CategoryChart({ categorySummary, currency }: CategoryChartProps) {
+export default function CategoryChart({ categorySummary, currency, onSelectCategory }: CategoryChartProps) {
+  // The grouped "Other (n categories)" slice isn't a real category, so it isn't clickable
+  const select = (category: string) => {
+    if (onSelectCategory && !category.startsWith('Other (')) onSelectCategory(category)
+  }
   // Take top 8 categories and group rest as "Other"
   const topCategories = categorySummary.slice(0, 8)
   const otherCategories = categorySummary.slice(8)
@@ -67,6 +64,8 @@ export default function CategoryChart({ categorySummary, currency }: CategoryCha
                 paddingAngle={2}
                 dataKey="total"
                 nameKey="category"
+                onClick={(entry: any) => select(entry.category)}
+                cursor={onSelectCategory ? 'pointer' : undefined}
               >
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
@@ -85,14 +84,19 @@ export default function CategoryChart({ categorySummary, currency }: CategoryCha
       {/* Legend */}
       <div className="mt-4 grid grid-cols-2 gap-2">
         {data.slice(0, 6).map((item) => (
-          <div key={item.category} className="flex items-center gap-2">
+          <button
+            key={item.category}
+            onClick={() => select(item.category)}
+            className="flex items-center gap-2 text-left hover:bg-midnight-800 rounded px-1 -mx-1"
+            title={onSelectCategory ? `Show ${item.category} transactions` : undefined}
+          >
             <span
               className="w-3 h-3 rounded-full flex-shrink-0"
               style={{ backgroundColor: item.color }}
             />
             <span className="text-sm text-midnight-300 truncate">{item.category}</span>
             <span className="text-sm text-midnight-500 ml-auto">{item.percentage.toFixed(0)}%</span>
-          </div>
+          </button>
         ))}
       </div>
     </div>

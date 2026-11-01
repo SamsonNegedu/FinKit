@@ -1,17 +1,11 @@
+import { formatCurrency } from '../../lib/format'
 interface TopExpensesProps {
   topMerchants: { merchant: string; total: number; count: number }[]
   currency: string
+  onSelectMerchant?: (merchant: string) => void
 }
 
-function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
-
-export default function TopExpenses({ topMerchants, currency }: TopExpensesProps) {
+export default function TopExpenses({ topMerchants, currency, onSelectMerchant }: TopExpensesProps) {
   const maxTotal = topMerchants[0]?.total || 1
 
   return (
@@ -21,7 +15,12 @@ export default function TopExpenses({ topMerchants, currency }: TopExpensesProps
       {topMerchants.length > 0 ? (
         <div className="space-y-3">
           {topMerchants.slice(0, 8).map((merchant, index) => (
-            <div key={merchant.merchant} className="group">
+            <button
+              key={merchant.merchant}
+              onClick={() => onSelectMerchant?.(merchant.merchant)}
+              className="group block w-full text-left"
+              title={onSelectMerchant ? `Show ${merchant.merchant} transactions` : undefined}
+            >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-3">
                   <span className="w-6 h-6 rounded-lg bg-midnight-700 flex items-center justify-center text-xs font-medium text-midnight-400">
@@ -46,7 +45,7 @@ export default function TopExpenses({ topMerchants, currency }: TopExpensesProps
                   style={{ width: `${(merchant.total / maxTotal) * 100}%` }}
                 />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       ) : (

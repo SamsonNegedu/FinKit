@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { X, Copy, Check } from 'lucide-react'
 import { Transaction, SheetConfig, DateRange } from '../types'
-import { EXPENSE_CATEGORIES, SHEET_COLUMNS } from '../lib/categorizer'
+import { buildSheetRow, getLayout } from '../lib/sheetLayout'
+import { formatCurrency, formatForSheet } from '../lib/format'
 
 interface ExportPreviewProps {
   transactions: Transaction[]
@@ -10,113 +11,83 @@ interface ExportPreviewProps {
   onCancel: () => void
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
-
 // Format for Google Sheets (just the number, no currency symbol)
-function formatForSheet(amount: number): string {
-  return amount.toFixed(2).replace('.', ',') // German decimal format
-}
 
 export default function ExportPreview({
   transactions,
   sheetConfig,
-  dateRange,
   onCancel,
 }: ExportPreviewProps) {
   const [copied, setCopied] = useState(false)
 
-  const previewData = useMemo(() => {
-    // Calculate totals by category
-    const categoryTotals = new Map<string, number>()
-    let totalIncome = 0
-    let grossSavings = 0
-    let grossInvestment = 0
-
+  // One row per calendar month present in the data (a 3-month file gives 3 rows)
+  const months = useMemo(() => {
+    const byMonth = new Map<string, { label: string; txs: Transaction[] }>()
     for (const tx of transactions) {
-      if (tx.isExcluded) continue
-
-      if (tx.type === 'income') {
-        totalIncome += tx.amount
-      } else {
-        const category = tx.category || 'Other'
-
-        // Check for savings/investment categories
-        if (category === 'Savings') {
-          grossSavings += tx.amount
-        } else if (category === 'Investment') {
-          grossInvestment += tx.amount
-        } else if (category !== 'Transfer') {
-          categoryTotals.set(category, (categoryTotals.get(category) || 0) + tx.amount)
-        }
+      const d = new Date(tx.date)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const entry = byMonth.get(key) ?? {
+        label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        txs: [],
       }
+      entry.txs.push(tx)
+      byMonth.set(key, entry)
     }
-
-    // Build row data matching exact sheet structure
-    const rowData: Array<{ column: string; label: string; value: number; isFormula: boolean }> = []
-
-    // Add all expense categories in order (B-R)
-    for (const category of EXPENSE_CATEGORIES) {
-      const column = SHEET_COLUMNS[category]
-      if (column) {
-        rowData.push({
-          column,
-          label: category,
-          value: categoryTotals.get(category) || 0,
-          isFormula: false,
-        })
-      }
-    }
-
-    // Calculate total expenditure (sum of B-R)
-    const totalExpenditure = Array.from(categoryTotals.values()).reduce((sum, v) => sum + v, 0)
-
-    // Add calculated columns
-    const incomeAfterExpenditure = totalIncome - totalExpenditure
-
-    return {
-      categories: rowData,
-      totalExpenditure,
-      income: totalIncome,
-      incomeAfterExpenditure,
-      grossSavings,
-      grossInvestment,
-      netIncome: incomeAfterExpenditure - grossSavings - grossInvestment,
-    }
+    return [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => ({ key, ...v }))
   }, [transactions])
 
-  // Format month like "July 2025"
-  const month = dateRange
-    ? new Date(dateRange.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    : new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const activeMonth = months.find(m => m.key === selectedKey) ?? months[months.length - 1]
+  const month = activeMonth?.label ?? new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
-  // Generate tab-separated row for copying to Google Sheets
-  const generateCopyableRow = () => {
-    const values = [
-      month, // A: Month
-      ...previewData.categories.map(c => formatForSheet(c.value)), // B-R: Categories
-      formatForSheet(previewData.totalExpenditure), // S: Total Expenditure
-      formatForSheet(previewData.income), // T: Income
-      formatForSheet(previewData.incomeAfterExpenditure), // U: Income After Expenditure
-      formatForSheet(previewData.grossSavings), // V: Gross Savings
-      formatForSheet(previewData.grossInvestment), // W: Gross Investment
-      formatForSheet(previewData.netIncome), // X: Net Income
-    ]
-    return values.join('\t')
+  // The row mirrors the sheet's own column order (read from its header row)
+  const layout = getLayout(sheetConfig)
+  const previewData = useMemo(
+    () => buildSheetRow(activeMonth?.txs ?? [], layout, month),
+    [activeMonth, layout, month]
+  )
+  const allRows = useMemo(
+    () => months.map(m => buildSheetRow(m.txs, layout, m.label)),
+    [months, layout]
+  )
+
+  const rowToTsv = (row: ReturnType<typeof buildSheetRow>, label: string) =>
+    row.cells
+      .map(c => (c.kind === 'month' ? label : c.value === null ? '' : formatForSheet(c.value)))
+      .join('\t')
+
+  const [copiedAll, setCopiedAll] = useState(false)
+  const handleCopyAll = async () => {
+    try {
+      await navigator.clipboard.writeText(allRows.map((r, i) => rowToTsv(r, months[i].label)).join('\n'))
+      setCopiedAll(true)
+      setTimeout(() => setCopiedAll(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
   }
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(generateCopyableRow())
+      await navigator.clipboard.writeText(rowToTsv(previewData, month))
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
+    }
+  }
+
+  const cellStyle = (kind: string, value: number | null): string => {
+    if (kind === 'month') return 'bg-midnight-800 text-white'
+    if (value === null) return 'bg-midnight-900 text-midnight-600'
+    switch (kind) {
+      case 'total': return 'bg-expense/20 text-expense'
+      case 'income': return 'bg-income/20 text-income'
+      case 'incomeAfter':
+      case 'net': return value >= 0 ? 'bg-income/20 text-income' : 'bg-expense/20 text-expense'
+      case 'savings': return 'bg-blue-500/20 text-blue-400'
+      case 'investment': return 'bg-cyan-500/20 text-cyan-400'
+      default: return value > 0 ? 'bg-midnight-800 text-white' : 'bg-midnight-800/50 text-midnight-500'
     }
   }
 
@@ -141,81 +112,47 @@ export default function ExportPreview({
             <p className="text-white font-medium">{month}{sheetConfig?.tabName ? ` → ${sheetConfig.tabName}` : ''}</p>
           </div>
 
+          {months.length > 1 && (
+            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Month">
+              {months.map(m => (
+                <button
+                  key={m.key}
+                  role="tab"
+                  aria-selected={m.key === activeMonth?.key}
+                  onClick={() => setSelectedKey(m.key)}
+                  className={`px-3 py-1.5 rounded-lg text-sm ${
+                    m.key === activeMonth?.key ? 'bg-accent text-white' : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Sheet Row Preview - Matching exact format */}
           <div>
             <h3 className="text-sm font-medium text-midnight-300 mb-3">Sheet Row Preview</h3>
             <div className="bg-midnight-950 rounded-lg p-4 overflow-x-auto">
               <div className="inline-flex gap-1 min-w-max">
-                {/* Month Column */}
-                <div className="flex flex-col items-center">
-                  <span className="text-xs text-midnight-500 mb-1">A</span>
-                  <div className="bg-midnight-800 px-3 py-2 rounded text-sm text-white whitespace-nowrap">
-                    {month}
-                  </div>
-                </div>
-
-                {/* Category Columns (B-R) */}
-                {previewData.categories.map(({ column, label, value }) => (
-                  <div key={column} className="flex flex-col items-center">
-                    <span className="text-xs text-midnight-500 mb-1">{column}</span>
+                {previewData.cells.map(cell => (
+                  <div key={cell.column} className="flex flex-col items-center">
+                    <span className="text-xs text-midnight-500 mb-1">{cell.column}</span>
                     <div
-                      className={`px-3 py-2 rounded text-sm whitespace-nowrap ${value > 0 ? 'bg-midnight-800 text-white' : 'bg-midnight-800/50 text-midnight-500'
-                        }`}
-                      title={label}
+                      className={`px-3 py-2 rounded text-sm whitespace-nowrap ${cellStyle(cell.kind, cell.value)}`}
+                      title={cell.label}
                     >
-                      {formatCurrency(value)}
+                      {cell.kind === 'month' ? month : cell.value === null ? '—' : formatCurrency(cell.value)}
                     </div>
+                    <span className="text-[10px] text-midnight-500 mt-1 max-w-[88px] truncate" title={cell.label}>
+                      {cell.label}
+                    </span>
                   </div>
                 ))}
-
-                {/* Calculated Columns */}
-                <div className="flex flex-col items-center">
-                  <span className="text-xs text-midnight-500 mb-1">S</span>
-                  <div className="bg-expense/20 px-3 py-2 rounded text-sm text-expense whitespace-nowrap" title="Total Expenditure">
-                    {formatCurrency(previewData.totalExpenditure)}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <span className="text-xs text-midnight-500 mb-1">T</span>
-                  <div className="bg-income/20 px-3 py-2 rounded text-sm text-income whitespace-nowrap" title="Income">
-                    {formatCurrency(previewData.income)}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <span className="text-xs text-midnight-500 mb-1">U</span>
-                  <div className={`px-3 py-2 rounded text-sm whitespace-nowrap ${previewData.incomeAfterExpenditure >= 0 ? 'bg-income/20 text-income' : 'bg-expense/20 text-expense'
-                    }`} title="Income After Expenditure">
-                    {formatCurrency(previewData.incomeAfterExpenditure)}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <span className="text-xs text-midnight-500 mb-1">V</span>
-                  <div className="bg-blue-500/20 px-3 py-2 rounded text-sm text-blue-400 whitespace-nowrap" title="Gross Savings">
-                    {formatCurrency(previewData.grossSavings)}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <span className="text-xs text-midnight-500 mb-1">W</span>
-                  <div className="bg-cyan-500/20 px-3 py-2 rounded text-sm text-cyan-400 whitespace-nowrap" title="Gross Investment">
-                    {formatCurrency(previewData.grossInvestment)}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <span className="text-xs text-midnight-500 mb-1">X</span>
-                  <div className={`px-3 py-2 rounded text-sm whitespace-nowrap ${previewData.netIncome >= 0 ? 'bg-income/20 text-income' : 'bg-expense/20 text-expense'
-                    }`} title="Net Income">
-                    {formatCurrency(previewData.netIncome)}
-                  </div>
-                </div>
               </div>
             </div>
             <p className="text-xs text-midnight-500 mt-2">
-              Scroll horizontally to see all columns → Categories with €0.00 are dimmed
+              Columns follow your sheet, left to right. Scroll to see all → €0.00 is dimmed, — is a column left untouched
             </p>
           </div>
 
@@ -223,20 +160,31 @@ export default function ExportPreview({
           <div>
             <h3 className="text-sm font-medium text-midnight-300 mb-3">Category Breakdown</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {previewData.categories
-                .filter(c => c.value > 0)
-                .sort((a, b) => b.value - a.value)
+              {previewData.cells
+                .filter(c => c.kind === 'category' && (c.value ?? 0) > 0)
                 .map(({ column, label, value }) => (
                   <div key={column} className="flex items-center justify-between bg-midnight-800 rounded-lg px-3 py-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono text-midnight-500">{column}</span>
                       <span className="text-sm text-white truncate">{label}</span>
                     </div>
-                    <span className="text-sm font-medium text-white">{formatCurrency(value)}</span>
+                    <span className="text-sm font-medium text-white">{formatCurrency(value ?? 0)}</span>
                   </div>
                 ))}
             </div>
           </div>
+
+          {previewData.unmapped.length > 0 && (
+            <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+              <p className="text-sm text-orange-400 font-medium">Not in your sheet (left out of the row)</p>
+              <p className="text-xs text-orange-400/80 mt-1">
+                {previewData.unmapped.map(u => `${u.category} ${formatCurrency(u.total)}`).join(' · ')}
+              </p>
+              <p className="text-xs text-midnight-400 mt-1">
+                Add a column for these in your sheet and sync in Settings, or recategorize them.
+              </p>
+            </div>
+          )}
 
           {/* Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-midnight-700">
@@ -265,9 +213,9 @@ export default function ExportPreview({
           {/* Copy Instructions */}
           <div className="bg-midnight-800 rounded-lg p-4">
             <p className="text-sm text-midnight-300">
-              <strong>How to use:</strong> Click "Copy Row" to copy all values, then paste into your Google Sheet
+              <strong>How to use:</strong> Pick a month, click "Copy Row" (or "Copy all rows" when the file spans several months), then paste into your Google Sheet
               in the row for <span className="text-white">{month}</span>. The data is tab-separated and will
-              fill columns A through X automatically.
+              fill the columns in the same order as your sheet. Columns the app doesn't know about are pasted empty.
             </p>
           </div>
 
@@ -291,6 +239,12 @@ export default function ExportPreview({
             >
               Close
             </button>
+            {months.length > 1 && (
+              <button onClick={handleCopyAll} className="btn-secondary flex items-center gap-2">
+                {copiedAll ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copiedAll ? 'Copied!' : `Copy all ${months.length} rows`}
+              </button>
+            )}
             <button
               onClick={handleCopy}
               className="btn-primary flex items-center gap-2"
@@ -303,7 +257,7 @@ export default function ExportPreview({
               ) : (
                 <>
                   <Copy className="w-4 h-4" />
-                  Copy Row
+                  Copy this row
                 </>
               )}
             </button>

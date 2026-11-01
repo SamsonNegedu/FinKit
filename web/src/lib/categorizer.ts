@@ -83,8 +83,26 @@ export function setLearnedMappings(mappings: Array<{ merchant: string; category:
   console.log(`Loaded ${learnedMappings.size} learned categorizations`)
 }
 
+// Key used to group transactions by merchant (same logic everywhere in the UI)
+export function merchantKeyOf(tx: Pick<Transaction, 'merchant' | 'recipient' | 'description'>): string {
+  return tx.merchant || tx.recipient || tx.description.slice(0, 30)
+}
+
+export function sameMerchant(a: string, b: string): boolean {
+  return normalizeMerchant(a) === normalizeMerchant(b)
+}
+
+// Add/replace/remove a learned mapping locally so re-processing keeps it
+export function setLocalLearnedMapping(merchant: string, category: string | null): string | null {
+  const key = normalizeMerchant(merchant)
+  const previous = learnedMappings.get(key) ?? null
+  if (category) learnedMappings.set(key, category)
+  else learnedMappings.delete(key)
+  return previous
+}
+
 // Normalize merchant name for matching (must match backend normalization)
-function normalizeMerchant(merchant: string): string {
+export function normalizeMerchant(merchant: string): string {
   return merchant.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ')
 }
 
@@ -112,6 +130,11 @@ function getMerchantVariations(text: string): string[] {
   return [...new Set(variations.filter(v => v.length > 2))]
 }
 
+// Whole-word containment: "rewe" matches "rewe markt" but "net" doesn't match "netflix"
+function containsWords(haystack: string, needle: string): boolean {
+  return ` ${haystack} `.includes(` ${needle} `)
+}
+
 // Check if a merchant/description matches any learned mapping with fuzzy matching
 function findLearnedCategory(tx: Transaction): string | null {
   if (learnedMappings.size === 0) return null
@@ -133,7 +156,7 @@ function findLearnedCategory(tx: Transaction): string | null {
   // 3. Fuzzy match - check if any learned merchant is contained in description
   const descNormalized = normalizeMerchant(tx.description)
   for (const [merchant, category] of learnedMappings) {
-    if (descNormalized.includes(merchant) && merchant.length > 3) {
+    if (merchant.length > 3 && containsWords(descNormalized, merchant)) {
       return category
     }
   }
@@ -148,10 +171,7 @@ function findLearnedCategory(tx: Transaction): string | null {
       
       // Also check if any stored merchant is a substring of our variation
       for (const [storedMerchant, category] of learnedMappings) {
-        if (variation.includes(storedMerchant) && storedMerchant.length > 3) {
-          return category
-        }
-        if (storedMerchant.includes(variation) && variation.length > 3) {
+        if (storedMerchant.length > 3 && containsWords(variation, storedMerchant)) {
           return category
         }
       }
@@ -317,45 +337,28 @@ export const EXPENSE_CATEGORIES = [
   'Gifts',
 ] as const
 
-// All available categories for the dropdown (including non-expense)
-export const AVAILABLE_CATEGORIES = [
-  ...EXPENSE_CATEGORIES,
-  'Income',
-  'Savings',
-  'Investment',
-  'Transfer',
-]
+// Non-expense categories that always exist, whatever the sheet looks like
+const SYSTEM_CATEGORIES = ['Income', 'Savings', 'Investment', 'Transfer']
 
-// Sheet column mapping (category -> column letter, assuming Month is A)
-export const SHEET_COLUMNS: Record<string, string> = {
-  'Month': 'A',
-  'Rent': 'B',
-  'Eating Out': 'C',
-  'Personal Entertainment': 'D',
-  'Subscriptions': 'E',
-  'Car': 'F',  // Car(Miles) in sheet
-  'Public Transport': 'G',
-  'Internet': 'H',
-  'Electricity': 'I',
-  'Insurance': 'J',
-  'Travel': 'K',
-  'Groceries': 'L',
-  'Family': 'M',
-  'Radio Tax': 'N',
-  'Health & Wellbeing': 'O',
-  'Shopping': 'P',
-  'Other': 'Q',
-  'Gifts': 'R',
-  'Total Expenditure': 'S',
-  'Income': 'T',
-  'Income After Expenditure': 'U',
-  'Gross Savings': 'V',
-  'Gross Investment': 'W',
-  'Net Income': 'X',
+// Expense categories currently in use. Defaults to the built-in list; replaced with the
+// sheet's own columns once a sheet layout is known (see setExpenseCategories).
+let activeExpenseCategories: string[] = [...EXPENSE_CATEGORIES]
+
+export function setExpenseCategories(names: string[]): void {
+  activeExpenseCategories = names.length > 0 ? [...names] : [...EXPENSE_CATEGORIES]
+}
+
+export function getExpenseCategories(): string[] {
+  return activeExpenseCategories
+}
+
+// All available categories for dropdowns (expense columns from the sheet + system ones)
+export function getAvailableCategories(): string[] {
+  return [...activeExpenseCategories, ...SYSTEM_CATEGORIES.filter(c => !activeExpenseCategories.includes(c))]
 }
 
 // Category colors for charts
-export const CATEGORY_COLORS: Record<string, string> = {
+const CATEGORY_COLORS: Record<string, string> = {
   'Rent': '#8b5cf6',
   'Eating Out': '#f59e0b',
   'Personal Entertainment': '#ec4899',
@@ -377,4 +380,21 @@ export const CATEGORY_COLORS: Record<string, string> = {
   'Savings': '#0ea5e9',
   'Investment': '#0284c7',
   'Transfer': '#94a3b8',
+}
+
+// Known categories keep their color; new sheet columns get a stable generated one
+export function getCategoryColor(category: string | undefined): string {
+  const name = category || 'Other'
+  if (CATEGORY_COLORS[name]) return CATEGORY_COLORS[name]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
+  // Hex (not hsl) because callers append an alpha suffix like `${color}20`
+  const h = hash % 360, sat = 0.65, l = 0.55
+  const a = sat * Math.min(l, 1 - l)
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+    return Math.round(255 * c).toString(16).padStart(2, '0')
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
 }

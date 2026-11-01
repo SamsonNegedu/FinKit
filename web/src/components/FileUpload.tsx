@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react'
 import { Upload, FileSpreadsheet, AlertCircle, Loader2, Calendar } from 'lucide-react'
 import { isFileSupported, getSupportedExtensions } from '../lib/parser'
+import { createSampleFile } from '../lib/sample'
+import DashboardSkeleton from './Skeleton'
 
 export interface ImportOptions {
   dateFilter: 'all' | '1m' | '3m' | '6m' | '1y' | 'custom'
@@ -235,6 +237,24 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
             <p className="text-red-400 font-medium">Failed to parse file</p>
             <p className="text-red-400/70 text-sm mt-1">{error}</p>
           </div>
+        </div>
+      )}
+
+      {!isLoading && (
+        <div className="mt-6 text-center">
+          <p className="text-sm text-midnight-400">No bank export handy?</p>
+          <button
+            onClick={() => onFileUpload(createSampleFile(), { dateFilter: 'all' })}
+            className="mt-2 btn-secondary text-sm"
+          >
+            Try with sample data
+          </button>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="mt-8">
+          <DashboardSkeleton />
         </div>
       )}
 
