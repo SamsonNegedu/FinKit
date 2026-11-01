@@ -1,140 +1,68 @@
 # FinKit
 
-**Self-hosted** personal finance tooling: you run the web app and API on your own machine or server. Import transactions (CSV/XLSX or optional bank sync), categorize them, explore spending, and optionally push summary rows to **your** Google Sheet.
+Self-hosted personal finance tooling. Import transactions (CSV/XLSX or bank sync), categorize them, explore your spending, and optionally push monthly totals to your own Google Sheet.
 
-There is no FinKit cloud, no vendor account, and **no built-in analytics, telemetry, or data collection**. Nothing is sent to the authors of this software unless **you** configure an optional integration below.
+## Privacy
 
-## Privacy & data (short version)
+No FinKit cloud, no accounts, no telemetry. Everything runs on your machine or server.
 
-| Where (all on **your** deployment) | What is kept |
-|--------|----------------|
-| **Your browser** | Parsed transactions from **file import** (never uploaded to the API); optional local session (IndexedDB) if you leave “remember session” on. Optional in-memory anonymization mappings (never persisted). |
-| **Your self-hosted API** (SQLite on **your** server or laptop) | Per-user merchant rules, settings, encrypted bank connection tokens, and (if bank sync is on) **synced bank transactions** on the server—scoped by signed-in user, with descriptive fields encrypted at rest. Disconnecting a bank or using **Stored bank data** on the Banks page removes server-side sync data. |
-| **Nowhere else by default** | No FinKit-operated cloud, no background uploads, crash reports, usage stats, or third-party trackers in the app. |
+- **Browser**: file imports are parsed locally and never uploaded.
+- **Your API** (SQLite on your host): per-user rules, settings, encrypted bank tokens, and synced bank transactions (encrypted at rest). Disconnecting a bank removes its synced data.
+- **Optional outbound calls, only if you enable them**: Google Sheets, Enable Banking (`BANKING_PROVIDER=enablebanking`), and Cloudflare Access as the production login gate.
 
-**Optional outbound connections (you enable these):**
-
-- **Google Sheets** — only when you configure a service account and export from the app; sends the summary row you choose to a spreadsheet you control.
-- **Open Banking (Enable Banking)** — only when `BANKING_PROVIDER=enablebanking`; **your** API talks to Enable Banking and your bank. FinKit never sees your bank password.
-- **Cloudflare Access** — in production, the recommended gate in front of the app; the API verifies Access JWTs itself. Cloudflare’s privacy terms apply to that layer.
-
-See [web/public/privacy.html](./web/public/privacy.html) and [web/public/terms.html](./web/public/terms.html) for the full privacy and terms copy shown on the landing site.
+Full copy: [privacy](./web/public/privacy.html) · [terms](./web/public/terms.html)
 
 ## Features
 
-- **Import**: FinanzGuru CSV/XLSX (client-side); optional Open Banking sync when configured
-- **Multi-user (allowlist)**: `ALLOWED_USER_EMAILS` — each person sees only their rules, settings, banks, and synced data ([details](./docs/users-and-access.md))
-- **Categorization**: Client-side rules, recurring detection, and server-stored merchant rules (learned when you recategorize)
-- **Review & edit**: Inline categories, bulk actions, income and review queues
-- **Analytics**: Trends, category breakdowns, top expenses (computed in the browser from your data)
-- **Export**: Optional push of monthly totals to your Google Sheet
-- **Privacy**: Optional in-browser anonymization of names, IBANs, emails, and similar fields
+- **Import**: FinanzGuru CSV/XLSX, or Open Banking sync
+- **Categorize**: rules, recurring detection, merchant rules learned from your edits
+- **Review**: inline edits, bulk actions, review queues
+- **Analytics**: trends, category breakdowns, top expenses, computed in the browser
+- **Multi-user**: allowlist via `ALLOWED_USER_EMAILS`, each person sees only their own data
+- **Anonymize**: optionally mask names, IBANs and emails in the UI
+- **Export**: monthly totals to Google Sheets
 
-## Prerequisites
+## Quick start
 
-- Node.js 26.13+ (matches Docker `node:26-alpine`; see `.nvmrc`). Nest 12 CLI officially supports the 26.x line.
-- For Sheets export: Google Cloud service account with Sheets API enabled
-- For production deploy: [.env.example](./.env.example) (tunnel, registry, Google credentials, **Cloudflare Access**, **ALLOWED_ORIGIN**, **ALLOWED_USER_EMAILS**)
-- For bank sync: [api/.env.example](./api/.env.example) and [Enable Banking setup](./docs/enable-banking-setup.md)
-
-## Local development
-
-From the repo root (`npm install` once installs root tooling only):
+Needs Node.js 26.13+ (see `.nvmrc`).
 
 ```bash
 npm run install:all   # api + web dependencies
-npm run dev           # API :3003 and web :5173 together
-# or: npm run dev:api | npm run dev:web in separate terminals
+cp api/.env.example api/.env
+npm run dev           # API :3003, web :5173
 ```
 
-Or per package:
-
-```bash
-cd api && npm install && npm run dev    # http://localhost:3003
-cd web && npm install && npm run dev    # http://localhost:5173 — proxies /api → :3003
-```
-
-Open **http://localhost:5173/app/** for the app (landing page is at `/`).
-
-Copy [api/.env.example](./api/.env.example) to `api/.env`. Defaults are enough for local import, categorization, and merchant rules (SQLite under `api/data`). Locally you are `dev@localhost`; use header `X-Dev-User: other@example.com` to simulate another allowlisted user (ignored in production).
-
-### Tests and quality
+Open http://localhost:5173/app/. Locally you are `dev@localhost`; send `X-Dev-User: other@example.com` to act as another allowlisted user (ignored in production).
 
 ```bash
 npm test              # api + web
-npm run check         # oxlint + oxfmt --check in both packages
-npm run lint:fix && npm run format   # auto-fix style (run format after lint:fix)
-npm run build         # production build both packages
+npm run check         # lint + format check
+npm run lint:fix && npm run format
+npm run build
 ```
 
-## Documentation
+## Production
 
-- [Users and access](./docs/users-and-access.md) — Cloudflare Access, allowlist, per-user data, production env requirements
-- [Web frontend architecture](./docs/web-architecture.md) — feature layout, AppState, conventions
-- [Enable Banking setup](./docs/enable-banking-setup.md) — optional open banking configuration
-
-## Production (Docker)
-
-You host the containers; data stays in volumes you control.
-
-1. Copy [.env.example](./.env.example) to `.env` and set at least **`ALLOWED_USER_EMAILS`**, **`CF_ACCESS_TEAM_DOMAIN`**, **`CF_ACCESS_AUD`**, and **`ALLOWED_ORIGIN`** (the API **will not start** in production without Cloudflare Access config and a fixed web origin). See [users and access](./docs/users-and-access.md).
-2. Deploy:
+Copy [.env.example](./.env.example) to `.env`, set `ALLOWED_USER_EMAILS`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD` and `ALLOWED_ORIGIN`, then:
 
 ```bash
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-### Key files (only for bank sync or Google Sheets)
+The API won't start in production without Cloudflare Access config. Details, including key files: [deployment](./docs/deployment.md).
 
-The `.env` values `EB_PRIVATE_KEY_PATH` and `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` are paths **inside** the API container. The compose file mounts the `secrets/` folder next to it, read-only, at `/run/secrets`, so a file at `secrets/enablebanking.pem` on your server is `/run/secrets/enablebanking.pem` for the API.
+## Docs
 
-```bash
-[ -e secrets/enablebanking.pem ] && echo "already exists, not overwriting" || {
-  mkdir -p secrets &&
-  openssl genrsa -out secrets/enablebanking.pem 4096 2>/dev/null &&
-  openssl req -new -x509 -days 1095 -key secrets/enablebanking.pem -out secrets/enablebanking.crt -subj "/C=DE/O=FinKit/CN=finkit" &&
-  chmod 644 secrets/enablebanking.pem secrets/enablebanking.crt &&
-  cat secrets/enablebanking.crt
-}
-```
+- [Deployment](./docs/deployment.md): Docker, secrets, key generation
+- [Users and access](./docs/users-and-access.md): Cloudflare Access, allowlist, per-user data
+- [Enable Banking setup](./docs/enable-banking-setup.md): bank sync
+- [Google Sheets](./docs/google-sheets.md): export setup
+- [Web architecture](./docs/web-architecture.md): frontend layout and conventions
 
-Run it from the folder with `docker-compose.prod.yml`. It creates `secrets/`, generates the Enable Banking signing key there, and prints the certificate to paste into the Enable Banking form. The private key never leaves the server. For Sheets export, save the JSON key Google gives you as `secrets/google-sa.json`. The API runs as a non-root user, hence the `644`.
+## Stack
 
-Then set `EB_PRIVATE_KEY_PATH=/run/secrets/enablebanking.pem` and/or `GOOGLE_SERVICE_ACCOUNT_KEY_PATH=/run/secrets/google-sa.json` in `.env` and restart. The folder is gitignored; copy the files to the server yourself.
-
-API health: `GET /health`. Persistent SQLite data uses the `finkit-api-data` volume on **your** host.
-
-Root [docker-compose.yml](./docker-compose.yml) builds the same web and API images for local or CI use; wire ports or a reverse proxy so the browser can reach the web container and `/api` can reach the API.
-
-## Google Sheets (optional)
-
-Only runs when you set credentials and export from the app:
-
-1. In [Google Cloud Console](https://console.cloud.google.com/), enable the Sheets API and create a service account.
-2. Share **only** the spreadsheet FinKit should use with the service account email (Editor). Export calls pass a spreadsheet id from the app; **narrow sharing on the SA** is what limits where it can write ([users and access — Sheets](./docs/users-and-access.md#google-sheets-export)).
-3. **Local API**: `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` in `api/.env`.
-4. **Docker production**: mount the JSON key as a secret and set `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` in the root `.env` (see [.env.example](./.env.example)).
-5. In **Settings**, set sheet URL/ID, tab name, and category column mappings.
-
-Tab names and column letters are validated before any Google API call. The export expects a monthly summary layout (month row plus category columns and totals).
-
-## Project layout
-
-```
-package.json  Root scripts: dev, build, test, lint, format, check (both packages)
-api/          NestJS API — access control, per-user rules/settings, Sheets export, optional banking
-web/          React + Vite SPA (see docs/web-architecture.md)
-docs/         Architecture and integration guides
-.env.example  Production compose and secrets template
-```
-
-## Tech stack
-
-- **Web**: React 18, Vite, TanStack Router, TanStack Query, TailwindCSS, Recharts
-- **API**: NestJS, SQLite (better-sqlite3), Zod, oxlint/oxfmt
-- **Export**: Google Sheets API (optional)
-- **Auth (production)**: Cloudflare Access JWT verification on the API
+React, Vite, TanStack Router/Query, Tailwind, Recharts · NestJS, SQLite, Zod · Cloudflare Access JWT auth
 
 ## License
 
