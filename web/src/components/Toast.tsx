@@ -18,7 +18,7 @@ function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }
   useEffect(() => {
     const timer = setTimeout(onDismiss, toast.tone === 'error' ? 10000 : 7000)
     return () => clearTimeout(timer)
-  }, [toast.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [toast.id])
 
   const Icon = toast.tone === 'error' ? AlertTriangle : CheckCircle2
   return (

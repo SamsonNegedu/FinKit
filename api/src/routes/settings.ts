@@ -89,7 +89,7 @@ settingsRoute.post('/sheet', async (c) => {
     return c.json({ success: true, message: 'Settings saved' })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return c.json({ success: false, error: error.errors }, 400)
+      return c.json({ success: false, error: error.issues }, 400)
     }
     return c.json({ success: false, error: 'Invalid request' }, 400)
   }

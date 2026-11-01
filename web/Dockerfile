@@ -53,5 +53,7 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
-# Use npx serve (better for multi-arch builds)
-CMD ["npx", "-y", "serve", "-s", "dist", "-l", "3000"]
+# Serve the built files. Routing, security headers and "no directory listings" live in
+# dist/serve.json (from public/serve.json). Don't add -s: it puts a catch-all rewrite first,
+# which would send /app/ to the landing page. The version is pinned so builds can't drift.
+CMD ["npx", "-y", "serve@14.2.6", "dist", "-l", "3000"]

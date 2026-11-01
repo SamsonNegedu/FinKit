@@ -191,7 +191,6 @@ export default function TransactionTable({
       }
     }
     return result.sort((a, b) => b.items.length - a.items.length || a.key.localeCompare(b.key))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, sortField, sortDirection])
 
   // In merchant view, show whole groups until about `limit` rows are on screen

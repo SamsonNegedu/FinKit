@@ -25,6 +25,8 @@ The site has two parts. The landing page at `/`, plus `/privacy.html` and `/term
 
 The old address `/` used to be the app. Bookmarks should now point to `/app/`.
 
+If `/` or `/app/` ever shows an "Index of dist/" folder listing, the web container isn't serving the built files correctly. Check `docker compose -f docker-compose.prod.yml exec finkit-web ls dist` (it must contain `index.html` and `app/index.html`) and `... logs --tail 30 finkit-web`.
+
 ## 2. Generate the signing key (you)
 
 ```

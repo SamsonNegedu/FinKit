@@ -164,7 +164,7 @@ function App() {
   const baseCurrency = useMemo(() => baseCurrencyOf(transactions), [transactions])
   const foreignCurrencies = useMemo(() => foreignCurrenciesOf(transactions, baseCurrency), [transactions, baseCurrency])
   const rates: RateMap = rateStore[baseCurrency] ?? {}
-  const displayTransactions = useMemo(() => applyRates(transactions, baseCurrency, rates), [transactions, baseCurrency, rateStore]) // eslint-disable-line react-hooks/exhaustive-deps
+  const displayTransactions = useMemo(() => applyRates(transactions, baseCurrency, rates), [transactions, baseCurrency, rateStore])
   const handleRatesChange = (next: RateMap) => {
     const store = { ...rateStore, [baseCurrency]: next }
     setRateStore(store)
