@@ -47,6 +47,11 @@ Open **http://localhost:5173/app/** for the app (landing page is at `/`).
 
 Copy [api/.env.example](./api/.env.example) to `api/.env` and adjust optional features. Defaults are enough for import, categorization, and merchant rules (SQLite under `api/data` on your machine).
 
+## Documentation
+
+- [Web frontend architecture](./docs/web-architecture.md) — feature layout, AppState, conventions
+- [Enable Banking setup](./docs/enable-banking-setup.md) — optional open banking configuration
+
 ### Tests
 
 ```bash
@@ -84,7 +89,8 @@ The export expects a monthly summary layout (month row plus category columns and
 
 ```
 api/          NestJS API — merchant rules, settings, Sheets export, optional banking
-web/          React + Vite — parsing, categorization, UI (/ and /app/)
+web/          React + Vite SPA (architecture: docs/web-architecture.md)
+docs/         Architecture notes and integration guides
 example.env   Production compose secrets template
 ```
 

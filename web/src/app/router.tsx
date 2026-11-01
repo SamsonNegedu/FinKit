@@ -1,30 +1,28 @@
 import { QueryClient } from '@tanstack/react-query'
-import { statusQuery } from '../lib/banking-queries'
 import { createRootRouteWithContext, createRoute, createRouter, redirect } from '@tanstack/react-router'
-import AppShell from './AppShell'
+import { statusQuery } from '@/features/banking/hooks/banking-queries'
 import {
   validateBackOfficeSearch,
   validateBanksSearch,
   validateConnectSearch,
-  validateTransactionsSearch,
-} from './search'
-import { AnalyticsPage, TrendsPage } from '../pages/AnalyticsPage'
-import BankDetailPage from '../pages/BankDetailPage'
-import BanksPage from '../pages/BanksPage'
-import ConnectBankPage from '../pages/ConnectBankPage'
-import ExportPage from '../pages/ExportPage'
-import IncomePage from '../pages/IncomePage'
-import MerchantPage from '../pages/MerchantPage'
-import OverviewPage from '../pages/OverviewPage'
-import ReviewPage from '../pages/ReviewPage'
-import SettingsPage from '../pages/SettingsPage'
-import TransactionsPage from '../pages/TransactionsPage'
+} from '@/features/banking/constants/search.constants'
+import { validateTransactionsSearch } from '@/features/transactions/constants/search.constants'
+import OverviewPage from '@/features/overview/routes'
+import ReviewPage from '@/features/review/routes'
+import IncomePage from '@/features/income/routes'
+import ExportPage from '@/features/export/routes'
+import SettingsPage from '@/features/settings/routes'
+import { AnalyticsPage, TrendsPage } from '@/features/analytics/routes'
+import { BanksPage, BankDetailPage, ConnectBankPage } from '@/features/banking/routes'
+import TransactionsPage from '@/features/transactions/routes'
+import MerchantPage from '@/features/transactions/routes/MerchantPage'
+import AppShell from '@/app/shell'
 
 const root = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   component: AppShell,
   notFoundComponent: () => <p className="card text-midnight-300">That page doesn't exist.</p>,
 })
-// Bank pages only exist when banking is switched on; otherwise send people to the overview
+
 const requireBanking = async ({ context }: { context: { queryClient: QueryClient } }) => {
   const status = await context.queryClient.ensureQueryData(statusQuery)
   if (!status.enabled) throw redirect({ to: '/' })
@@ -117,7 +115,6 @@ const routeTree = root.addChildren([
 
 export const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } })
 
-// Plain, readable addresses: ?cat=Groceries&cat=Car&q=lidl (the default would JSON-encode the list)
 const stringifySearch = (search: Record<string, unknown>) => {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(search)) {
