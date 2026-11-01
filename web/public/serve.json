@@ -13,6 +13,50 @@
     {
       "source": "/app/",
       "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/banks",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/banks/**",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/transactions",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/transactions/**",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/review",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/income",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/analytics",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/analytics/**",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/export",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/settings",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/settings/**",
+      "destination": "/app/index.html"
     }
   ],
   "headers": [

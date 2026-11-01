@@ -10,8 +10,15 @@ function cell(value: unknown): string {
 export function transactionsToCsv(transactions: Transaction[]): string {
   const header = ['date', 'type', 'amount', 'currency', 'category', 'merchant', 'recipient', 'description', 'excluded']
   const rows = transactions.map(t => [
-    t.date, t.type, t.type === 'expense' ? -t.amount : t.amount, t.currency,
-    t.category || '', t.merchant || '', t.recipient || '', t.description, t.isExcluded ? 'yes' : '',
+    t.date,
+    t.type,
+    t.type === 'expense' ? -t.amount : t.amount,
+    t.currency,
+    t.category || '',
+    t.merchant || '',
+    t.recipient || '',
+    t.description,
+    t.isExcluded ? 'yes' : '',
   ])
   return [header, ...rows].map(r => r.map(cell).join(',')).join('\n')
 }

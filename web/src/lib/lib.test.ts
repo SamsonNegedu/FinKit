@@ -1,15 +1,28 @@
 import { describe, it, expect } from 'vitest'
 import { Transaction, RawTransaction } from '../types'
 import { recategorize } from './recategorize'
-import { classifyHeaders, layoutFromPaste, buildSheetRow, categoryFromHeader, columnLetter, DEFAULT_LAYOUT } from './sheetLayout'
+import {
+  classifyHeaders,
+  layoutFromPaste,
+  buildSheetRow,
+  categoryFromHeader,
+  columnLetter,
+  DEFAULT_LAYOUT,
+} from './sheetLayout'
 import { mergeWithoutDuplicates } from './dedupe'
 import { assignStableIds } from './ids'
 import { categorizeWithRules, setLearnedMappings } from './categorizer'
 import { transactionsToCsv } from './csv'
+import { inPeriod, summarize } from './summary'
 
 function tx(partial: Partial<Transaction> & { id: string }): Transaction {
   return {
-    date: '2026-10-05', description: 'x', amount: 10, currency: 'EUR', type: 'expense', rawData: {},
+    date: '2026-10-05',
+    description: 'x',
+    amount: 10,
+    currency: 'EUR',
+    type: 'expense',
+    rawData: {},
     ...partial,
   } as Transaction
 }
@@ -42,11 +55,28 @@ describe('recategorize', () => {
 })
 
 describe('sheet layout', () => {
-  const headers = ['Month', 'Rent', 'Car(Miles)', 'Gifts', 'New Macbook', 'Total Expenditure', 'Income', 'Income After Expenditure', 'Gross Savings', 'Gross Investment', 'Net Income']
+  const headers = [
+    'Month',
+    'Rent',
+    'Car(Miles)',
+    'Gifts',
+    'New Macbook',
+    'Total Expenditure',
+    'Income',
+    'Income After Expenditure',
+    'Gross Savings',
+    'Gross Investment',
+    'Net Income',
+  ]
 
   it('treats columns before Total Expenditure as categories, in order', () => {
     const layout = classifyHeaders(headers.map((name, i) => ({ column: columnLetter(i), name })))
-    expect(layout.filter(c => c.kind === 'category').map(c => categoryFromHeader(c.name))).toEqual(['Rent', 'Car', 'Gifts', 'New Macbook'])
+    expect(layout.filter(c => c.kind === 'category').map(c => categoryFromHeader(c.name))).toEqual([
+      'Rent',
+      'Car',
+      'Gifts',
+      'New Macbook',
+    ])
     expect(layout.find(c => c.name === 'Income After Expenditure')!.kind).toBe('incomeAfter')
     expect(layout.find(c => c.name === 'Net Income')!.kind).toBe('net')
   })
@@ -75,7 +105,7 @@ describe('sheet layout', () => {
         tx({ id: 'e', category: 'Rent', amount: 999, isExcluded: true }),
       ],
       layout,
-      'October 2026'
+      'October 2026',
     )
     expect(row.cells.map(c => c.label)).toEqual(headers)
     expect(row.totalExpenditure).toBe(600)
@@ -90,11 +120,22 @@ describe('sheet layout', () => {
 })
 
 describe('dedupe + ids', () => {
-  const raw = (description: string): RawTransaction => ({ date: '2026-10-01', description, amount: -5, currency: 'EUR', rawData: {} })
+  const raw = (description: string): RawTransaction => ({
+    date: '2026-10-01',
+    description,
+    amount: -5,
+    currency: 'EUR',
+    rawData: {},
+  })
 
   it('skips rows already present but keeps genuine repeats', () => {
     const existing = [raw('coffee'), raw('coffee')]
-    const { added, skipped, merged } = mergeWithoutDuplicates(existing, [raw('coffee'), raw('coffee'), raw('coffee'), raw('lunch')])
+    const { added, skipped, merged } = mergeWithoutDuplicates(existing, [
+      raw('coffee'),
+      raw('coffee'),
+      raw('coffee'),
+      raw('lunch'),
+    ])
     expect(skipped).toBe(2)
     expect(added).toBe(2)
     expect(merged).toHaveLength(4)
@@ -112,7 +153,10 @@ describe('dedupe + ids', () => {
 
 describe('learned rule matching', () => {
   it('matches whole words only', () => {
-    setLearnedMappings([{ merchant: 'rewe', category: 'Groceries' }, { merchant: 'amazon prime', category: 'Subscriptions' }])
+    setLearnedMappings([
+      { merchant: 'rewe', category: 'Groceries' },
+      { merchant: 'amazon prime', category: 'Subscriptions' },
+    ])
     const [a, b, c] = categorizeWithRules([
       tx({ id: '1', description: 'REWE Markt 123', merchant: undefined }),
       tx({ id: '2', description: 'Reweaving Studio' }),
@@ -128,7 +172,7 @@ describe('learned rule matching', () => {
 describe('csv', () => {
   it('quotes values and defuses formulas', () => {
     const csv = transactionsToCsv([tx({ id: '1', description: '=HYPERLINK("x")', merchant: 'A, B' })])
-    expect(csv).toContain("\"'=HYPERLINK(\"\"x\"\")\"")
+    expect(csv).toContain('"\'=HYPERLINK(""x"")"')
     expect(csv).toContain('"A, B"')
   })
 })
@@ -139,11 +183,19 @@ import { applyAliases, displayNameOf } from './aliases'
 
 describe('splits', () => {
   const parent = tx({ id: 'p', amount: 100, merchant: 'Amazon', category: 'Shopping' })
-  const parts = [{ amount: 60, category: 'Shopping' }, { amount: 40, category: 'Gifts' }]
+  const parts = [
+    { amount: 60, category: 'Shopping' },
+    { amount: 40, category: 'Gifts' },
+  ]
 
   it('validates that parts add up to the total', () => {
     expect(isValidSplit(100, parts)).toBe(true)
-    expect(isValidSplit(100, [{ amount: 60, category: 'A' }, { amount: 30, category: 'B' }])).toBe(false)
+    expect(
+      isValidSplit(100, [
+        { amount: 60, category: 'A' },
+        { amount: 30, category: 'B' },
+      ]),
+    ).toBe(false)
     expect(isValidSplit(100, [{ amount: 100, category: 'A' }])).toBe(false)
     expect(remaining(100, [{ amount: 33.33, category: 'A' }])).toBe(66.67)
   })
@@ -164,7 +216,11 @@ describe('splits', () => {
 })
 
 describe('exchange rates', () => {
-  const list = [tx({ id: '1', currency: 'EUR' }), tx({ id: '2', currency: 'EUR' }), tx({ id: '3', currency: 'USD', amount: 100 })]
+  const list = [
+    tx({ id: '1', currency: 'EUR' }),
+    tx({ id: '2', currency: 'EUR' }),
+    tx({ id: '3', currency: 'USD', amount: 100 }),
+  ]
 
   it('finds the base and foreign currencies', () => {
     expect(baseCurrencyOf(list)).toBe('EUR')
@@ -180,7 +236,10 @@ describe('exchange rates', () => {
 
 describe('aliases', () => {
   it('sets a display name without changing the merchant', () => {
-    const [t] = applyAliases([tx({ id: '1', merchant: 'AMZN Mktp DE' })], { amzn_mktp_de: 'x', 'amzn mktp de': 'Amazon' })
+    const [t] = applyAliases([tx({ id: '1', merchant: 'AMZN Mktp DE' })], {
+      amzn_mktp_de: 'x',
+      'amzn mktp de': 'Amazon',
+    })
     expect(t.displayName).toBe('Amazon')
     expect(t.merchant).toBe('AMZN Mktp DE')
     expect(displayNameOf(t)).toBe('Amazon')
@@ -195,7 +254,10 @@ import { migrateOldIds, hashKey, rawKey } from './ids'
 describe('split edits survive re-processing', () => {
   it('copies part edits into the stored split', () => {
     const parent = tx({ id: 'p', amount: 100, merchant: 'Amazon', category: 'Shopping' })
-    const parts = [{ amount: 60, category: 'Shopping' }, { amount: 40, category: 'Gifts' }]
+    const parts = [
+      { amount: 60, category: 'Shopping' },
+      { amount: 40, category: 'Gifts' },
+    ]
     const splits = { p: { parent, parts } }
     const shown = applySplits([parent], splits)
     const edited = recategorize(shown, ['p~2'], 'Travel')!.next
@@ -207,9 +269,14 @@ describe('split edits survive re-processing', () => {
 
   it('remembers an excluded part, and leaves untouched splits alone', () => {
     const parent = tx({ id: 'p', amount: 100 })
-    const parts = [{ amount: 60, category: 'A' }, { amount: 40, category: 'B' }]
+    const parts = [
+      { amount: 60, category: 'A' },
+      { amount: 40, category: 'B' },
+    ]
     const splits = { p: { parent, parts } }
-    const shown = applySplits([parent], splits).map(t => (t.id === 'p~2' ? { ...t, isExcluded: true, excludedManually: true } : t))
+    const shown = applySplits([parent], splits).map(t =>
+      t.id === 'p~2' ? { ...t, isExcluded: true, excludedManually: true } : t,
+    )
     const synced = syncSplits(splits, shown)
     expect(synced.p.parts[1].isExcluded).toBe(true)
     expect(applySplits([parent], synced).find(t => t.id === 'p~2')!.isExcluded).toBe(true)
@@ -228,7 +295,12 @@ describe('local dates', () => {
 describe('exchange rate store', () => {
   it('ignores the old flat format and keeps rates per base currency', () => {
     const data: Record<string, string> = {}
-    ;(globalThis as any).localStorage = { getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => { data[k] = v } }
+    ;(globalThis as any).localStorage = {
+      getItem: (k: string) => data[k] ?? null,
+      setItem: (k: string, v: string) => {
+        data[k] = v
+      },
+    }
     data['finkit.rates'] = JSON.stringify({ USD: 0.9 })
     expect(loadRateStore()).toEqual({})
     data['finkit.rates'] = JSON.stringify({ EUR: { USD: 0.9 }, USD: { EUR: 1.1 } })
@@ -243,11 +315,56 @@ describe('old session id migration', () => {
       { date: '2026-10-01', description: 'a', amount: -5, currency: 'EUR', rawData: {} },
       { date: '2026-10-02', description: 'b', amount: -6, currency: 'EUR', rawData: {} },
     ] as RawTransaction[]
-    const old = [tx({ id: 'tx_1761990000000_0' }), tx({ id: 'tx_1761990000000_1', doubleBookingMatch: 'tx_1761990000000_0' })]
+    const old = [
+      tx({ id: 'tx_1761990000000_0' }),
+      tx({ id: 'tx_1761990000000_1', doubleBookingMatch: 'tx_1761990000000_0' }),
+    ]
     const migrated = migrateOldIds(old, raw)
     expect(migrated[0].id).toBe(`tx_${hashKey(rawKey(raw[0]))}_1`)
     expect(migrated[1].doubleBookingMatch).toBe(migrated[0].id)
     // already-new ids are left alone
     expect(migrateOldIds(migrated, raw)).toBe(migrated)
+  })
+})
+
+describe('bank transactions', () => {
+  const bankRow = (externalId: string, description: string): RawTransaction =>
+    ({ date: '2026-10-01', description, amount: -5, currency: 'EUR', externalId, rawData: {} }) as RawTransaction
+
+  it("identifies a row by the bank's own id, even if its text changes", () => {
+    const { added, skipped } = mergeWithoutDuplicates(
+      [bankRow('acc:1', 'Coffee')],
+      [bankRow('acc:1', 'COFFEE SHOP 0042')],
+    )
+    expect([added, skipped]).toEqual([0, 1])
+  })
+  it('keeps rows with different bank ids even when everything else matches', () => {
+    const { added } = mergeWithoutDuplicates([bankRow('acc:1', 'Coffee')], [bankRow('acc:2', 'Coffee')])
+    expect(added).toBe(1)
+  })
+  it('does not confuse a bank id with content-based identity', () => {
+    expect(rawKey(bankRow('x', 'a'))).toBe('ext:x')
+    expect(rawKey({ ...bankRow('x', 'a'), externalId: undefined })).not.toContain('ext:')
+  })
+})
+
+describe('summary', () => {
+  const rows = [
+    tx({ id: 'a', date: '2026-03-02', type: 'expense', amount: 10, category: 'Groceries' }),
+    tx({ id: 'b', date: '2026-03-20', type: 'expense', amount: 5, category: 'Groceries' }),
+    tx({ id: 'c', date: '2026-03-21', type: 'expense', amount: 99, category: 'Transfer' }),
+    tx({ id: 'd', date: '2026-03-22', type: 'income', amount: 100, category: 'Salary' }),
+    tx({ id: 'e', date: '2026-04-01', type: 'expense', amount: 7, category: 'Other' }),
+  ]
+  it('keeps only the chosen period', () => {
+    const range = { startDate: new Date(2026, 2, 1), endDate: new Date(2026, 2, 31) }
+    expect(inPeriod(rows, range).map(t => t.id)).toEqual(['a', 'b', 'c', 'd'])
+    expect(inPeriod(rows, null)).toHaveLength(5)
+  })
+  it('leaves transfers out of the totals', () => {
+    const s = summarize(rows, null, 'EUR')
+    expect(s.totalExpense).toBe(22)
+    expect(s.totalIncome).toBe(100)
+    expect(s.categorySummary[0].category).toBe('Groceries')
   })
 })

@@ -23,7 +23,7 @@ export default function SplitDialog({ transaction, initialParts, onSave, onCance
     initialParts ?? [
       { amount: Math.round(total * 50) / 100, category: transaction.category || 'Other' },
       { amount: Math.round(total * 50) / 100, category: categories.find(c => c !== transaction.category) || 'Other' },
-    ]
+    ],
   )
 
   const left = remaining(total, parts)
@@ -32,11 +32,19 @@ export default function SplitDialog({ transaction, initialParts, onSave, onCance
     setParts(parts.map((p, idx) => (idx === i ? { ...p, ...patch } : p)))
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4" role="dialog" aria-modal="true" aria-labelledby="split-title">
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="split-title"
+    >
       <div className="bg-midnight-900 border border-midnight-700 rounded-2xl shadow-2xl max-w-md w-full p-6">
-        <h3 id="split-title" className="text-lg font-semibold text-white">Split transaction</h3>
+        <h3 id="split-title" className="text-lg font-semibold text-white">
+          Split transaction
+        </h3>
         <p className="text-sm text-midnight-400 mt-1 truncate">
-          {transaction.displayName || transaction.merchant || transaction.recipient || transaction.description} · {formatCurrency(total, currency)}
+          {transaction.displayName || transaction.merchant || transaction.recipient || transaction.description} ·{' '}
+          {formatCurrency(total, currency)}
         </p>
 
         <div className="mt-4 space-y-2">
@@ -47,18 +55,20 @@ export default function SplitDialog({ transaction, initialParts, onSave, onCance
                 step="0.01"
                 min="0"
                 value={part.amount || ''}
-                onChange={(e) => update(i, { amount: parseFloat(e.target.value) || 0 })}
+                onChange={e => update(i, { amount: parseFloat(e.target.value) || 0 })}
                 className="input py-1.5 text-sm"
                 aria-label={`Amount for part ${i + 1}`}
               />
               <select
                 value={part.category}
-                onChange={(e) => update(i, { category: e.target.value })}
+                onChange={e => update(i, { category: e.target.value })}
                 className="input py-1.5 text-sm"
                 aria-label={`Category for part ${i + 1}`}
               >
                 {categories.map(c => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
               </select>
               <button
@@ -86,7 +96,9 @@ export default function SplitDialog({ transaction, initialParts, onSave, onCance
         </div>
 
         <div className="flex gap-3 mt-6">
-          <button className="flex-1 btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="flex-1 btn-secondary" onClick={onCancel}>
+            Cancel
+          </button>
           <button className="flex-1 btn-primary disabled:opacity-50" disabled={!valid} onClick={() => onSave(parts)}>
             Save split
           </button>

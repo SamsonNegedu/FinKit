@@ -5,9 +5,9 @@ import { merchantKeyOf, normalizeMerchant } from './categorizer'
 // Only the shown name changes: grouping and learned rules keep using the original merchant.
 const KEY = 'finkit.aliases'
 
-export type AliasMap = Record<string, string>
+type AliasMap = Record<string, string>
 
-export function loadAliases(): AliasMap {
+function loadAliases(): AliasMap {
   try {
     return JSON.parse(localStorage.getItem(KEY) || '{}')
   } catch {

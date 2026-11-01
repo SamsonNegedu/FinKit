@@ -19,6 +19,7 @@ export default function TopExpenses({ topMerchants, currency, onSelectMerchant }
               key={merchant.merchant}
               onClick={() => onSelectMerchant?.(merchant.merchant)}
               className="group block w-full text-left"
+              aria-label={`${merchant.merchant}: ${formatCurrency(merchant.total, currency)}, ${merchant.count} transactions`}
               title={onSelectMerchant ? `Show ${merchant.merchant} transactions` : undefined}
             >
               <div className="flex items-center justify-between mb-1">
@@ -26,17 +27,11 @@ export default function TopExpenses({ topMerchants, currency, onSelectMerchant }
                   <span className="w-6 h-6 rounded-lg bg-midnight-700 flex items-center justify-center text-xs font-medium text-midnight-400">
                     {index + 1}
                   </span>
-                  <span className="text-sm text-white truncate max-w-[200px]">
-                    {merchant.merchant}
-                  </span>
+                  <span className="text-sm text-white truncate max-w-[200px]">{merchant.merchant}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-medium text-white">
-                    {formatCurrency(merchant.total, currency)}
-                  </span>
-                  <span className="text-xs text-midnight-500 ml-2">
-                    ({merchant.count}x)
-                  </span>
+                  <span className="text-sm font-medium text-white">{formatCurrency(merchant.total, currency)}</span>
+                  <span className="text-xs text-midnight-500 ml-2">({merchant.count}x)</span>
                 </div>
               </div>
               <div className="h-1.5 bg-midnight-800 rounded-full overflow-hidden ml-9">

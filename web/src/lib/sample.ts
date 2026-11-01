@@ -1,3 +1,5 @@
+const fmt = (d: Date) => d.toISOString().slice(0, 10)
+
 // Builds a small demo CSV in memory so first-time users can try the app without a bank export.
 export function createSampleFile(): File {
   const today = new Date()
@@ -19,7 +21,6 @@ export function createSampleFile(): File {
     [1, 2800.0, 'Acme GmbH', 'Salary'],
     [28, 2800.0, 'Acme GmbH', 'Salary'],
   ]
-  const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const lines = ['Date,Amount,Currency,Payee,Description']
   for (const [ago, amount, payee, desc] of rows) {
     const d = new Date(today)

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Upload, FileSpreadsheet, AlertCircle, Loader2, Calendar } from 'lucide-react'
+import { Upload, FileSpreadsheet, AlertCircle, Loader2, Calendar, Landmark } from 'lucide-react'
 import { isFileSupported, getSupportedExtensions } from '../lib/parser'
 import { createSampleFile } from '../lib/sample'
 import DashboardSkeleton from './Skeleton'
@@ -14,7 +14,12 @@ interface FileUploadProps {
   onFileUpload: (file: File, options: ImportOptions) => Promise<void>
   isLoading: boolean
   error: string | null
+  // With bank sync available, connecting a bank is the main way in and file import steps back
+  bankingEnabled?: boolean
+  onConnectBank?: (bank: string | null) => void
 }
+
+const PINNED_BANKS = ['N26', 'Wise', 'Revolut']
 
 const DATE_FILTER_OPTIONS = [
   { value: '1m', label: 'Last Month' },
@@ -24,7 +29,8 @@ const DATE_FILTER_OPTIONS = [
   { value: 'all', label: 'All Time' },
 ] as const
 
-export default function FileUpload({ onFileUpload, isLoading, error }: FileUploadProps) {
+export default function FileUpload({ onFileUpload, isLoading, error, bankingEnabled, onConnectBank }: FileUploadProps) {
+  const [showFile, setShowFile] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [showOptions, setShowOptions] = useState(false)
@@ -96,20 +102,62 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
   return (
     <div className="max-w-2xl mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-semibold text-white mb-2">Add transactions</h2>
+        <h2 className="text-2xl font-semibold text-white mb-2">
+          {bankingEnabled ? 'Bring in your transactions' : 'Add transactions'}
+        </h2>
         <p className="text-midnight-400 text-sm">
-          Drop a bank export. You can filter by date as you import.
+          {bankingEnabled
+            ? 'Connect a bank to sync automatically. No exports.'
+            : 'Drop a bank export. You can filter by date as you import.'}
         </p>
       </div>
 
+      {bankingEnabled && (
+        <div className="mb-8 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {PINNED_BANKS.map(bank => (
+              <button
+                key={bank}
+                onClick={() => onConnectBank?.(bank)}
+                className="flex flex-col items-center gap-2 p-5 rounded-xl border border-midnight-700 bg-midnight-900/60 hover:bg-midnight-800 transition-colors"
+              >
+                <span className="w-10 h-10 rounded-xl bg-midnight-700 border border-midnight-600 grid place-items-center font-bold text-midnight-100">
+                  {bank[0]}
+                </span>
+                <span className="font-medium text-white">{bank}</span>
+                <span className="text-xs text-midnight-400">Personal account</span>
+                <span className="btn-primary text-sm mt-1">Connect</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
+            <button
+              onClick={() => onConnectBank?.(null)}
+              className="inline-flex items-center gap-1.5 text-midnight-300 hover:text-white underline underline-offset-2"
+            >
+              <Landmark className="w-4 h-4" /> Another bank…
+            </button>
+            <button
+              onClick={() => setShowFile(v => !v)}
+              aria-expanded={showFile}
+              className="text-midnight-300 hover:text-white underline underline-offset-2"
+            >
+              Import a file instead
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Import Options Modal */}
       {showOptions && pendingFile && (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+        >
           <div className="bg-midnight-900 border border-midnight-700 rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-semibold text-white mb-2">Import Options</h3>
-            <p className="text-midnight-400 text-sm mb-6">
-              Filter transactions to import only what you need
-            </p>
+            <p className="text-midnight-400 text-sm mb-6">Filter transactions to import only what you need</p>
 
             {/* File Info */}
             <div className="bg-midnight-800 rounded-lg p-4 mb-6">
@@ -117,29 +165,28 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
                 <FileSpreadsheet className="w-8 h-8 text-accent" />
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-medium truncate">{pendingFile.name}</p>
-                  <p className="text-midnight-400 text-sm">
-                    {(pendingFile.size / 1024).toFixed(1)} KB
-                  </p>
+                  <p className="text-midnight-400 text-sm">{(pendingFile.size / 1024).toFixed(1)} KB</p>
                 </div>
               </div>
             </div>
 
             {/* Date Filter */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-midnight-300 mb-3">
+              <p className="text-sm font-medium text-midnight-300 mb-3">
                 <Calendar className="w-4 h-4 inline mr-2" />
                 Import transactions from
-              </label>
+              </p>
               <div className="grid grid-cols-2 gap-2">
-                {DATE_FILTER_OPTIONS.map((option) => (
+                {DATE_FILTER_OPTIONS.map(option => (
                   <button
                     key={option.value}
                     onClick={() => setDateFilter(option.value)}
                     className={`
                       px-4 py-3 rounded-lg text-sm font-medium transition-all
-                      ${dateFilter === option.value
-                        ? 'bg-accent text-white'
-                        : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
+                      ${
+                        dateFilter === option.value
+                          ? 'bg-accent text-white'
+                          : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
                       }
                     `}
                   >
@@ -154,16 +201,10 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
 
             {/* Actions */}
             <div className="flex gap-3">
-              <button
-                onClick={handleCancel}
-                className="flex-1 btn-secondary"
-              >
+              <button onClick={handleCancel} className="flex-1 btn-secondary">
                 Cancel
               </button>
-              <button
-                onClick={handleConfirmImport}
-                className="flex-1 btn-primary"
-              >
+              <button onClick={handleConfirmImport} className="flex-1 btn-primary">
                 Import
               </button>
             </div>
@@ -171,62 +212,65 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
         </div>
       )}
 
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`
+      {(!bankingEnabled || showFile) && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`
           relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300
-          ${isDragging
-            ? 'border-accent bg-accent/10 scale-[1.02]'
-            : 'border-midnight-600 hover:border-midnight-500 bg-midnight-900/50'
+          ${
+            isDragging
+              ? 'border-accent bg-accent/10 scale-[1.02]'
+              : 'border-midnight-600 hover:border-midnight-500 bg-midnight-900/50'
           }
           ${isLoading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}
         `}
-      >
-        <input
-          type="file"
-          accept={getSupportedExtensions()}
-          onChange={handleInputChange}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          disabled={isLoading}
-        />
+        >
+          <input
+            type="file"
+            accept={getSupportedExtensions()}
+            onChange={handleInputChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            disabled={isLoading}
+          />
 
-        <div className="flex flex-col items-center gap-4">
-          {isLoading ? (
-            <>
-              <div className="w-16 h-16 rounded-full bg-midnight-800 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-accent animate-spin" />
-              </div>
-              <div>
-                <p className="text-lg font-medium text-white">Processing transactions...</p>
-                <p className="text-sm text-midnight-400 mt-1">Filtering and categorizing</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className={`
+          <div className="flex flex-col items-center gap-4">
+            {isLoading ? (
+              <>
+                <div className="w-16 h-16 rounded-full bg-midnight-800 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-accent animate-spin" />
+                </div>
+                <div>
+                  <p className="text-lg font-medium text-white">Processing transactions...</p>
+                  <p className="text-sm text-midnight-400 mt-1">Filtering and categorizing</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  className={`
                 w-16 h-16 rounded-full flex items-center justify-center transition-colors
                 ${isDragging ? 'bg-accent/20' : 'bg-midnight-800'}
-              `}>
-                {isDragging ? (
-                  <FileSpreadsheet className="w-8 h-8 text-accent" />
-                ) : (
-                  <Upload className="w-8 h-8 text-midnight-400" />
-                )}
-              </div>
-              <div>
-                <p className="text-lg font-medium text-white">
-                  {isDragging ? 'Drop your file here' : 'Drop your file here or click to browse'}
-                </p>
-                <p className="text-sm text-midnight-400 mt-1">
-                  CSV, Excel (.xlsx), and OFX formats supported
-                </p>
-              </div>
-            </>
-          )}
+              `}
+                >
+                  {isDragging ? (
+                    <FileSpreadsheet className="w-8 h-8 text-accent" />
+                  ) : (
+                    <Upload className="w-8 h-8 text-midnight-400" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-lg font-medium text-white">
+                    {isDragging ? 'Drop your file here' : 'Drop your file here or click to browse'}
+                  </p>
+                  <p className="text-sm text-midnight-400 mt-1">CSV, Excel (.xlsx), and OFX formats supported</p>
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {error && (
         <div className="mt-4 flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
@@ -258,4 +302,3 @@ export default function FileUpload({ onFileUpload, isLoading, error }: FileUploa
     </div>
   )
 }
-

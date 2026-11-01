@@ -1,15 +1,22 @@
 {
   "name": "finkit-web",
-  "private": true,
   "version": "2.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "check": "oxlint && oxfmt --check"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.105.1",
+    "@tanstack/react-router": "^1.170.46",
     "lucide-react": "^0.577.0",
     "papaparse": "^5.7.0",
     "react": "^18.3.1",
@@ -24,6 +31,8 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.6.2",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
     "postcss": "^8.5.32",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.6.2",

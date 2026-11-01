@@ -8,7 +8,7 @@ import { rawKey } from './ids'
  */
 export function mergeWithoutDuplicates(
   existing: RawTransaction[],
-  incoming: RawTransaction[]
+  incoming: RawTransaction[],
 ): { merged: RawTransaction[]; added: number; skipped: number } {
   const available = new Map<string, number>()
   for (const r of existing) {

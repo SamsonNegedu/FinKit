@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { X, Copy, Check } from 'lucide-react'
-import { Transaction, SheetConfig, DateRange } from '../types'
+import { Copy, Check } from 'lucide-react'
+import { Transaction, SheetConfig } from '../types'
 import { buildSheetRow, getLayout } from '../lib/sheetLayout'
 import { formatCurrency, formatForSheet } from '../lib/format'
 import { parseLocalDate } from '../lib/dates'
@@ -8,17 +8,11 @@ import { parseLocalDate } from '../lib/dates'
 interface ExportPreviewProps {
   transactions: Transaction[]
   sheetConfig?: SheetConfig | null
-  dateRange: DateRange | null
-  onCancel: () => void
 }
 
 // Format for Google Sheets (just the number, no currency symbol)
 
-export default function ExportPreview({
-  transactions,
-  sheetConfig,
-  onCancel,
-}: ExportPreviewProps) {
+export default function ExportPreview({ transactions, sheetConfig }: ExportPreviewProps) {
   const [copied, setCopied] = useState(false)
 
   // One row per calendar month present in the data (a 3-month file gives 3 rows)
@@ -37,30 +31,27 @@ export default function ExportPreview({
     return [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => ({ key, ...v }))
   }, [transactions])
 
+  // The sheet has one tab per year, so pick the year first and then one of its months
+  const years = useMemo(() => [...new Set(months.map(m => Number(m.key.slice(0, 4))))].sort((a, b) => b - a), [months])
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
-  const activeMonth = months.find(m => m.key === selectedKey) ?? months[months.length - 1]
+  const [selectedYear, setSelectedYear] = useState<number | null>(null)
+  const activeYear = selectedYear ?? (selectedKey ? Number(selectedKey.slice(0, 4)) : years[0])
+  const yearMonths = months.filter(m => Number(m.key.slice(0, 4)) === activeYear)
+  const activeMonth = yearMonths.find(m => m.key === selectedKey) ?? yearMonths[yearMonths.length - 1]
   const month = activeMonth?.label ?? new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   // The row mirrors the sheet's own column order (read from its header row)
   const layout = getLayout(sheetConfig)
-  const previewData = useMemo(
-    () => buildSheetRow(activeMonth?.txs ?? [], layout, month),
-    [activeMonth, layout, month]
-  )
-  const allRows = useMemo(
-    () => months.map(m => buildSheetRow(m.txs, layout, m.label)),
-    [months, layout]
-  )
+  const previewData = useMemo(() => buildSheetRow(activeMonth?.txs ?? [], layout, month), [activeMonth, layout, month])
+  const allRows = useMemo(() => yearMonths.map(m => buildSheetRow(m.txs, layout, m.label)), [yearMonths, layout])
 
   const rowToTsv = (row: ReturnType<typeof buildSheetRow>, label: string) =>
-    row.cells
-      .map(c => (c.kind === 'month' ? label : c.value === null ? '' : formatForSheet(c.value)))
-      .join('\t')
+    row.cells.map(c => (c.kind === 'month' ? label : c.value === null ? '' : formatForSheet(c.value))).join('\t')
 
   const [copiedAll, setCopiedAll] = useState(false)
   const handleCopyAll = async () => {
     try {
-      await navigator.clipboard.writeText(allRows.map((r, i) => rowToTsv(r, months[i].label)).join('\n'))
+      await navigator.clipboard.writeText(allRows.map((r, i) => rowToTsv(r, yearMonths[i].label)).join('\n'))
       setCopiedAll(true)
       setTimeout(() => setCopiedAll(false), 2000)
     } catch (err) {
@@ -82,52 +73,73 @@ export default function ExportPreview({
     if (kind === 'month') return 'bg-midnight-800 text-white'
     if (value === null) return 'bg-midnight-900 text-midnight-600'
     switch (kind) {
-      case 'total': return 'bg-expense/20 text-expense'
-      case 'income': return 'bg-income/20 text-income'
+      case 'total':
+        return 'bg-expense/20 text-expense'
+      case 'income':
+        return 'bg-income/20 text-income'
       case 'incomeAfter':
-      case 'net': return value >= 0 ? 'bg-income/20 text-income' : 'bg-expense/20 text-expense'
-      case 'savings': return 'bg-blue-500/20 text-blue-400'
-      case 'investment': return 'bg-cyan-500/20 text-cyan-400'
-      default: return value > 0 ? 'bg-midnight-800 text-white' : 'bg-midnight-800/50 text-midnight-500'
+      case 'net':
+        return value >= 0 ? 'bg-income/20 text-income' : 'bg-expense/20 text-expense'
+      case 'savings':
+        return 'bg-blue-500/20 text-blue-400'
+      case 'investment':
+        return 'bg-cyan-500/20 text-cyan-400'
+      default:
+        return value > 0 ? 'bg-midnight-800 text-white' : 'bg-midnight-800/50 text-midnight-500'
     }
   }
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-midnight-900 border border-midnight-700 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-midnight-700">
-          <h2 className="text-xl font-semibold text-white">Export Preview</h2>
-          <button
-            onClick={onCancel}
-            className="p-2 hover:bg-midnight-800 rounded-lg transition-colors"
-            disabled={status === 'loading'}
-          >
-            <X className="w-5 h-5 text-midnight-400" />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+    <div className="card">
+      <div>
+        <div className="space-y-6">
           {/* Target Info */}
           <div className="bg-midnight-800 rounded-lg p-4">
             <p className="text-sm text-midnight-400">Data for</p>
-            <p className="text-white font-medium">{month}{sheetConfig?.tabName ? ` → ${sheetConfig.tabName}` : ''}</p>
+            <p className="text-white font-medium">
+              {month}
+              {sheetConfig?.tabName ? ` → sheet tab “${sheetConfig.tabName}”` : ''}
+            </p>
           </div>
 
-          {months.length > 1 && (
-            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Month">
-              {months.map(m => (
-                <button
-                  key={m.key}
-                  role="tab"
-                  aria-selected={m.key === activeMonth?.key}
-                  onClick={() => setSelectedKey(m.key)}
-                  className={`px-3 py-1.5 rounded-lg text-sm ${
-                    m.key === activeMonth?.key ? 'bg-accent text-white' : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
-                  }`}
+          {(years.length > 1 || yearMonths.length > 1) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {years.length > 1 && (
+                <select
+                  aria-label="Year"
+                  className="input py-1.5 text-sm"
+                  value={activeYear}
+                  onChange={e => {
+                    setSelectedYear(Number(e.target.value))
+                    setSelectedKey(null)
+                  }}
                 >
-                  {m.label}
-                </button>
-              ))}
+                  {years.map(y => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {yearMonths.length > 1 && (
+                <div className="flex flex-wrap gap-2" role="tablist" aria-label="Month">
+                  {yearMonths.map(m => (
+                    <button
+                      key={m.key}
+                      role="tab"
+                      aria-selected={m.key === activeMonth?.key}
+                      onClick={() => setSelectedKey(m.key)}
+                      className={`px-3 py-1.5 rounded-lg text-sm ${
+                        m.key === activeMonth?.key
+                          ? 'bg-accent text-white'
+                          : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
+                      }`}
+                    >
+                      {m.label.replace(/ \d{4}$/, '')}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -153,7 +165,8 @@ export default function ExportPreview({
               </div>
             </div>
             <p className="text-xs text-midnight-500 mt-2">
-              Columns follow your sheet, left to right. Scroll to see all → €0.00 is dimmed, — is a column left untouched
+              Columns follow your sheet, left to right. Scroll to see all → €0.00 is dimmed, — is a column left
+              untouched
             </p>
           </div>
 
@@ -214,9 +227,10 @@ export default function ExportPreview({
           {/* Copy Instructions */}
           <div className="bg-midnight-800 rounded-lg p-4">
             <p className="text-sm text-midnight-300">
-              <strong>How to use:</strong> Pick a month, click "Copy Row" (or "Copy all rows" when the file spans several months), then paste into your Google Sheet
-              in the row for <span className="text-white">{month}</span>. The data is tab-separated and will
-              fill the columns in the same order as your sheet. Columns the app doesn't know about are pasted empty.
+              <strong>How to use:</strong> Pick a month, click "Copy Row" (or "Copy all rows" when the file spans
+              several months), then paste into your Google Sheet in the row for{' '}
+              <span className="text-white">{month}</span>. The data is tab-separated and will fill the columns in the
+              same order as your sheet. Columns the app doesn't know about are pasted empty.
             </p>
           </div>
 
@@ -229,27 +243,16 @@ export default function ExportPreview({
           )}
         </div>
 
-        <div className="flex justify-between items-center gap-3 p-6 border-t border-midnight-700">
-          <p className="text-xs text-midnight-500">
-            Tip: Select cell A in your target row before pasting
-          </p>
+        <div className="flex flex-wrap justify-between items-center gap-3 pt-6 mt-6 border-t border-midnight-700">
+          <p className="text-xs text-midnight-500">Tip: Select cell A in your target row before pasting</p>
           <div className="flex gap-3">
-            <button
-              onClick={onCancel}
-              className="btn-secondary"
-            >
-              Close
-            </button>
-            {months.length > 1 && (
+            {yearMonths.length > 1 && (
               <button onClick={handleCopyAll} className="btn-secondary flex items-center gap-2">
                 {copiedAll ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copiedAll ? 'Copied!' : `Copy all ${months.length} rows`}
+                {copiedAll ? 'Copied!' : `Copy all ${yearMonths.length} rows of ${activeYear}`}
               </button>
             )}
-            <button
-              onClick={handleCopy}
-              className="btn-primary flex items-center gap-2"
-            >
+            <button onClick={handleCopy} className="btn-primary flex items-center gap-2">
               {copied ? (
                 <>
                   <Check className="w-4 h-4" />

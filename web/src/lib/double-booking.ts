@@ -1,6 +1,6 @@
 import { Transaction } from '../types'
 
-export interface DoubleBookingPair {
+interface DoubleBookingPair {
   outgoing: Transaction
   incoming: Transaction
   amount: number
@@ -9,14 +9,11 @@ export interface DoubleBookingPair {
 
 // Detect internal transfers between user's own accounts
 // This prevents inflated income/expense totals when money moves between accounts
-export function detectDoubleBookings(transactions: Transaction[]): {
-  transactions: Transaction[]
-  pairs: DoubleBookingPair[]
-} {
+export function detectDoubleBookings(transactions: Transaction[]): Transaction[] {
   // Step 1: Identify all of the user's accounts from the data
   const userAccounts = new Set<string>()
   const userAccountNames = new Set<string>()
-  
+
   for (const tx of transactions) {
     if (tx.referenceAccount) {
       userAccounts.add(tx.referenceAccount.toLowerCase())
@@ -28,7 +25,7 @@ export function detectDoubleBookings(transactions: Transaction[]): {
 
   // Step 2: Mark transactions as internal if counterparty is one of user's accounts
   const markedAsInternal = new Set<string>()
-  
+
   for (const tx of transactions) {
     if (isInternalTransfer(tx, userAccounts, userAccountNames)) {
       markedAsInternal.add(tx.id)
@@ -57,7 +54,7 @@ export function detectDoubleBookings(transactions: Transaction[]): {
 
       for (const income of incomes) {
         if (pairedIds.has(income.id)) continue
-        
+
         // Match by amount (within 1 cent)
         if (Math.abs(expense.amount - income.amount) > 0.01) continue
 
@@ -79,7 +76,7 @@ export function detectDoubleBookings(transactions: Transaction[]): {
     const isInternal = markedAsInternal.has(tx.id)
     const isPaired = pairedIds.has(tx.id)
     const isIncomingSide = pairs.some(p => p.incoming.id === tx.id)
-    
+
     if (isInternal) {
       return {
         ...tx,
@@ -89,25 +86,21 @@ export function detectDoubleBookings(transactions: Transaction[]): {
         // For paired transactions, only exclude the incoming side
         // For unpaired internal transfers, exclude income
         isExcluded: tx.type === 'income',
-        doubleBookingMatch: isPaired 
-          ? (isIncomingSide 
-              ? pairs.find(p => p.incoming.id === tx.id)?.outgoing.id
-              : pairs.find(p => p.outgoing.id === tx.id)?.incoming.id)
+        doubleBookingMatch: isPaired
+          ? isIncomingSide
+            ? pairs.find(p => p.incoming.id === tx.id)?.outgoing.id
+            : pairs.find(p => p.outgoing.id === tx.id)?.incoming.id
           : undefined,
       }
     }
     return tx
   })
 
-  return { transactions: result, pairs }
+  return result
 }
 
 // Check if a transaction is an internal transfer between user's own accounts
-function isInternalTransfer(
-  tx: Transaction, 
-  userAccounts: Set<string>,
-  userAccountNames: Set<string>
-): boolean {
+function isInternalTransfer(tx: Transaction, userAccounts: Set<string>, userAccountNames: Set<string>): boolean {
   // Check if already flagged as transfer in source data
   if (tx.isTransfer) return true
 
@@ -169,34 +162,4 @@ function isInternalTransfer(
   }
 
   return false
-}
-
-// Get summary of internal transfers
-export function getDoubleBookingSummary(pairs: DoubleBookingPair[]): {
-  totalAmount: number
-  count: number
-} {
-  return {
-    totalAmount: pairs.reduce((sum, p) => sum + p.amount, 0),
-    count: pairs.length,
-  }
-}
-
-// Get summary of all internal movements (including unpaired)
-export function getInternalTransferSummary(transactions: Transaction[]): {
-  excludedIncome: number
-  excludedExpense: number
-  internalCount: number
-} {
-  const internal = transactions.filter(tx => tx.isTransfer && tx.category === 'Transfer')
-  
-  return {
-    excludedIncome: internal
-      .filter(tx => tx.type === 'income' && tx.isExcluded)
-      .reduce((sum, tx) => sum + tx.amount, 0),
-    excludedExpense: internal
-      .filter(tx => tx.type === 'expense' && tx.isExcluded)
-      .reduce((sum, tx) => sum + tx.amount, 0),
-    internalCount: internal.length,
-  }
 }

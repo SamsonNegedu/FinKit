@@ -4,10 +4,10 @@ import { RawTransaction, Transaction, AnonymizationMapping, AnonymizedData } fro
 const PATTERNS = {
   // IBAN patterns for different countries
   iban: /[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}[A-Z0-9]{0,16}/g,
-  
+
   // Email addresses
   email: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
-  
+
   // Phone numbers (international format)
   phone: /(?:\+\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g,
 }
@@ -15,55 +15,138 @@ const PATTERNS = {
 // Known merchants/businesses that should NOT be anonymized
 const KNOWN_MERCHANTS = new Set([
   // Supermarkets
-  'rewe', 'aldi', 'lidl', 'edeka', 'netto', 'penny', 'kaufland', 'real',
+  'rewe',
+  'aldi',
+  'lidl',
+  'edeka',
+  'netto',
+  'penny',
+  'kaufland',
+  'real',
   // Drugstores
-  'dm', 'rossmann', 'müller',
+  'dm',
+  'rossmann',
+  'müller',
   // Online retail
-  'amazon', 'zalando', 'otto', 'ebay', 'mediamarkt', 'saturn', 'flaconi',
+  'amazon',
+  'zalando',
+  'otto',
+  'ebay',
+  'mediamarkt',
+  'saturn',
+  'flaconi',
   // Food delivery
-  'lieferando', 'wolt', 'uber eats', 'delivery hero',
+  'lieferando',
+  'wolt',
+  'uber eats',
+  'delivery hero',
   // Fast food
-  'mcdonalds', 'burger king', 'subway', 'kfc', 'starbucks',
+  'mcdonalds',
+  'burger king',
+  'subway',
+  'kfc',
+  'starbucks',
   // Tech/Entertainment
-  'apple', 'netflix', 'spotify', 'playstation', 'xbox', 'steam', 'nintendo',
-  'sony interactive entertainment', 'google', 'paypal',
+  'apple',
+  'netflix',
+  'spotify',
+  'playstation',
+  'xbox',
+  'steam',
+  'nintendo',
+  'sony interactive entertainment',
+  'google',
+  'paypal',
   // Banks/Finance
-  'scalable capital', 'trade republic', 'n26', 'dkb', 'sparkasse', 'commerzbank',
-  'deutsche bank', 'ing', 'comdirect', 'finanzamt', 'transferwise', 'wise',
+  'scalable capital',
+  'trade republic',
+  'n26',
+  'dkb',
+  'sparkasse',
+  'commerzbank',
+  'deutsche bank',
+  'ing',
+  'comdirect',
+  'finanzamt',
+  'transferwise',
+  'wise',
   // Insurance
-  'allianz', 'ergo', 'huk', 'axa', 'getsafe',
+  'allianz',
+  'ergo',
+  'huk',
+  'axa',
+  'getsafe',
   // Telecom
-  'telekom', 'vodafone', 'o2', 'congstar', 'aldi talk', 'rebtel',
+  'telekom',
+  'vodafone',
+  'o2',
+  'congstar',
+  'aldi talk',
+  'rebtel',
   // Transport
-  'deutsche bahn', 'db', 'bvg', 'uber', 'bolt', 'freenow',
+  'deutsche bahn',
+  'db',
+  'bvg',
+  'uber',
+  'bolt',
+  'freenow',
   // Utilities
-  'vattenfall', 'eon', 'beitragsservice', 'ard', 'zdf',
+  'vattenfall',
+  'eon',
+  'beitragsservice',
+  'ard',
+  'zdf',
   // Other common merchants
-  'ikea', 'h&m', 'zara', 'primark', 'zeeman', 'maya handels',
+  'ikea',
+  'h&m',
+  'zara',
+  'primark',
+  'zeeman',
+  'maya handels',
 ])
 
 // Business suffixes that indicate a company, not a person
 const BUSINESS_SUFFIXES = [
-  'gmbh', 'ag', 'ltd', 'inc', 'co', 'kg', 'ohg', 'ug', 'se', 'ev', 'e.v.',
-  'corp', 'llc', 'limited', 'holding', 'group', 'services', 'payments',
-  'bank', 'sparkasse', 'versicherung', 'finanz', 'capital',
+  'gmbh',
+  'ag',
+  'ltd',
+  'inc',
+  'co',
+  'kg',
+  'ohg',
+  'ug',
+  'se',
+  'ev',
+  'e.v.',
+  'corp',
+  'llc',
+  'limited',
+  'holding',
+  'group',
+  'services',
+  'payments',
+  'bank',
+  'sparkasse',
+  'versicherung',
+  'finanz',
+  'capital',
 ]
 
 // Check if a name looks like a business/merchant
 function isLikelyBusiness(name: string): boolean {
   if (!name) return false
   const lower = name.toLowerCase().trim()
-  
+
   // Check against known merchants
   for (const merchant of KNOWN_MERCHANTS) {
     if (lower.includes(merchant)) return true
   }
-  
+
   // Check for business suffixes
   for (const suffix of BUSINESS_SUFFIXES) {
     if (lower.includes(suffix)) return true
   }
-  
+
   // If we don't recognize it, assume it could be personal (privacy-first)
   return false
 }
@@ -71,24 +154,22 @@ function isLikelyBusiness(name: string): boolean {
 // In-memory mapping store (never persisted)
 class AnonymizationStore {
   private mappings: Map<string, AnonymizationMapping> = new Map()
-  private reverseMap: Map<string, string> = new Map()
   private counters = { name: 0, iban: 0, account: 0, email: 0, phone: 0, address: 0 }
 
   clear() {
     this.mappings.clear()
-    this.reverseMap.clear()
     this.counters = { name: 0, iban: 0, account: 0, email: 0, phone: 0, address: 0 }
   }
 
   getOrCreate(original: string, type: AnonymizationMapping['type']): string {
     const key = `${type}:${original}`
-    
+
     if (this.mappings.has(key)) {
       return this.mappings.get(key)!.anonymized
     }
 
     let anonymized: string
-    
+
     switch (type) {
       case 'name':
         this.counters.name++
@@ -119,13 +200,8 @@ class AnonymizationStore {
 
     const mapping: AnonymizationMapping = { original, anonymized, type }
     this.mappings.set(key, mapping)
-    this.reverseMap.set(anonymized, original)
-    
-    return anonymized
-  }
 
-  getOriginal(anonymized: string): string | undefined {
-    return this.reverseMap.get(anonymized)
+    return anonymized
   }
 
   getAllMappings(): AnonymizationMapping[] {
@@ -154,17 +230,17 @@ function anonymizeText(text: string, personalNames: Set<string>): string {
   let result = text
 
   // Anonymize IBANs (keep country + last 4)
-  result = result.replace(PATTERNS.iban, (match) => {
+  result = result.replace(PATTERNS.iban, match => {
     return store.getOrCreate(match, 'iban')
   })
 
   // Anonymize emails
-  result = result.replace(PATTERNS.email, (match) => {
+  result = result.replace(PATTERNS.email, match => {
     return store.getOrCreate(match, 'email')
   })
 
   // Anonymize phone numbers
-  result = result.replace(PATTERNS.phone, (match) => {
+  result = result.replace(PATTERNS.phone, match => {
     return store.getOrCreate(match, 'phone')
   })
 
@@ -195,14 +271,14 @@ export function anonymizeTransactions(rawTransactions: RawTransaction[]): Anonym
   // Second pass: anonymize transactions
   const transactions: Transaction[] = rawTransactions.map((raw, index) => {
     // Only anonymize recipient if it looks like a personal name, not a business
-    const anonymizedRecipient = raw.recipient 
-      ? (isLikelyBusiness(raw.recipient) ? raw.recipient : store.getOrCreate(raw.recipient, 'name'))
+    const anonymizedRecipient = raw.recipient
+      ? isLikelyBusiness(raw.recipient)
+        ? raw.recipient
+        : store.getOrCreate(raw.recipient, 'name')
       : undefined
 
     // Always anonymize IBANs (but only partially - keep country and last 4)
-    const anonymizedIban = raw.recipientIban
-      ? store.getOrCreate(raw.recipientIban, 'iban')
-      : undefined
+    const anonymizedIban = raw.recipientIban ? store.getOrCreate(raw.recipientIban, 'iban') : undefined
 
     // Keep reference account names as-is (they're your own accounts)
     const referenceAccount = raw.referenceAccount
@@ -211,9 +287,7 @@ export function anonymizeTransactions(rawTransactions: RawTransaction[]): Anonym
     const anonymizedDescription = anonymizeText(raw.description, personalNames)
 
     // Extract merchant name from recipient if it's a business
-    const merchant = raw.recipient && isLikelyBusiness(raw.recipient) 
-      ? cleanMerchantName(raw.recipient)
-      : undefined
+    const merchant = raw.recipient && isLikelyBusiness(raw.recipient) ? cleanMerchantName(raw.recipient) : undefined
 
     return {
       ...raw,
@@ -247,9 +321,7 @@ function cleanMerchantName(name: string): string {
 export function processWithoutAnonymization(rawTransactions: RawTransaction[]): Transaction[] {
   return rawTransactions.map((raw, index) => {
     // Extract merchant name from recipient if it's a business
-    const merchant = raw.recipient && isLikelyBusiness(raw.recipient) 
-      ? cleanMerchantName(raw.recipient)
-      : undefined
+    const merchant = raw.recipient && isLikelyBusiness(raw.recipient) ? cleanMerchantName(raw.recipient) : undefined
 
     return {
       ...raw,
@@ -260,21 +332,4 @@ export function processWithoutAnonymization(rawTransactions: RawTransaction[]): 
       categorySource: raw.category ? 'rule' : undefined,
     } as Transaction
   })
-}
-
-export function getOriginalValue(anonymized: string): string | undefined {
-  return store.getOriginal(anonymized)
-}
-
-export function clearAnonymizationData(): void {
-  store.clear()
-}
-
-// For display: show original value in tooltip
-export function getDisplayValue(anonymized: string): { display: string; original?: string } {
-  const original = store.getOriginal(anonymized)
-  return {
-    display: anonymized,
-    original,
-  }
 }

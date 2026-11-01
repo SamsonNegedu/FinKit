@@ -14,11 +14,7 @@ function formatDate(date: string): string {
   return formatDay(date)
 }
 
-export default function IncomeReview({
-  transactions,
-  onUpdateTransaction,
-  currency,
-}: IncomeReviewProps) {
+export default function IncomeReview({ transactions, onUpdateTransaction, currency }: IncomeReviewProps) {
   const [filter, setFilter] = useState<'all' | 'included' | 'excluded'>('all')
 
   // Get all income transactions
@@ -34,13 +30,9 @@ export default function IncomeReview({
   })
 
   // Calculate totals
-  const totalIncome = incomeTransactions
-    .filter(tx => !tx.isExcluded)
-    .reduce((sum, tx) => sum + tx.amount, 0)
+  const totalIncome = incomeTransactions.filter(tx => !tx.isExcluded).reduce((sum, tx) => sum + tx.amount, 0)
 
-  const excludedIncome = incomeTransactions
-    .filter(tx => tx.isExcluded)
-    .reduce((sum, tx) => sum + tx.amount, 0)
+  const excludedIncome = incomeTransactions.filter(tx => tx.isExcluded).reduce((sum, tx) => sum + tx.amount, 0)
 
   const autoExcludedCount = incomeTransactions.filter(tx => tx.isExcluded && tx.doubleBookingMatch).length
   const manualExcludedCount = incomeTransactions.filter(tx => tx.isExcluded && !tx.doubleBookingMatch).length
@@ -59,9 +51,7 @@ export default function IncomeReview({
           </div>
           <div>
             <h3 className="text-lg font-semibold text-white">Income Review</h3>
-            <p className="text-sm text-midnight-400">
-              Review and adjust which income is counted in totals
-            </p>
+            <p className="text-sm text-midnight-400">Review and adjust which income is counted in totals</p>
           </div>
         </div>
       </div>
@@ -85,9 +75,7 @@ export default function IncomeReview({
         <div className="bg-midnight-800 rounded-lg p-4">
           <p className="text-sm text-midnight-400 mb-1">Total Entries</p>
           <p className="text-xl font-bold text-white">{incomeTransactions.length}</p>
-          <p className="text-xs text-midnight-500 mt-1">
-            income transactions
-          </p>
+          <p className="text-xs text-midnight-500 mt-1">income transactions</p>
         </div>
       </div>
 
@@ -97,23 +85,22 @@ export default function IncomeReview({
           { id: 'all', label: 'All', count: incomeTransactions.length },
           { id: 'included', label: 'Counted', count: incomeTransactions.filter(tx => !tx.isExcluded).length },
           { id: 'excluded', label: 'Excluded', count: incomeTransactions.filter(tx => tx.isExcluded).length },
-        ].map((tab) => (
+        ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setFilter(tab.id as typeof filter)}
             className={`
               px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2
-              ${filter === tab.id
-                ? 'bg-accent text-white'
-                : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
-              }
+              ${filter === tab.id ? 'bg-accent text-white' : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'}
             `}
           >
             {tab.label}
-            <span className={`
+            <span
+              className={`
               px-1.5 py-0.5 rounded text-xs
               ${filter === tab.id ? 'bg-white/20' : 'bg-midnight-700'}
-            `}>
+            `}
+            >
               {tab.count}
             </span>
           </button>
@@ -123,18 +110,17 @@ export default function IncomeReview({
       {/* Transaction List */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto">
         {filteredTransactions.length === 0 ? (
-          <div className="text-center py-8 text-midnight-400">
-            No transactions match this filter
-          </div>
+          <div className="text-center py-8 text-midnight-400">No transactions match this filter</div>
         ) : (
-          filteredTransactions.map((tx) => (
+          filteredTransactions.map(tx => (
             <div
               key={tx.id}
               className={`
                 flex items-center gap-4 p-4 rounded-lg border transition-all
-                ${tx.isExcluded 
-                  ? 'bg-midnight-800/50 border-midnight-700 opacity-60' 
-                  : 'bg-midnight-800 border-midnight-600'
+                ${
+                  tx.isExcluded
+                    ? 'bg-midnight-800/50 border-midnight-700 opacity-60'
+                    : 'bg-midnight-800 border-midnight-600'
                 }
               `}
             >
@@ -143,9 +129,10 @@ export default function IncomeReview({
                 onClick={() => handleToggleExclude(tx.id, tx.isExcluded || false)}
                 className={`
                   w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0
-                  ${tx.isExcluded
-                    ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'
-                    : 'bg-income/20 text-income hover:bg-income/30'
+                  ${
+                    tx.isExcluded
+                      ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'
+                      : 'bg-income/20 text-income hover:bg-income/30'
                   }
                 `}
                 title={tx.isExcluded ? 'Click to include in totals' : 'Click to exclude from totals'}
@@ -190,16 +177,16 @@ export default function IncomeReview({
 
               {/* Amount */}
               <div className="w-28 text-right shrink-0">
-                <span className={`text-sm font-medium ${tx.isExcluded ? 'text-midnight-400 line-through' : 'text-income'}`}>
+                <span
+                  className={`text-sm font-medium ${tx.isExcluded ? 'text-midnight-400 line-through' : 'text-income'}`}
+                >
                   +{formatCurrency(tx.amount, currency)}
                 </span>
               </div>
 
               {/* Account */}
               <div className="w-32 text-right shrink-0 hidden lg:block">
-                <span className="text-xs text-midnight-500 truncate block">
-                  {tx.referenceAccountName || 'Unknown'}
-                </span>
+                <span className="text-xs text-midnight-500 truncate block">{tx.referenceAccountName || 'Unknown'}</span>
               </div>
             </div>
           ))

@@ -43,7 +43,10 @@ export default function HeaderMenu(props: HeaderMenuProps) {
         <MoreHorizontal className="w-5 h-5" />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 mt-2 w-72 bg-midnight-800 border border-midnight-600 rounded-xl shadow-2xl p-1 z-50">
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-72 bg-midnight-800 border border-midnight-600 rounded-xl shadow-2xl p-1 z-50"
+        >
           <button role="menuitem" className={item} onClick={props.onToggleNumberFormat}>
             <Hash className="w-4 h-4 text-midnight-400" />
             <span className="flex-1">Number format</span>

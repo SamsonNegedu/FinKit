@@ -3,7 +3,7 @@
 import { Transaction, RawTransaction, DateRange } from '../types'
 import type { SplitMap } from './splits'
 
-export interface SavedSession {
+interface SavedSession {
   transactions: Transaction[]
   raw: RawTransaction[]
   dateRange: { start: string; end: string } | null

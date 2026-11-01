@@ -1,7 +1,7 @@
 import { Transaction } from '../types'
 import { merchantKeyOf, sameMerchant } from './categorizer'
 
-export interface RecategorizeResult {
+interface RecategorizeResult {
   next: Transaction[]
   merchants: string[] // distinct merchant keys that were learned
   targetCount: number
@@ -16,7 +16,7 @@ export function recategorize(
   current: Transaction[],
   ids: string[],
   category: string,
-  extra: Partial<Transaction> = {}
+  extra: Partial<Transaction> = {},
 ): RecategorizeResult | null {
   const idSet = new Set(ids)
   const targets = current.filter(t => idSet.has(t.id))

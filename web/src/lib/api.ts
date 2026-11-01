@@ -1,4 +1,4 @@
-import { Transaction, SheetConfig } from '../types'
+import { SheetConfig } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -11,53 +11,6 @@ function getHeaders(contentType = true): HeadersInit {
   return headers
 }
 
-interface CategorizeResponse {
-  success: boolean;
-  data: Array<{
-    id: string;
-    category: string;
-    merchant?: string;
-  }>;
-}
-
-export async function categorizeWithAI(transactions: Transaction[]): Promise<Transaction[]> {
-  const response = await fetch(`${API_BASE}/categorize`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      transactions: transactions.map(tx => ({
-        id: tx.id,
-        description: tx.description,
-        amount: tx.type === 'expense' ? -tx.amount : tx.amount,
-        date: tx.date,
-        category: tx.category,
-      }))
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error('Failed to categorize transactions')
-  }
-
-  const result: CategorizeResponse = await response.json()
-  
-  // Merge AI results with existing transactions
-  const categorizedMap = new Map(result.data.map(item => [item.id, item]))
-  
-  return transactions.map(tx => {
-    const aiResult = categorizedMap.get(tx.id)
-    if (aiResult) {
-      return {
-        ...tx,
-        category: aiResult.category,
-        merchant: aiResult.merchant || tx.merchant,
-        categorySource: 'ai' as const,
-      }
-    }
-    return tx
-  })
-}
-
 export interface SheetHeaderColumn {
   column: string
   name: string
@@ -66,7 +19,7 @@ export interface SheetHeaderColumn {
 // Read the header row of a sheet tab (so the app mirrors the sheet instead of hardcoding columns)
 export async function fetchSheetLayout(
   sheetId: string,
-  tabName: string
+  tabName: string,
 ): Promise<{ headerRow: number; columns: SheetHeaderColumn[] }> {
   const response = await fetch(`${API_BASE}/export/sheets/layout`, {
     method: 'POST',
@@ -94,7 +47,7 @@ export async function getLearnedMappings(): Promise<LearnedMapping[]> {
       headers: getHeaders(false),
     })
     if (!response.ok) return []
-    
+
     const result = await response.json()
     return result.data || []
   } catch {
@@ -134,7 +87,7 @@ export async function deleteLearnedMapping(merchant: string): Promise<boolean> {
 
 // Save multiple mappings at once
 export async function saveBatchLearnedMappings(
-  mappings: Array<{ merchant: string; category: string }>
+  mappings: Array<{ merchant: string; category: string }>,
 ): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE}/learn/mappings/batch`, {
@@ -157,7 +110,7 @@ export async function getSheetConfig(): Promise<SheetConfig | null> {
       headers: getHeaders(false),
     })
     if (!response.ok) return null
-    
+
     const result = await response.json()
     return result.data || null
   } catch {

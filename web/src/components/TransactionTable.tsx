@@ -1,6 +1,19 @@
 import { Fragment, useState, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, ChevronRight, Check, RefreshCw, ArrowUpDown, ArrowLeftRight, List, Layers, Scissors, Pencil, Undo2 } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import {
+  ChevronDown,
+  ChevronRight,
+  Check,
+  ArrowUpDown,
+  ArrowLeftRight,
+  ArrowUpRight,
+  List,
+  Layers,
+  Scissors,
+  Pencil,
+  Undo2,
+} from 'lucide-react'
 import { Transaction } from '../types'
 import { getAvailableCategories, getCategoryColor, merchantKeyOf, sameMerchant } from '../lib/categorizer'
 import RecurringBadge from './RecurringBadge'
@@ -25,6 +38,11 @@ interface TransactionTableProps {
   onUnsplit: (parentId: string) => void
   onRenameMerchant: (merchantKey: string, name: string) => void
   currency: string
+  // Controlled from the address bar when provided (the Transactions page); otherwise internal
+  viewMode?: 'list' | 'merchant'
+  onViewModeChange?: (mode: 'list' | 'merchant') => void
+  // Hide the toggle where one view only makes sense (a single merchant's page)
+  hideViewToggle?: boolean
 }
 
 type SortField = 'date' | 'amount' | 'category' | 'description'
@@ -32,6 +50,25 @@ type SortDirection = 'asc' | 'desc'
 
 function formatDate(date: string): string {
   return formatDay(date)
+}
+
+function SortButton({
+  field,
+  active,
+  onSort,
+  children,
+}: {
+  field: SortField
+  active: boolean
+  onSort: (field: SortField) => void
+  children: React.ReactNode
+}) {
+  return (
+    <button onClick={() => onSort(field)} className="flex items-center gap-1 hover:text-white transition-colors">
+      {children}
+      <ArrowUpDown className={`w-3 h-3 ${active ? 'text-accent' : 'text-midnight-500'}`} />
+    </button>
+  )
 }
 
 export default function TransactionTable({
@@ -48,6 +85,9 @@ export default function TransactionTable({
   onUnsplit,
   onRenameMerchant,
   currency,
+  viewMode: controlledViewMode,
+  onViewModeChange,
+  hideViewToggle,
 }: TransactionTableProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [sortField, setSortField] = useState<SortField>('date')
@@ -56,7 +96,9 @@ export default function TransactionTable({
   const PAGE = 200
   const [limit, setLimit] = useState(PAGE)
   const [activeIndex, setActiveIndex] = useState(0)
-  const [viewMode, setViewMode] = useState<'list' | 'merchant'>('list')
+  const [internalViewMode, setInternalViewMode] = useState<'list' | 'merchant'>('list')
+  const viewMode = controlledViewMode ?? internalViewMode
+  const setViewMode = (mode: 'list' | 'merchant') => (onViewModeChange ?? setInternalViewMode)(mode)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [pickerPos, setPickerPos] = useState<{ left: number; top?: number; bottom?: number } | null>(null)
@@ -119,24 +161,28 @@ export default function TransactionTable({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const sortedTransactions = useMemo(() => [...transactions].sort((a, b) => {
-    let comparison = 0
-    switch (sortField) {
-      case 'date':
-        comparison = parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
-        break
-      case 'amount':
-        comparison = a.amount - b.amount
-        break
-      case 'category':
-        comparison = (a.category || '').localeCompare(b.category || '')
-        break
-      case 'description':
-        comparison = a.description.localeCompare(b.description)
-        break
-    }
-    return sortDirection === 'asc' ? comparison : -comparison
-  }), [transactions, sortField, sortDirection])
+  const sortedTransactions = useMemo(
+    () =>
+      [...transactions].sort((a, b) => {
+        let comparison = 0
+        switch (sortField) {
+          case 'date':
+            comparison = parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
+            break
+          case 'amount':
+            comparison = a.amount - b.amount
+            break
+          case 'category':
+            comparison = (a.category || '').localeCompare(b.category || '')
+            break
+          case 'description':
+            comparison = a.description.localeCompare(b.description)
+            break
+        }
+        return sortDirection === 'asc' ? comparison : -comparison
+      }),
+    [transactions, sortField, sortDirection],
+  )
 
   // Big files: render in pages so the table stays fast; reset when the filtered set changes
   useEffect(() => {
@@ -145,7 +191,7 @@ export default function TransactionTable({
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(d => d === 'asc' ? 'desc' : 'asc')
+      setSortDirection(d => (d === 'asc' ? 'desc' : 'asc'))
     } else {
       setSortField(field)
       setSortDirection('desc')
@@ -163,17 +209,7 @@ export default function TransactionTable({
   }
 
   const filteredCategories = getAvailableCategories().filter(c =>
-    c.toLowerCase().includes(categorySearch.toLowerCase())
-  )
-
-  const SortButton = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <button
-      onClick={() => handleSort(field)}
-      className="flex items-center gap-1 hover:text-white transition-colors"
-    >
-      {children}
-      <ArrowUpDown className={`w-3 h-3 ${sortField === field ? 'text-accent' : 'text-midnight-500'}`} />
-    </button>
+    c.toLowerCase().includes(categorySearch.toLowerCase()),
   )
 
   const groups = useMemo(() => {
@@ -191,7 +227,7 @@ export default function TransactionTable({
       }
     }
     return result.sort((a, b) => b.items.length - a.items.length || a.key.localeCompare(b.key))
-  }, [transactions, sortField, sortDirection])
+  }, [sortedTransactions])
 
   // In merchant view, show whole groups until about `limit` rows are on screen
   const visibleGroups = useMemo(() => {
@@ -204,65 +240,72 @@ export default function TransactionTable({
     }
     return out
   }, [groups, limit])
-  const shownRows = viewMode === 'list' ? Math.min(limit, sortedTransactions.length) : visibleGroups.reduce((n, g) => n + g.items.length, 0)
+  const shownRows =
+    viewMode === 'list'
+      ? Math.min(limit, sortedTransactions.length)
+      : visibleGroups.reduce((n, g) => n + g.items.length, 0)
   const hasMore = viewMode === 'list' ? limit < sortedTransactions.length : visibleGroups.length < groups.length
 
-  const renderPicker = (current: string | undefined, onPick: (category: string) => void) => pickerPos && createPortal(
-    <div
-      ref={dropdownRef}
-      style={{ position: 'fixed', ...pickerPos, width: 220 }}
-      className="bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-[80] max-h-[280px] overflow-hidden"
-    >
-      <input
-        type="text"
-        placeholder="Search categories..."
-        aria-label="Search categories"
-        value={categorySearch}
-        onChange={(e) => {
-          setCategorySearch(e.target.value)
-          setActiveIndex(0)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowDown') {
-            e.preventDefault()
-            setActiveIndex(i => Math.min(i + 1, filteredCategories.length - 1))
-          } else if (e.key === 'ArrowUp') {
-            e.preventDefault()
-            setActiveIndex(i => Math.max(i - 1, 0))
-          } else if (e.key === 'Enter' && filteredCategories[activeIndex]) {
-            e.preventDefault()
-            onPick(filteredCategories[activeIndex])
-            setEditingId(null)
-            setCategorySearch('')
+  const renderPicker = (current: string | undefined, onPick: (category: string) => void) =>
+    pickerPos &&
+    createPortal(
+      <div
+        ref={dropdownRef}
+        style={{ position: 'fixed', ...pickerPos, width: 220 }}
+        className="bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-[80] max-h-[280px] overflow-hidden"
+      >
+        <input
+          type="text"
+          placeholder="Search categories..."
+          aria-label="Search categories"
+          value={categorySearch}
+          onChange={e => {
+            setCategorySearch(e.target.value)
             setActiveIndex(0)
-          }
-        }}
-        className="w-full px-3 py-2 bg-midnight-700 border-b border-midnight-600 text-sm focus:outline-none"
-        autoFocus
-      />
-      <div className="max-h-[240px] overflow-y-auto" role="listbox" aria-label="Categories">
-        {filteredCategories.map((category, i) => (
-          <button
-            key={category}
-            role="option"
-            aria-selected={category === current}
-            ref={el => { if (el && i === activeIndex) el.scrollIntoView({ block: 'nearest' }) }}
-            onClick={() => {
-              onPick(category)
+          }}
+          onKeyDown={e => {
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              setActiveIndex(i => Math.min(i + 1, filteredCategories.length - 1))
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              setActiveIndex(i => Math.max(i - 1, 0))
+            } else if (e.key === 'Enter' && filteredCategories[activeIndex]) {
+              e.preventDefault()
+              onPick(filteredCategories[activeIndex])
               setEditingId(null)
               setCategorySearch('')
-            }}
-            className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-midnight-700 text-left ${i === activeIndex ? 'bg-midnight-700' : ''}`}
-          >
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(category) }} />
-            <span className="text-sm flex-1">{category}</span>
-            {category === current && <Check className="w-4 h-4 text-accent" />}
-          </button>
-        ))}
-      </div>
-    </div>,
-    document.body
-  )
+              setActiveIndex(0)
+            }
+          }}
+          className="w-full px-3 py-2 bg-midnight-700 border-b border-midnight-600 text-sm focus:outline-none"
+          autoFocus
+        />
+        <div className="max-h-[240px] overflow-y-auto" role="listbox" aria-label="Categories">
+          {filteredCategories.map((category, i) => (
+            <button
+              key={category}
+              role="option"
+              aria-selected={category === current}
+              ref={el => {
+                if (el && i === activeIndex) el.scrollIntoView({ block: 'nearest' })
+              }}
+              onClick={() => {
+                onPick(category)
+                setEditingId(null)
+                setCategorySearch('')
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-midnight-700 text-left ${i === activeIndex ? 'bg-midnight-700' : ''}`}
+            >
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(category) }} />
+              <span className="text-sm flex-1">{category}</span>
+              {category === current && <Check className="w-4 h-4 text-accent" />}
+            </button>
+          ))}
+        </div>
+      </div>,
+      document.body,
+    )
 
   const renderGroup = (group: (typeof groups)[number]) => {
     const isCollapsed = collapsed.has(group.key)
@@ -272,16 +315,17 @@ export default function TransactionTable({
     const shownName = group.items.find(t => t.displayName)?.displayName || group.key
     return (
       <Fragment key={group.key}>
-        <tr className="border-b border-midnight-700 bg-midnight-800/40">
-          <td className="py-3 px-4" />
-          <td colSpan={2} className="py-3 px-4">
+        <tr className="border-b border-midnight-700 bg-midnight-800/40 max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto] max-md:items-center">
+          {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label -- a table cell, not a control */}
+          <td className="py-3 px-4 max-md:hidden" />
+          <td colSpan={2} className="py-3 px-4 max-md:col-start-1 max-md:row-start-1 max-md:py-2 max-md:px-3">
             {renamingKey === group.key ? (
               <input
                 autoFocus
                 defaultValue={shownName}
                 aria-label={`Rename ${group.key}`}
                 className="input py-1 text-sm w-64"
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (e.key === 'Enter') {
                     onRenameMerchant(group.key, e.currentTarget.value)
                     setRenamingKey(null)
@@ -293,49 +337,70 @@ export default function TransactionTable({
                 onBlur={() => setRenamingKey(null)}
               />
             ) : (
-            <div className="flex items-center gap-2">
-            <button
-              onClick={() =>
-                setCollapsed(prev => {
-                  const next = new Set(prev)
-                  if (next.has(group.key)) next.delete(group.key)
-                  else next.add(group.key)
-                  return next
-                })
-              }
-              className="flex items-center gap-2 text-left"
-            >
-              {isCollapsed ? <ChevronRight className="w-4 h-4 text-midnight-400" /> : <ChevronDown className="w-4 h-4 text-midnight-400" />}
-              <span className="text-sm font-medium text-white truncate">{shownName}</span>
-              <span className="text-xs text-midnight-400">{group.items.length}×</span>
-            </button>
-            <button
-              onClick={() => setRenamingKey(group.key)}
-              className="p-1 text-midnight-500 hover:text-white"
-              aria-label={`Rename ${shownName}`}
-              title="Rename (only changes how it's shown)"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-            </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    setCollapsed(prev => {
+                      const next = new Set(prev)
+                      if (next.has(group.key)) next.delete(group.key)
+                      else next.add(group.key)
+                      return next
+                    })
+                  }
+                  className="flex items-center gap-2 text-left"
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="w-4 h-4 text-midnight-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-midnight-400" />
+                  )}
+                  <span className="text-sm font-medium text-white truncate">{shownName}</span>
+                  <span className="text-xs text-midnight-400">{group.items.length}×</span>
+                </button>
+                <button
+                  onClick={() => setRenamingKey(group.key)}
+                  className="p-1 text-midnight-500 hover:text-white"
+                  aria-label={`Rename ${shownName}`}
+                  title="Rename (only changes how it's shown)"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <Link
+                  to="/transactions/merchants/$merchantKey"
+                  params={{ merchantKey: group.key }}
+                  className="p-1 text-midnight-500 hover:text-white"
+                  aria-label={`Open ${shownName}`}
+                  title="Open this merchant"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             )}
           </td>
-          <td className="py-3 px-4 relative">
+          <td className="py-3 px-4 relative max-md:col-start-1 max-md:row-start-2 max-md:py-0 max-md:px-3 max-md:pb-2">
             <button
-              onClick={(e) => openPicker(pickerId, e.currentTarget)}
+              onClick={e => openPicker(pickerId, e.currentTarget)}
               className="flex items-center gap-2 h-8 px-3 max-w-full rounded-lg text-sm whitespace-nowrap hover:bg-midnight-700 transition-colors"
               title="Set category for all transactions from this merchant"
             >
-              {single && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(single) }} />}
+              {single && (
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(single) }} />
+              )}
               <span className="text-midnight-100">{mixed ? 'Mixed' : single}</span>
               <ChevronDown className="w-3 h-3 text-midnight-400" />
             </button>
             {editingId === pickerId &&
-              renderPicker(single, category => onSetCategoryForIds(group.items.map(t => t.id), category))}
+              renderPicker(single, category =>
+                onSetCategoryForIds(
+                  group.items.map(t => t.id),
+                  category,
+                ),
+              )}
           </td>
-          <td className="py-3 px-4 text-right whitespace-nowrap">
+          <td className="py-3 px-4 text-right whitespace-nowrap max-md:col-start-2 max-md:row-start-1 max-md:py-2 max-md:px-3">
             <span className={`text-sm font-medium ${group.total >= 0 ? 'text-income' : 'text-expense'}`}>
-              {group.total >= 0 ? '+' : '-'}{formatCurrency(Math.abs(group.total), currency)}
+              {group.total >= 0 ? '+' : '-'}
+              {formatCurrency(Math.abs(group.total), currency)}
             </span>
           </td>
         </tr>
@@ -345,117 +410,118 @@ export default function TransactionTable({
   }
 
   const renderRow = (tx: Transaction) => (
-                <tr
-                  key={tx.id}
-                  className={`
+    <tr
+      key={tx.id}
+      className={`
                     group border-b border-midnight-800 hover:bg-midnight-800/50 transition-colors
+                    max-md:grid max-md:grid-cols-[44px_minmax(0,1fr)_auto] max-md:items-center max-md:py-2
                     ${selectedIds.has(tx.id) ? 'bg-midnight-800/30' : ''}
                     ${tx.isExcluded ? 'opacity-50' : ''}
                   `}
-                >
-                  {/* The label fills the whole cell, so the click target is the full cell, not just the box */}
-                  <td className="relative p-0">
-                    <label className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-midnight-700/40">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(tx.id)}
-                        aria-label={`Select ${tx.merchant || tx.recipient || tx.description.slice(0, 30)}`}
-                        onChange={() => handleToggleSelect(tx.id)}
-                        className="w-5 h-5 cursor-pointer rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
-                      />
-                    </label>
-                  </td>
-                  <td className="py-3 px-4 whitespace-nowrap">
-                    <span className="text-sm text-midnight-300">{formatDate(tx.date)}</span>
-                  </td>
-                  <td className="py-3 px-4 max-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <p className="text-sm text-white truncate" title={displayNameOf(tx)}>
-                          {displayNameOf(tx)}
-                        </p>
-                        <p className="text-xs text-midnight-500 truncate" title={tx.description}>{tx.description}</p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {tx.isExcluded && !tx.doubleBookingMatch && (
-                          <span 
-                            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                            title="Excluded from totals"
-                          >
-                            <span className="hidden sm:inline">Excluded</span>
-                          </span>
-                        )}
-                        {tx.doubleBookingMatch && (
-                          <span 
-                            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                            title={`Internal transfer - ${tx.isExcluded ? 'excluded from totals' : 'counted in totals'}`}
-                          >
-                            <ArrowLeftRight className="w-3 h-3" />
-                            <span className="hidden sm:inline">Transfer</span>
-                          </span>
-                        )}
-                        {tx.isRecurring && <RecurringBadge frequency={tx.recurringFrequency} />}
-                        {tx.splitOf ? (
-                          <button
-                            onClick={() => onUnsplit(tx.splitOf!)}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30"
-                            title="Part of a split. Click to undo the split"
-                          >
-                            <Undo2 className="w-3 h-3" />
-                            <span className="hidden sm:inline">Split</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setSplitting(tx)}
-                            className="p-1 rounded text-midnight-500 hover:text-white hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                            title="Split across categories"
-                            aria-label={`Split ${displayNameOf(tx)}`}
-                          >
-                            <Scissors className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 relative">
-                    <button
-                      aria-haspopup="listbox"
-                      aria-expanded={editingId === tx.id}
-                      aria-label={`Category: ${tx.category || 'Other'}. Change category`}
-                      onClick={(e) => openPicker(tx.id, e.currentTarget)}
-                      className={`
+    >
+      {/* The label fills the whole cell, so the click target is the full cell, not just the box */}
+      <td className="relative p-0 max-md:col-start-1 max-md:row-start-1 max-md:row-span-2 max-md:self-stretch">
+        <label className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-midnight-700/40">
+          <input
+            type="checkbox"
+            checked={selectedIds.has(tx.id)}
+            aria-label={`Select ${tx.merchant || tx.recipient || tx.description.slice(0, 30)}`}
+            onChange={() => handleToggleSelect(tx.id)}
+            className="w-5 h-5 cursor-pointer rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
+          />
+        </label>
+      </td>
+      <td className="py-3 px-4 whitespace-nowrap max-md:col-start-3 max-md:row-start-2 max-md:py-0 max-md:px-3 max-md:text-right">
+        <span className="text-sm text-midnight-300 max-md:text-xs">{formatDate(tx.date)}</span>
+      </td>
+      {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label -- a table cell, not a control */}
+      <td className="py-3 px-4 max-w-0 max-md:max-w-none max-md:col-start-2 max-md:row-start-1 max-md:py-1 max-md:px-3">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <p className="text-sm text-white truncate" title={displayNameOf(tx)}>
+              {displayNameOf(tx)}
+            </p>
+            <p className="text-xs text-midnight-500 truncate" title={tx.description}>
+              {tx.description}
+            </p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {tx.isExcluded && !tx.doubleBookingMatch && (
+              <span
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                title="Excluded from totals"
+              >
+                <span className="hidden sm:inline">Excluded</span>
+              </span>
+            )}
+            {tx.doubleBookingMatch && (
+              <span
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                title={`Internal transfer - ${tx.isExcluded ? 'excluded from totals' : 'counted in totals'}`}
+              >
+                <ArrowLeftRight className="w-3 h-3" />
+                <span className="hidden sm:inline">Transfer</span>
+              </span>
+            )}
+            {tx.isRecurring && <RecurringBadge frequency={tx.recurringFrequency} />}
+            {tx.splitOf ? (
+              <button
+                onClick={() => onUnsplit(tx.splitOf!)}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30"
+                title="Part of a split. Click to undo the split"
+              >
+                <Undo2 className="w-3 h-3" />
+                <span className="hidden sm:inline">Split</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setSplitting(tx)}
+                className="p-1 rounded text-midnight-500 hover:text-white hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                title="Split across categories"
+                aria-label={`Split ${displayNameOf(tx)}`}
+              >
+                <Scissors className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="py-3 px-4 relative max-md:col-start-2 max-md:row-start-2 max-md:py-0 max-md:px-3">
+        <button
+          aria-haspopup="listbox"
+          aria-expanded={editingId === tx.id}
+          aria-label={`Category: ${tx.category || 'Other'}. Change category`}
+          onClick={e => openPicker(tx.id, e.currentTarget)}
+          className={`
                         flex items-center gap-2 h-8 px-3 max-w-full rounded-lg text-sm whitespace-nowrap transition-all
-                        ${editingId === tx.id 
-                          ? 'bg-accent/20 ring-2 ring-accent' 
-                          : 'hover:bg-midnight-700'
-                        }
+                        ${editingId === tx.id ? 'bg-accent/20 ring-2 ring-accent' : 'hover:bg-midnight-700'}
                       `}
-                      style={{ 
-                        backgroundColor: editingId !== tx.id ? `${getCategoryColor(tx.category || 'Other')}20` : undefined
-                      }}
-                    >
-                      <span 
-                        className="w-2 h-2 rounded-full shrink-0" 
-                        style={{ backgroundColor: getCategoryColor(tx.category || 'Other') }}
-                      />
-                      <span className="text-midnight-100 truncate">{tx.category || 'Other'}</span>
-                      {tx.categorySource === 'ai' && (
-                        <RefreshCw className="w-3 h-3 text-accent shrink-0" />
-                      )}
-                      <ChevronDown className="w-3 h-3 text-midnight-400 shrink-0 ml-auto" />
-                    </button>
+          style={{
+            backgroundColor: editingId !== tx.id ? `${getCategoryColor(tx.category || 'Other')}20` : undefined,
+          }}
+        >
+          <span
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: getCategoryColor(tx.category || 'Other') }}
+          />
+          <span className="text-midnight-100 truncate">{tx.category || 'Other'}</span>
+          <ChevronDown className="w-3 h-3 text-midnight-400 shrink-0 ml-auto" />
+        </button>
 
-                    {editingId === tx.id && renderPicker(tx.category, category => onUpdateTransaction(tx.id, { category }))}
-                  </td>
-                  <td className="py-3 px-4 text-right whitespace-nowrap">
-                    <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-income' : 'text-expense'}`}>
-                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, currency)}
-                    </span>
-                    {tx.originalAmount !== undefined && tx.originalCurrency && (
-                      <span className="block text-xs text-midnight-500">{formatCurrency(tx.originalAmount, tx.originalCurrency)}</span>
-                    )}
-                  </td>
-                </tr>
+        {editingId === tx.id && renderPicker(tx.category, category => onUpdateTransaction(tx.id, { category }))}
+      </td>
+      <td className="py-3 px-4 text-right whitespace-nowrap max-md:col-start-3 max-md:row-start-1 max-md:py-1 max-md:px-3">
+        <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-income' : 'text-expense'}`}>
+          {tx.type === 'income' ? '+' : '-'}
+          {formatCurrency(tx.amount, currency)}
+        </span>
+        {tx.originalAmount !== undefined && tx.originalCurrency && (
+          <span className="block text-xs text-midnight-500">
+            {formatCurrency(tx.originalAmount, tx.originalCurrency)}
+          </span>
+        )}
+      </td>
+    </tr>
   )
 
   return (
@@ -475,16 +541,45 @@ export default function TransactionTable({
         <SplitDialog
           transaction={splitting}
           onCancel={() => setSplitting(null)}
-          onSave={(parts) => {
+          onSave={parts => {
             onSplit(splitting.id, parts)
             setSplitting(null)
           }}
         />
       )}
 
-      <div className="flex justify-end mb-2">
+      {/* Phones have no column headers, so sorting lives here */}
+      <div className="md:hidden flex items-center gap-2 mb-2 text-sm">
+        <label htmlFor="sort-by" className="text-midnight-400">
+          Sort
+        </label>
+        <select
+          id="sort-by"
+          className="input py-1.5 text-sm"
+          value={`${sortField}:${sortDirection}`}
+          onChange={e => {
+            const [field, dir] = e.target.value.split(':')
+            setSortField(field as SortField)
+            setSortDirection(dir as SortDirection)
+          }}
+        >
+          <option value="date:desc">Newest first</option>
+          <option value="date:asc">Oldest first</option>
+          <option value="amount:desc">Largest first</option>
+          <option value="amount:asc">Smallest first</option>
+          <option value="description:asc">Name A–Z</option>
+          <option value="category:asc">Category</option>
+        </select>
+      </div>
+
+      <div className={`flex justify-end mb-2 ${hideViewToggle ? 'hidden' : ''}`}>
         <div className="inline-flex rounded-lg bg-midnight-800 p-1 text-sm">
-          {([['list', 'List', List], ['merchant', 'By merchant', Layers]] as const).map(([mode, label, Icon]) => (
+          {(
+            [
+              ['list', 'List', List],
+              ['merchant', 'By merchant', Layers],
+            ] as const
+          ).map(([mode, label, Icon]) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
@@ -499,42 +594,48 @@ export default function TransactionTable({
         </div>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card overflow-hidden md:overflow-visible">
         <div className="overflow-x-auto md:overflow-visible">
-        <table className="w-full table-fixed min-w-[640px]">
-          <thead>
-            <tr className="border-b border-midnight-700">
-              <th className="relative p-0 w-14">
-                <label className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-midnight-700/40">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.size === transactions.length && transactions.length > 0}
-                    aria-label="Select all"
-                    onChange={onSelectAll}
-                    className="w-5 h-5 cursor-pointer rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
-                  />
-                </label>
-              </th>
-              <th className="py-3 px-4 w-28 text-left text-sm font-medium text-midnight-400">
-                <SortButton field="date">Date</SortButton>
-              </th>
-              <th className="py-3 px-4 text-left text-sm font-medium text-midnight-400">
-                <SortButton field="description">Description</SortButton>
-              </th>
-              <th className="py-3 px-4 w-56 text-left text-sm font-medium text-midnight-400">
-                <SortButton field="category">Category</SortButton>
-              </th>
-              <th className="py-3 px-4 w-32 text-right text-sm font-medium text-midnight-400">
-                <SortButton field="amount">Amount</SortButton>
-              </th>
-            </tr>
-          </thead>
-            <tbody>
-              {viewMode === 'list'
-                ? sortedTransactions.slice(0, limit).map(renderRow)
-                : visibleGroups.map(renderGroup)}
+          <table className="w-full md:table-fixed md:min-w-[640px] max-md:block">
+            <thead className="max-md:hidden">
+              <tr className="border-b border-midnight-700">
+                <th className="md:sticky md:top-[63px] md:z-10 bg-midnight-900 md:first:rounded-tl-xl md:last:rounded-tr-xl relative p-0 w-14">
+                  <label className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-midnight-700/40">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === transactions.length && transactions.length > 0}
+                      aria-label="Select all"
+                      onChange={onSelectAll}
+                      className="w-5 h-5 cursor-pointer rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
+                    />
+                  </label>
+                </th>
+                <th className="md:sticky md:top-[63px] md:z-10 bg-midnight-900 md:first:rounded-tl-xl md:last:rounded-tr-xl py-3 px-4 w-28 text-left text-sm font-medium text-midnight-400">
+                  <SortButton field="date" active={sortField === 'date'} onSort={handleSort}>
+                    Date
+                  </SortButton>
+                </th>
+                <th className="md:sticky md:top-[63px] md:z-10 bg-midnight-900 md:first:rounded-tl-xl md:last:rounded-tr-xl py-3 px-4 text-left text-sm font-medium text-midnight-400">
+                  <SortButton field="description" active={sortField === 'description'} onSort={handleSort}>
+                    Description
+                  </SortButton>
+                </th>
+                <th className="md:sticky md:top-[63px] md:z-10 bg-midnight-900 md:first:rounded-tl-xl md:last:rounded-tr-xl py-3 px-4 w-56 text-left text-sm font-medium text-midnight-400">
+                  <SortButton field="category" active={sortField === 'category'} onSort={handleSort}>
+                    Category
+                  </SortButton>
+                </th>
+                <th className="md:sticky md:top-[63px] md:z-10 bg-midnight-900 md:first:rounded-tl-xl md:last:rounded-tr-xl py-3 px-4 w-32 text-right text-sm font-medium text-midnight-400">
+                  <SortButton field="amount" active={sortField === 'amount'} onSort={handleSort}>
+                    Amount
+                  </SortButton>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="max-md:block">
+              {viewMode === 'list' ? sortedTransactions.slice(0, limit).map(renderRow) : visibleGroups.map(renderGroup)}
             </tbody>
-        </table>
+          </table>
         </div>
 
         {hasMore && (

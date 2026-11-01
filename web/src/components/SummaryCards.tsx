@@ -40,7 +40,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card) => (
+      {cards.map(card => (
         <div key={card.label} className="card">
           <div className="flex items-center justify-between">
             <p className="text-midnight-400 text-sm font-medium">{card.label}</p>
@@ -48,9 +48,7 @@ export default function SummaryCards({ summary }: SummaryCardsProps) {
               <card.icon className={`w-5 h-5 ${card.color}`} />
             </div>
           </div>
-          <p className={`text-2xl font-bold mt-2 ${card.color}`}>
-            {card.value}
-          </p>
+          <p className={`text-2xl font-bold mt-2 ${card.color}`}>{card.value}</p>
         </div>
       ))}
     </div>

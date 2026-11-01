@@ -1,42 +1,112 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { Transaction, DateRange, SheetConfig, RawTransaction } from './types'
-import Dashboard from './components/Dashboard'
-import FileUpload, { ImportOptions } from './components/FileUpload'
-import ToastHost, { ToastItem } from './components/Toast'
-import DashboardSkeleton from './components/Skeleton'
-import { parseFile } from './lib/parser'
-import { anonymizeTransactions, processWithoutAnonymization } from './lib/anonymizer'
+import { createContext, useContext, useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react'
+import { Transaction, DateRange, SheetConfig, RawTransaction } from '../types'
+import type { ImportOptions } from '../components/FileUpload'
+import ToastHost, { ToastItem } from '../components/Toast'
+import { parseFile } from '../lib/parser'
+import { anonymizeTransactions, processWithoutAnonymization } from '../lib/anonymizer'
 import {
   categorizeWithRules,
   setLearnedMappings,
   setLocalLearnedMapping,
   setExpenseCategories,
-} from './lib/categorizer'
-import { getLayout, layoutCategories, syncSheetLayout } from './lib/sheetLayout'
-import { detectRecurring } from './lib/recurring'
-import { detectDoubleBookings } from './lib/double-booking'
-import { getLearnedMappings, saveBatchLearnedMappings, deleteLearnedMapping, getSheetConfig, saveSheetConfig } from './lib/api'
-import { saveSession, loadSession, clearSession, getRememberPreference, setRememberPreference } from './lib/storage'
-import { getNumberFormat, setNumberFormat, NumberFormat } from './lib/format'
-import { recategorize as applyRecategorize } from './lib/recategorize'
-import { assignStableIds, migrateOldIds } from './lib/ids'
-import { mergeWithoutDuplicates } from './lib/dedupe'
-import { transactionsToCsv, downloadCsv } from './lib/csv'
-import { applyAliases, saveAlias } from './lib/aliases'
-import { SplitMap, SplitPart, applySplits, removeSplit, syncSplits } from './lib/splits'
-import { RateMap, RateStore, loadRateStore, saveRateStore, baseCurrencyOf, foreignCurrenciesOf, applyRates } from './lib/rates'
-import { merchantKeyOf, sameMerchant } from './lib/categorizer'
-import HeaderMenu from './components/HeaderMenu'
-import ImportConfirm from './components/ImportConfirm'
-import { Shield, ShieldOff, Loader2, FilePlus } from 'lucide-react'
-import { parseLocalDate } from './lib/dates'
+} from '../lib/categorizer'
+import { getLayout, layoutCategories, syncSheetLayout } from '../lib/sheetLayout'
+import { detectRecurring } from '../lib/recurring'
+import { detectDoubleBookings } from '../lib/double-booking'
+import {
+  getLearnedMappings,
+  saveBatchLearnedMappings,
+  deleteLearnedMapping,
+  getSheetConfig,
+  saveSheetConfig,
+} from '../lib/api'
+import { saveSession, loadSession, clearSession, getRememberPreference, setRememberPreference } from '../lib/storage'
+import { getNumberFormat, setNumberFormat, NumberFormat } from '../lib/format'
+import { recategorize as applyRecategorize } from '../lib/recategorize'
+import { assignStableIds, migrateOldIds } from '../lib/ids'
+import { mergeWithoutDuplicates } from '../lib/dedupe'
+import { transactionsToCsv, downloadCsv } from '../lib/csv'
+import { applyAliases, saveAlias } from '../lib/aliases'
+import { SplitMap, SplitPart, applySplits, removeSplit, syncSplits } from '../lib/splits'
+import {
+  RateMap,
+  RateStore,
+  loadRateStore,
+  saveRateStore,
+  baseCurrencyOf,
+  foreignCurrenciesOf,
+  applyRates,
+} from '../lib/rates'
+import { merchantKeyOf, sameMerchant } from '../lib/categorizer'
+import ImportConfirm from '../components/ImportConfirm'
+import { parseLocalDate } from '../lib/dates'
 
 interface MappingChange {
   merchant: string
   category: string
 }
 
-function App() {
+function processTransactions(raw: RawTransaction[], anonymize: boolean) {
+  // Process with or without anonymization
+  const base = anonymize ? anonymizeTransactions(raw).transactions : processWithoutAnonymization(raw)
+  // Content-based ids: re-processing gives the same ids, so manual edits survive
+  const processed = assignStableIds(base, raw)
+
+  // Apply rule-based categorization
+  const categorized = categorizeWithRules(processed)
+
+  // Detect double-bookings (internal transfers between own accounts)
+  const withDoubleBookings = detectDoubleBookings(categorized)
+
+  // Detect recurring transactions, then apply the user's merchant names
+  return applyAliases(detectRecurring(withDoubleBookings))
+}
+
+// Excluding a row is its own kind of edit: it must survive re-processing, but it must not make
+// the category "manual" (which would stop merchant-wide recategorizing from reaching it)
+const withEdit = (t: Transaction, updates: Partial<Transaction>): Transaction => ({
+  ...t,
+  ...updates,
+  ...('isExcluded' in updates ? { excludedManually: true } : {}),
+})
+
+interface AppState {
+  transactions: Transaction[] // as stored (original currency, with splits applied)
+  displayTransactions: Transaction[] // converted to the main currency: what every screen shows
+  baseCurrency: string
+  foreignCurrencies: string[]
+  rates: RateMap
+  onRatesChange: (rates: RateMap) => void
+  dateRange: DateRange | null
+  setDateRange: (range: DateRange | null) => void
+  sheetConfig: SheetConfig | null
+  setSheetConfig: (config: SheetConfig | null) => void
+  isLoading: boolean
+  isRestoring: boolean
+  error: string | null
+  anonymizationEnabled: boolean
+  toggleAnonymization: () => void
+  uploadFile: (file: File, options: ImportOptions) => Promise<void>
+  addFile: (file: File) => Promise<void>
+  importBankTransactions: (incoming: RawTransaction[], bankName: string) => void
+  clearData: () => void
+  downloadCsv: () => void
+  updateTransaction: (id: string, updates: Partial<Transaction>) => void
+  bulkUpdate: (ids: string[], updates: Partial<Transaction>) => void
+  split: (id: string, parts: SplitPart[]) => void
+  unsplit: (parentId: string) => void
+  renameMerchant: (merchantKey: string, name: string) => void
+  remember: boolean
+  toggleRemember: () => void
+  numberFormat: NumberFormat
+  toggleNumberFormat: () => void
+  pendingSaves: number
+  pushToast: (toast: Omit<ToastItem, 'id'>) => void
+}
+
+const AppContext = createContext<AppState | null>(null)
+
+export function AppStateProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isRestoring, setIsRestoring] = useState(true)
@@ -48,7 +118,11 @@ function App() {
   const [pendingSaves, setPendingSaves] = useState(0)
   const [remember, setRemember] = useState(getRememberPreference())
   const [rateStore, setRateStore] = useState<RateStore>(loadRateStore())
-  const [pendingImport, setPendingImport] = useState<{ incoming: RawTransaction[]; duplicates: number; fileName: string } | null>(null)
+  const [pendingImport, setPendingImport] = useState<{
+    incoming: RawTransaction[]
+    duplicates: number
+    fileName: string
+  } | null>(null)
   // Held in state so changing it re-renders every number in the app
   const [numberFormat, setNumberFormatState] = useState<NumberFormat>(getNumberFormat())
   const toggleNumberFormat = () => {
@@ -163,75 +237,60 @@ function App() {
   // Currency: show everything in the main currency, converting with the rates the user entered
   const baseCurrency = useMemo(() => baseCurrencyOf(transactions), [transactions])
   const foreignCurrencies = useMemo(() => foreignCurrenciesOf(transactions, baseCurrency), [transactions, baseCurrency])
-  const rates: RateMap = rateStore[baseCurrency] ?? {}
-  const displayTransactions = useMemo(() => applyRates(transactions, baseCurrency, rates), [transactions, baseCurrency, rateStore])
+  const rates = useMemo<RateMap>(() => rateStore[baseCurrency] ?? {}, [rateStore, baseCurrency])
+  const displayTransactions = useMemo(
+    () => applyRates(transactions, baseCurrency, rates),
+    [transactions, baseCurrency, rates],
+  )
   const handleRatesChange = (next: RateMap) => {
     const store = { ...rateStore, [baseCurrency]: next }
     setRateStore(store)
     saveRateStore(store)
   }
 
-  const processTransactions = (raw: RawTransaction[], anonymize: boolean) => {
-    // Process with or without anonymization
-    const base = anonymize 
-      ? anonymizeTransactions(raw).transactions
-      : processWithoutAnonymization(raw)
-    // Content-based ids: re-processing gives the same ids, so manual edits survive
-    const processed = assignStableIds(base, raw)
-    
-    // Apply rule-based categorization
-    const categorized = categorizeWithRules(processed)
-    
-    // Detect double-bookings (internal transfers between own accounts)
-    const { transactions: withDoubleBookings } = detectDoubleBookings(categorized)
-    
-    // Detect recurring transactions, then apply the user's merchant names
-    return applyAliases(detectRecurring(withDoubleBookings))
-  }
-
   const handleFileUpload = async (file: File, options: ImportOptions) => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
       // Parse file (CSV, Excel, or OFX)
       let rawTransactions = await parseFile(file)
-      
+
       // Apply date filter if specified (filter early to reduce processing load)
       if (options.dateFilter !== 'all' && options.customStartDate) {
         const startTime = options.customStartDate.getTime()
         const endTime = options.customEndDate?.getTime() || Date.now()
-        
+
         const beforeCount = rawTransactions.length
         rawTransactions = rawTransactions.filter(tx => {
           const txTime = parseLocalDate(tx.date).getTime()
           return txTime >= startTime && txTime <= endTime
         })
-        
+
         console.log(`Date filter: ${beforeCount} → ${rawTransactions.length} transactions`)
       }
-      
+
       rawTransactionsRef.current = rawTransactions
       splitsRef.current = {}
-      
+
       // Process transactions
       const processed = processTransactions(rawTransactions, anonymizationEnabled)
       commit(processed)
-      
+
       // Auto-detect date range from the actual transaction data
       if (processed.length > 0) {
         const dates = processed.map(tx => parseLocalDate(tx.date).getTime())
         const minDate = new Date(Math.min(...dates))
         const maxDate = new Date(Math.max(...dates))
-        
+
         // Set to the month range of the data
         // Set endDate to end of day (23:59:59.999) to include all transactions on that day
         const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0)
         endDate.setHours(23, 59, 59, 999)
-        
+
         setDateRange({
           startDate: new Date(minDate.getFullYear(), minDate.getMonth(), 1),
-          endDate: endDate
+          endDate: endDate,
         })
       }
     } catch (err) {
@@ -244,11 +303,9 @@ function App() {
   // Re-run processing over raw rows, keeping the user's manual edits (matched by stable id)
   const reprocess = (raw: RawTransaction[], anonymize: boolean): Transaction[] => {
     const manual = new Map(
-      transactionsRef.current.filter(t => t.categorySource === 'manual' && !t.splitOf).map(t => [t.id, t])
+      transactionsRef.current.filter(t => t.categorySource === 'manual' && !t.splitOf).map(t => [t.id, t]),
     )
-    const excluded = new Map(
-      transactionsRef.current.filter(t => t.excludedManually && !t.splitOf).map(t => [t.id, t])
-    )
+    const excluded = new Map(transactionsRef.current.filter(t => t.excludedManually && !t.splitOf).map(t => [t.id, t]))
     const processed = processTransactions(raw, anonymize).map(t => {
       const old = manual.get(t.id)
       const keepExcluded = excluded.get(t.id)
@@ -282,7 +339,7 @@ function App() {
     }
   }
 
-  const finishAdd = (incoming: RawTransaction[], keepDuplicates: boolean) => {
+  const finishAdd = (incoming: RawTransaction[], keepDuplicates: boolean, label?: string) => {
     const existing = rawTransactionsRef.current
     const { merged, added, skipped } = keepDuplicates
       ? { merged: [...existing, ...incoming], added: incoming.length, skipped: 0 }
@@ -301,7 +358,7 @@ function App() {
     end.setHours(23, 59, 59, 999)
     setDateRange({ startDate: new Date(min.getFullYear(), min.getMonth(), 1), endDate: end })
     pushToast({
-      message: `Added ${added} new transaction${added === 1 ? '' : 's'}${skipped ? `, skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}` : ''}`,
+      message: `${label ? `${label}: ` : ''}${added === 0 && skipped > 0 ? 'Nothing new' : `Added ${added} new transaction${added === 1 ? '' : 's'}`}${skipped ? `, ${skipped} already imported` : ''}`,
       tone: 'success',
       actionLabel: 'Undo',
       onAction: () => {
@@ -312,6 +369,9 @@ function App() {
     })
   }
 
+  // Transactions fetched from a bank join the normal import. Repeats are skipped by the bank's own ids.
+  const handleBankImport = (incoming: RawTransaction[], bankName: string) => finishAdd(incoming, false, bankName)
+
   const handleDownloadCsv = () => {
     downloadCsv(`finkit-${new Date().toISOString().slice(0, 10)}.csv`, transactionsToCsv(transactionsRef.current))
   }
@@ -319,7 +379,7 @@ function App() {
   const handleToggleAnonymization = () => {
     const newValue = !anonymizationEnabled
     setAnonymizationEnabled(newValue)
-    
+
     // Re-process transactions with new anonymization setting
     if (rawTransactionsRef.current.length > 0) {
       commit(reprocess(rawTransactionsRef.current, newValue))
@@ -352,20 +412,27 @@ function App() {
   }
 
   // Save learned mappings in the background; tell the user if the server didn't confirm
-  const persistMappings = useCallback(async (changes: MappingChange[]) => {
-    if (changes.length === 0) return
-    setPendingSaves(n => n + 1)
-    const ok = await saveBatchLearnedMappings(changes)
-    setPendingSaves(n => n - 1)
-    if (!ok) {
-      pushToast({
-        message: "Couldn't save this for future imports.",
-        tone: 'error',
-        actionLabel: 'Retry',
-        onAction: () => persistMappings(changes),
-      })
-    }
-  }, [pushToast])
+  const persistMappings = useCallback(
+    (changes: MappingChange[]) => {
+      // A named inner function, so "Retry" can call itself without referring to the hook's own result
+      async function save(batch: MappingChange[]): Promise<void> {
+        if (batch.length === 0) return
+        setPendingSaves(n => n + 1)
+        const ok = await saveBatchLearnedMappings(batch)
+        setPendingSaves(n => n - 1)
+        if (!ok) {
+          pushToast({
+            message: "Couldn't save this for future imports.",
+            tone: 'error',
+            actionLabel: 'Retry',
+            onAction: () => save(batch),
+          })
+        }
+      }
+      return save(changes)
+    },
+    [pushToast],
+  )
 
   /**
    * Core edit: set a category on some transactions, learn the merchant, and apply it to every
@@ -400,14 +467,6 @@ function App() {
       },
     })
   }
-
-  // Excluding a row is its own kind of edit: it must survive re-processing, but it must not make
-  // the category "manual" (which would stop merchant-wide recategorizing from reaching it)
-  const withEdit = (t: Transaction, updates: Partial<Transaction>): Transaction => ({
-    ...t,
-    ...updates,
-    ...('isExcluded' in updates ? { excludedManually: true } : {}),
-  })
 
   const handleUpdateTransaction = (id: string, updates: Partial<Transaction>) => {
     const { category, ...rest } = updates
@@ -493,7 +552,11 @@ function App() {
     const current = transactionsRef.current
     const previousName = current.find(t => sameMerchant(merchantKeyOf(t), merchantKey))?.displayName
     saveAlias(merchantKey, name)
-    commit(current.map(t => (sameMerchant(merchantKeyOf(t), merchantKey) ? { ...t, displayName: name.trim() || undefined } : t)))
+    commit(
+      current.map(t =>
+        sameMerchant(merchantKeyOf(t), merchantKey) ? { ...t, displayName: name.trim() || undefined } : t,
+      ),
+    )
     pushToast({
       message: name.trim() ? `Showing "${merchantKey}" as ${name.trim()}` : `Reset name for ${merchantKey}`,
       tone: 'success',
@@ -505,111 +568,43 @@ function App() {
     })
   }
 
+  const value: AppState = {
+    transactions,
+    displayTransactions,
+    baseCurrency,
+    foreignCurrencies,
+    rates,
+    onRatesChange: handleRatesChange,
+    dateRange,
+    setDateRange,
+    sheetConfig,
+    setSheetConfig,
+    isLoading,
+    isRestoring,
+    error,
+    anonymizationEnabled,
+    toggleAnonymization: handleToggleAnonymization,
+    uploadFile: handleFileUpload,
+    addFile: handleAddFile,
+    importBankTransactions: handleBankImport,
+    clearData: handleClearData,
+    downloadCsv: handleDownloadCsv,
+    updateTransaction: handleUpdateTransaction,
+    bulkUpdate: handleBulkUpdate,
+    split: handleSplit,
+    unsplit: handleUnsplit,
+    renameMerchant: handleRenameMerchant,
+    remember,
+    toggleRemember: handleToggleRemember,
+    numberFormat,
+    toggleNumberFormat,
+    pendingSaves,
+    pushToast,
+  }
+
   return (
-    <div className="min-h-screen bg-midnight-950">
-      <header className="border-b border-midnight-800 bg-midnight-900/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center">
-                <span className="text-xl font-bold text-white">F</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">FinKit</h1>
-                <p className="text-xs text-midnight-400">Transaction analysis & insights</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {transactions.length > 0 && (
-                <>
-                  {pendingSaves > 0 && (
-                    <span className="flex items-center gap-1.5 text-xs text-midnight-400" aria-live="polite">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Saving…
-                    </span>
-                  )}
-                  <button
-                    onClick={handleToggleAnonymization}
-                    className={`
-                      flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                      ${anonymizationEnabled 
-                        ? 'bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30' 
-                        : 'bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30'
-                      }
-                    `}
-                    title={anonymizationEnabled ? 'Click to show original data' : 'Click to anonymize data'}
-                  >
-                    {anonymizationEnabled ? (
-                      <>
-                        <Shield className="w-4 h-4" />
-                        <span>Anonymized</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShieldOff className="w-4 h-4" />
-                        <span>Original</span>
-                      </>
-                    )}
-                  </button>
-                  <label className="btn-secondary text-sm flex items-center gap-2 cursor-pointer" title="Add another file">
-                    <FilePlus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Add file</span>
-                    <input
-                      type="file"
-                      accept=".csv,.xlsx,.xls,.ofx,.qfx"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) handleAddFile(file)
-                        e.target.value = ''
-                      }}
-                    />
-                  </label>
-                </>
-              )}
-              <HeaderMenu
-                hasData={transactions.length > 0}
-                numberFormatLabel={numberFormat === 'point' ? '1,234.56' : '1.234,56'}
-                onToggleNumberFormat={toggleNumberFormat}
-                remember={remember}
-                onToggleRemember={handleToggleRemember}
-                onDownloadCsv={handleDownloadCsv}
-                onClear={handleClearData}
-              />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {isRestoring ? (
-          <DashboardSkeleton />
-        ) : transactions.length === 0 ? (
-          <FileUpload 
-            onFileUpload={handleFileUpload} 
-            isLoading={isLoading}
-            error={error}
-          />
-        ) : (
-          <Dashboard
-            transactions={displayTransactions}
-            baseCurrency={baseCurrency}
-            foreignCurrencies={foreignCurrencies}
-            rates={rates}
-            onRatesChange={handleRatesChange}
-            onSplit={handleSplit}
-            onUnsplit={handleUnsplit}
-            onRenameMerchant={handleRenameMerchant}
-            dateRange={dateRange}
-            onDateRangeChange={setDateRange}
-            onUpdateTransaction={handleUpdateTransaction}
-            onBulkUpdate={handleBulkUpdate}
-            sheetConfig={sheetConfig}
-            onSheetConfigChange={setSheetConfig}
-          />
-        )}
-      </main>
-
+    <AppContext.Provider value={value}>
+      {children}
       {pendingImport && (
         <ImportConfirm
           fileName={pendingImport.fileName}
@@ -627,15 +622,13 @@ function App() {
         />
       )}
 
-      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-xs text-midnight-500">
-        <a href="/privacy.html" className="hover:text-midnight-300 underline-offset-2 hover:underline">Privacy</a>
-        <span className="mx-2" aria-hidden="true">·</span>
-        <a href="/terms.html" className="hover:text-midnight-300 underline-offset-2 hover:underline">Terms</a>
-      </footer>
-
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
-    </div>
+    </AppContext.Provider>
   )
 }
 
-export default App
+export function useApp(): AppState {
+  const value = useContext(AppContext)
+  if (!value) throw new Error('useApp must be used inside AppStateProvider')
+  return value
+}

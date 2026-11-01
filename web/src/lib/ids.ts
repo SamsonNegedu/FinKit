@@ -11,6 +11,8 @@ export function hashKey(input: string): string {
 }
 
 export function rawKey(raw: RawTransaction): string {
+  // A bank's own transaction id is the best identity: it survives reconnects and re-fetches
+  if (raw.externalId) return `ext:${raw.externalId}`
   return [raw.date, raw.amount, raw.description, raw.recipient || '', raw.recipientIban || ''].join('|')
 }
 
@@ -49,7 +51,6 @@ export function migrateOldIds(txs: Transaction[], raw: RawTransaction[]): Transa
   return txs.map(t => ({
     ...t,
     id: idMap.get(t.id) ?? t.id,
-    doubleBookingMatch: t.doubleBookingMatch ? idMap.get(t.doubleBookingMatch) ?? t.doubleBookingMatch : undefined,
+    doubleBookingMatch: t.doubleBookingMatch ? (idMap.get(t.doubleBookingMatch) ?? t.doubleBookingMatch) : undefined,
   }))
 }
-

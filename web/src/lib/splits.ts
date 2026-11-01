@@ -24,7 +24,7 @@ export function isValidSplit(total: number, parts: SplitPart[]): boolean {
   return parts.length >= 2 && parts.every(p => p.amount > 0 && p.category) && Math.abs(remaining(total, parts)) < 0.005
 }
 
-export function childrenOf(parent: Transaction, parts: SplitPart[]): Transaction[] {
+function childrenOf(parent: Transaction, parts: SplitPart[]): Transaction[] {
   return parts.map((p, i) => ({
     ...parent,
     id: `${parent.id}~${i + 1}`,

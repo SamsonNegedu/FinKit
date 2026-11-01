@@ -25,10 +25,10 @@ interface Group {
   total: number
 }
 
-
 export default function ReviewQueue({ transactions, onBulkUpdate, currency }: ReviewQueueProps) {
   const [skipped, setSkipped] = useState<Set<string>>(new Set())
   const [totalAtStart, setTotalAtStart] = useState<number | null>(null)
+  const [focusKey, setFocusKey] = useState<string | null>(null)
 
   const groups = useMemo(() => {
     const result: Group[] = []
@@ -58,7 +58,11 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
   }, [transactions])
 
   const pending = groups.filter(g => !skipped.has(g.key))
-  const current = pending[0]
+  // Jumping to a merchant from the list puts it first; otherwise the biggest spend comes first
+  const focused = focusKey ? pending.find(g => g.key === focusKey) : undefined
+  const current = focused ?? pending[0]
+  const upNext = pending.filter(g => g !== current).slice(0, 6)
+  const transactionsLeft = pending.reduce((n, g) => n + g.items.length, 0)
 
   useEffect(() => {
     if (totalAtStart === null && groups.length > 0) setTotalAtStart(groups.length)
@@ -66,11 +70,17 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
 
   const assign = (category: string) => {
     if (!current) return
-    onBulkUpdate(current.items.map(t => t.id), { category })
+    onBulkUpdate(
+      current.items.map(t => t.id),
+      { category },
+    )
   }
   const exclude = () => {
     if (!current) return
-    onBulkUpdate(current.items.map(t => t.id), { isExcluded: true })
+    onBulkUpdate(
+      current.items.map(t => t.id),
+      { isExcluded: true },
+    )
   }
   const skip = () => {
     if (!current) return
@@ -80,7 +90,11 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const el = e.target as HTMLElement | null
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return
+      if (
+        el &&
+        (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
+      )
+        return
       // Never act behind an open dialog (settings, split, import confirm...)
       if (document.querySelector('[aria-modal="true"]')) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -122,8 +136,13 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
     <div className="card space-y-5">
       <div>
         <div className="flex justify-between text-xs text-midnight-400 mb-1">
-          <span>{pending.length} merchant{pending.length === 1 ? '' : 's'} left</span>
-          <span>{done} of {total} done</span>
+          <span>
+            {pending.length} merchant{pending.length === 1 ? '' : 's'} · {transactionsLeft} transaction
+            {transactionsLeft === 1 ? '' : 's'} left
+          </span>
+          <span>
+            {done} of {total} done
+          </span>
         </div>
         <div className="h-1.5 rounded-full bg-midnight-800 overflow-hidden">
           <div className="h-full bg-accent transition-all" style={{ width: `${(done / total) * 100}%` }} />
@@ -133,11 +152,14 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
       <div>
         <h3 className="text-xl font-semibold text-white">{current.items[0].displayName || current.key}</h3>
         <p className="text-sm text-midnight-400">
-          {current.items.length} transaction{current.items.length === 1 ? '' : 's'} · {formatCurrency(current.total, currency)} total
+          {current.items.length} transaction{current.items.length === 1 ? '' : 's'} ·{' '}
+          {formatCurrency(current.total, currency)} total
         </p>
         <ul className="mt-3 text-sm text-midnight-300 space-y-1">
           {current.items.slice(0, 3).map(t => (
-            <li key={t.id} className="truncate">{t.description}</li>
+            <li key={t.id} className="truncate">
+              {t.description}
+            </li>
           ))}
           {current.items.length > 3 && <li className="text-midnight-500">+ {current.items.length - 3} more</li>}
         </ul>
@@ -165,6 +187,27 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
           <EyeOff className="w-4 h-4" /> Exclude <kbd className="text-xs text-midnight-400">E</kbd>
         </button>
       </div>
+
+      {upNext.length > 0 && (
+        <div className="pt-4 border-t border-midnight-800">
+          <p className="text-xs text-midnight-400 mb-2">Up next, biggest first. Pick one to jump ahead.</p>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {upNext.map(g => (
+              <li key={g.key}>
+                <button
+                  onClick={() => setFocusKey(g.key)}
+                  className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-midnight-800/50 hover:bg-midnight-800 text-left text-sm"
+                >
+                  <span className="truncate text-midnight-100">{g.items[0].displayName || g.key}</span>
+                  <span className="shrink-0 text-xs text-midnight-400 tabular-nums">
+                    {g.items.length} · {formatCurrency(g.total, currency)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

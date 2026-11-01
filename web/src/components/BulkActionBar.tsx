@@ -31,7 +31,7 @@ export default function BulkActionBar({
   }, [])
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+    <div className="fixed bottom-6 max-md:bottom-20 left-1/2 -translate-x-1/2 z-50">
       <div className="bg-midnight-800 border border-midnight-600 rounded-xl shadow-2xl px-4 py-3 flex items-center gap-4">
         <span className="text-sm text-midnight-300">
           <span className="font-medium text-white">{selectedCount}</span> selected
@@ -52,7 +52,7 @@ export default function BulkActionBar({
 
           {showDropdown && (
             <div className="absolute bottom-full left-0 mb-2 bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl min-w-[200px] max-h-[300px] overflow-y-auto">
-              {getAvailableCategories().map((category) => (
+              {getAvailableCategories().map(category => (
                 <button
                   key={category}
                   onClick={() => {
@@ -61,10 +61,7 @@ export default function BulkActionBar({
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2 hover:bg-midnight-700 text-left"
                 >
-                  <span
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: getCategoryColor(category) }}
-                  />
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(category) }} />
                   <span className="text-sm">{category}</span>
                 </button>
               ))}

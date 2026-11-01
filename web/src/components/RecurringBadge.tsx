@@ -5,12 +5,14 @@ interface RecurringBadgeProps {
 }
 
 export default function RecurringBadge({ frequency }: RecurringBadgeProps) {
-  const label = frequency ? {
-    weekly: 'Weekly',
-    monthly: 'Monthly',
-    quarterly: 'Quarterly',
-    yearly: 'Yearly',
-  }[frequency] : 'Recurring'
+  const label = frequency
+    ? {
+        weekly: 'Weekly',
+        monthly: 'Monthly',
+        quarterly: 'Quarterly',
+        yearly: 'Yearly',
+      }[frequency]
+    : 'Recurring'
 
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent/20 text-accent text-xs font-medium rounded-full">

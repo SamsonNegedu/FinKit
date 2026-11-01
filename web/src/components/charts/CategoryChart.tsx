@@ -8,6 +8,20 @@ interface CategoryChartProps {
   onSelectCategory?: (category: string) => void
 }
 
+function CategoryTooltip({ active, payload, currency }: { active?: boolean; payload?: any[]; currency: string }) {
+  if (!active || !payload?.length) return null
+  const entry = payload[0].payload
+  return (
+    <div className="bg-midnight-800 border border-midnight-600 rounded-lg px-3 py-2 shadow-xl">
+      <p className="font-medium text-white">{entry.category}</p>
+      <p className="text-sm text-midnight-300">
+        {formatCurrency(entry.total, currency)} ({entry.percentage.toFixed(1)}%)
+      </p>
+      <p className="text-xs text-midnight-400">{entry.count} transactions</p>
+    </div>
+  )
+}
+
 export default function CategoryChart({ categorySummary, currency, onSelectCategory }: CategoryChartProps) {
   // The grouped "Other (n categories)" slice isn't a real category, so it isn't clickable
   const select = (category: string) => {
@@ -16,7 +30,7 @@ export default function CategoryChart({ categorySummary, currency, onSelectCateg
   // Take top 8 categories and group rest as "Other"
   const topCategories = categorySummary.slice(0, 8)
   const otherCategories = categorySummary.slice(8)
-  
+
   const data = [...topCategories]
   if (otherCategories.length > 0) {
     const otherTotal = otherCategories.reduce((sum, c) => sum + c.total, 0)
@@ -31,26 +45,10 @@ export default function CategoryChart({ categorySummary, currency, onSelectCateg
     })
   }
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      return (
-        <div className="bg-midnight-800 border border-midnight-600 rounded-lg px-3 py-2 shadow-xl">
-          <p className="font-medium text-white">{data.category}</p>
-          <p className="text-sm text-midnight-300">
-            {formatCurrency(data.total, currency)} ({data.percentage.toFixed(1)}%)
-          </p>
-          <p className="text-xs text-midnight-400">{data.count} transactions</p>
-        </div>
-      )
-    }
-    return null
-  }
-
   return (
     <div className="card">
       <h3 className="text-lg font-semibold text-white mb-4">Spending by Category</h3>
-      
+
       {data.length > 0 ? (
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -71,7 +69,7 @@ export default function CategoryChart({ categorySummary, currency, onSelectCateg
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CategoryTooltip currency={currency} />} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -81,24 +79,25 @@ export default function CategoryChart({ categorySummary, currency, onSelectCateg
         </div>
       )}
 
-      {/* Legend */}
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        {data.slice(0, 6).map((item) => (
-          <button
-            key={item.category}
-            onClick={() => select(item.category)}
-            className="flex items-center gap-2 text-left hover:bg-midnight-800 rounded px-1 -mx-1"
-            title={onSelectCategory ? `Show ${item.category} transactions` : undefined}
-          >
-            <span
-              className="w-3 h-3 rounded-full flex-shrink-0"
-              style={{ backgroundColor: item.color }}
-            />
-            <span className="text-sm text-midnight-300 truncate">{item.category}</span>
-            <span className="text-sm text-midnight-500 ml-auto">{item.percentage.toFixed(0)}%</span>
-          </button>
+      {/* Legend: every slice with what it cost */}
+      <ul className="mt-4 space-y-1">
+        {data.map(item => (
+          <li key={item.category}>
+            <button
+              onClick={() => select(item.category)}
+              className="w-full flex items-center gap-2 text-left hover:bg-midnight-800 rounded px-1.5 py-1"
+              title={onSelectCategory ? `Show ${item.category} transactions` : undefined}
+            >
+              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+              <span className="text-sm text-midnight-200 truncate">{item.category}</span>
+              <span className="text-sm text-white ml-auto tabular-nums">{formatCurrency(item.total, currency)}</span>
+              <span className="text-xs text-midnight-500 w-10 text-right tabular-nums">
+                {item.percentage.toFixed(0)}%
+              </span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }

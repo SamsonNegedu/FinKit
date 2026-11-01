@@ -10,7 +10,9 @@ export default function RulesManager() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getLearnedMappings().then(r => setRules(r.sort((a, b) => (a.merchantDisplay || a.merchant).localeCompare(b.merchantDisplay || b.merchant))))
+    getLearnedMappings().then(r =>
+      setRules(r.sort((a, b) => (a.merchantDisplay || a.merchant).localeCompare(b.merchantDisplay || b.merchant))),
+    )
   }, [])
 
   const change = async (rule: LearnedMapping, category: string) => {
@@ -30,7 +32,7 @@ export default function RulesManager() {
   }
 
   const visible = (rules || []).filter(r =>
-    (r.merchantDisplay || r.merchant).toLowerCase().includes(filter.toLowerCase())
+    (r.merchantDisplay || r.merchant).toLowerCase().includes(filter.toLowerCase()),
   )
 
   return (
@@ -48,7 +50,7 @@ export default function RulesManager() {
           <input
             type="text"
             value={filter}
-            onChange={(e) => setFilter(e.target.value)}
+            onChange={e => setFilter(e.target.value)}
             placeholder={`Search ${rules.length} rules`}
             className="input w-full text-sm mb-2"
             aria-label="Search rules"
@@ -61,12 +63,14 @@ export default function RulesManager() {
                 </span>
                 <select
                   value={rule.category}
-                  onChange={(e) => change(rule, e.target.value)}
+                  onChange={e => change(rule, e.target.value)}
                   className="input text-sm py-1"
                   aria-label={`Category for ${rule.merchantDisplay || rule.merchant}`}
                 >
                   {[...new Set([rule.category, ...getAvailableCategories()])].map(c => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
                 <button

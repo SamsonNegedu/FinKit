@@ -25,7 +25,9 @@ export default function CurrencyRates({ base, foreign, rates, onChange }: Curren
   return (
     <div
       className={`rounded-lg border p-3 text-sm ${
-        missing.length ? 'bg-orange-500/10 border-orange-500/30 text-orange-300' : 'bg-midnight-900 border-midnight-700 text-midnight-300'
+        missing.length
+          ? 'bg-orange-500/10 border-orange-500/30 text-orange-300'
+          : 'bg-midnight-900 border-midnight-700 text-midnight-300'
       }`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -47,7 +49,7 @@ export default function CurrencyRates({ base, foreign, rates, onChange }: Curren
                 type="text"
                 inputMode="decimal"
                 defaultValue={rates[c] ?? ''}
-                onBlur={(e) => set(c, e.target.value)}
+                onBlur={e => set(c, e.target.value)}
                 placeholder="0.00"
                 className="input w-24 py-1 text-sm"
                 aria-label={`Rate: 1 ${c} in ${base}`}

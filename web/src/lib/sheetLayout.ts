@@ -24,7 +24,7 @@ const NAMED_KINDS: Record<string, SheetColumnKind> = {
   netincome: 'net',
 }
 
-export function columnIndex(letter: string): number {
+function columnIndex(letter: string): number {
   return letter.split('').reduce((acc, ch) => acc * 26 + ch.charCodeAt(0) - 64, 0) - 1
 }
 
@@ -47,7 +47,10 @@ export function columnLetter(index: number): string {
 export function classifyHeaders(headers: SheetHeaderColumn[]): SheetColumn[] {
   const sorted = [...headers].sort((a, b) => columnIndex(a.column) - columnIndex(b.column))
   const totalIdx = sorted.findIndex(h => norm(h.name) === 'totalexpenditure')
-  const monthIdx = Math.max(0, sorted.findIndex(h => norm(h.name) === 'month'))
+  const monthIdx = Math.max(
+    0,
+    sorted.findIndex(h => norm(h.name) === 'month'),
+  )
 
   return sorted.map((h, i): SheetColumn => {
     const key = norm(h.name)
@@ -61,8 +64,14 @@ export function classifyHeaders(headers: SheetHeaderColumn[]): SheetColumn[] {
 // Built-in layout used until a sheet has been synced (matches the original hardcoded sheet)
 export const DEFAULT_LAYOUT: SheetColumn[] = (() => {
   const names = [
-    'Month', ...EXPENSE_CATEGORIES, 'Total Expenditure', 'Income',
-    'Income After Expenditure', 'Gross Savings', 'Gross Investment', 'Net Income',
+    'Month',
+    ...EXPENSE_CATEGORIES,
+    'Total Expenditure',
+    'Income',
+    'Income After Expenditure',
+    'Gross Savings',
+    'Gross Investment',
+    'Net Income',
   ]
   return classifyHeaders(names.map((name, i) => ({ column: columnLetter(i), name })))
 })()
@@ -76,10 +85,9 @@ export function layoutCategories(layout: SheetColumn[]): string[] {
 }
 
 /** Config fields derived from a layout, so mappings/formula columns never need hand-editing. */
-export function configPartsFromLayout(layout: SheetColumn[]): Pick<
-  SheetConfig,
-  'categoryMappings' | 'constantColumns' | 'incomeColumn' | 'savingsColumn' | 'investmentColumn'
-> {
+export function configPartsFromLayout(
+  layout: SheetColumn[],
+): Pick<SheetConfig, 'categoryMappings' | 'constantColumns' | 'incomeColumn' | 'savingsColumn' | 'investmentColumn'> {
   const categoryMappings: CategoryMapping[] = layout
     .filter(c => c.kind === 'category')
     .map(c => ({ appCategory: categoryFromHeader(c.name), sheetColumn: c.column }))
@@ -93,7 +101,7 @@ export function configPartsFromLayout(layout: SheetColumn[]): Pick<
   }
 }
 
-export interface RowCell {
+interface RowCell {
   column: string
   label: string
   kind: SheetColumnKind
@@ -101,7 +109,7 @@ export interface RowCell {
   text?: string
 }
 
-export interface BuiltRow {
+interface BuiltRow {
   cells: RowCell[]
   totalExpenditure: number
   income: number
@@ -162,7 +170,12 @@ export function buildSheetRow(transactions: Transaction[], layout: SheetColumn[]
     } else if (col.kind === 'month') {
       cells.push({ column: letter, label: col.name, kind: 'month', value: null, text: month })
     } else if (col.kind === 'category') {
-      cells.push({ column: letter, label: col.name, kind: 'category', value: totals.get(categoryFromHeader(col.name)) || 0 })
+      cells.push({
+        column: letter,
+        label: col.name,
+        kind: 'category',
+        value: totals.get(categoryFromHeader(col.name)) || 0,
+      })
     } else if (col.kind === 'other') {
       cells.push({ column: letter, label: col.name, kind: 'other', value: null })
     } else {
@@ -192,7 +205,10 @@ export async function syncSheetLayout(config: SheetConfig): Promise<SheetConfig>
  * `startColumn` is the letter of the first copied cell (default A).
  */
 export function layoutFromPaste(text: string, startColumn = 'A'): { layout: SheetColumn[]; headerRow: number } | null {
-  const rows = text.replace(/\r/g, '').split('\n').map(r => r.split('\t').map(c => c.trim()))
+  const rows = text
+    .replace(/\r/g, '')
+    .split('\n')
+    .map(r => r.split('\t').map(c => c.trim()))
   const filled = rows.filter(r => r.some(Boolean))
   if (filled.length === 0) return null
   // If several rows were pasted, prefer the one that has "Total Expenditure"; else the fullest
@@ -200,9 +216,7 @@ export function layoutFromPaste(text: string, startColumn = 'A'): { layout: Shee
     filled.find(r => r.some(c => norm(c) === 'totalexpenditure')) ??
     filled.reduce((best, r) => (r.filter(Boolean).length > best.filter(Boolean).length ? r : best))
   const start = Math.max(0, columnIndex((startColumn || 'A').toUpperCase()))
-  const headers = row
-    .map((name, i) => ({ column: columnLetter(start + i), name }))
-    .filter(h => h.name)
+  const headers = row.map((name, i) => ({ column: columnLetter(start + i), name })).filter(h => h.name)
   if (headers.length < 2) return null
   return { layout: classifyHeaders(headers), headerRow: 0 }
 }
