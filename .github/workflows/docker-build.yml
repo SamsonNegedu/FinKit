@@ -14,10 +14,44 @@ permissions:
 
 jobs:
   # ============================================
+  # Lint, types and tests: nothing is built until these pass
+  # ============================================
+  check:
+    name: Check (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, web]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - run: npm ci
+      - name: Lint and format
+        run: npm run check
+      - name: Types (web; the API check already includes them)
+        if: matrix.app == 'web'
+        run: npx tsc --noEmit -p .
+      - name: Tests
+        run: npm test
+
+  # ============================================
   # API Dependencies (cached node_modules)
   # ============================================
   api-deps:
     name: API deps (cached node_modules)
+    needs: [check]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:
@@ -38,20 +72,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push deps (builder)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./api
-          file: ./api/Dockerfile.deps
-          target: deps-builder
-          platforms: linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ghcr.io/${{ steps.owner.outputs.owner_lc }}/finkit-api-deps:builder
-            ghcr.io/${{ steps.owner.outputs.owner_lc }}/finkit-api-deps:builder-sha-${{ github.sha }}
-          cache-from: type=gha,scope=api-deps-builder
-          cache-to: type=gha,mode=max,scope=api-deps-builder
-
       - name: Build and push deps (production)
         uses: docker/build-push-action@v6
         with:
@@ -61,8 +81,8 @@ jobs:
           platforms: linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/${{ steps.owner.outputs.owner_lc }}/finkit-api-deps:production
             ghcr.io/${{ steps.owner.outputs.owner_lc }}/finkit-api-deps:production-sha-${{ github.sha }}
+            ghcr.io/${{ steps.owner.outputs.owner_lc }}/finkit-api-deps:production
           cache-from: type=gha,scope=api-deps-production
           cache-to: type=gha,mode=max,scope=api-deps-production
 
@@ -72,7 +92,9 @@ jobs:
   api:
     name: API app
     runs-on: ubuntu-24.04-arm
-    needs: [api-deps]
+    needs: [check, api-deps]
+    # api-deps doesn't run on pull requests (nothing is published there); the build installs its own
+    if: ${{ !cancelled() && needs.check.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.api-deps.result) }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -103,6 +125,18 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,prefix=sha-,format=short
 
+      # Pull requests publish nothing, so they build their own production dependencies (api/Dockerfile).
+      - name: Dependency image
+        id: deps
+        run: |
+          {
+            echo 'args<<EOF'
+            if [ "${{ github.event_name }}" != "pull_request" ]; then
+              echo "PRODUCTION_DEPS_IMAGE=ghcr.io/${{ steps.owner.outputs.owner_lc }}/finkit-api-deps:production-sha-${{ github.sha }}"
+            fi
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -112,9 +146,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            BUILDER_DEPS_IMAGE=ghcr.io/${{ steps.owner.outputs.owner_lc }}/finkit-api-deps:builder
-            PRODUCTION_DEPS_IMAGE=ghcr.io/${{ steps.owner.outputs.owner_lc }}/finkit-api-deps:production
+          build-args: ${{ steps.deps.outputs.args }}
           cache-from: type=gha,scope=api-app
           cache-to: type=gha,mode=max,scope=api-app
 
@@ -123,6 +155,7 @@ jobs:
   # ============================================
   web:
     name: Web app
+    needs: [check]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 10
     steps:

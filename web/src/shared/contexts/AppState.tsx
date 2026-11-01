@@ -1,0 +1,174 @@
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import ImportConfirm from '@/features/import/components/ImportConfirm'
+import ToastHost from '@/shared/components/feedback/Toast'
+import type { DateRange, SheetConfig } from '@/shared/types'
+import {
+  applyRates,
+  baseCurrencyOf,
+  foreignCurrenciesOf,
+  loadRateStore,
+  saveRateStore,
+  type RateMap,
+  type RateStore,
+} from '@/shared/utils/rates'
+import { getNumberFormat, setNumberFormat, type NumberFormat } from '@/shared/utils/format'
+import type { AppState } from './workspace/types'
+import { useToastStack } from './workspace/useToastStack'
+import { useTransactionStore } from './workspace/useTransactionStore'
+import { syncExpenseCategoriesFromSheet, useWorkspaceBootstrap } from './workspace/useWorkspaceBootstrap'
+import { useWorkspaceImport } from './workspace/useWorkspaceImport'
+import { useWorkspaceMutations } from './workspace/useWorkspaceMutations'
+import { useRememberPreference } from './workspace/useRememberPreference'
+import { useWorkspacePhase } from './workspace/useWorkspacePhase'
+import {
+  importErrorFromPhase,
+  isImportingPhase,
+  isRestoringPhase,
+  pendingImportFromPhase,
+  type SheetBootstrapPhase,
+} from './workspace/workspacePhase'
+
+const AppContext = createContext<AppState | null>(null)
+
+export function AppStateProvider({ children }: { children: ReactNode }) {
+  const store = useTransactionStore()
+  const { toasts, dismissToast, pushToast } = useToastStack()
+  const [workspacePhase, dispatchPhase] = useWorkspacePhase()
+  const [sheetBootstrapPhase, setSheetBootstrapPhase] = useState<SheetBootstrapPhase>({ kind: 'idle' })
+  const [dateRange, setDateRange] = useState<DateRange | null>(null)
+  const [sheetConfig, setSheetConfig] = useState<SheetConfig | null>(null)
+  const [anonymizationEnabled, setAnonymizationEnabled] = useState(false)
+  const [pendingSaves, setPendingSaves] = useState(0)
+  const [rateStore, setRateStore] = useState<RateStore>(loadRateStore())
+  const [numberFormat, setNumberFormatState] = useState<NumberFormat>(getNumberFormat())
+  const { remember, toggleRemember } = useRememberPreference(pushToast)
+
+  const isRestoring = isRestoringPhase(workspacePhase)
+  const isLoading = isImportingPhase(workspacePhase)
+  const error = importErrorFromPhase(workspacePhase)
+  const pendingImport = pendingImportFromPhase(workspacePhase)
+
+  useWorkspaceBootstrap({
+    store,
+    dispatchPhase,
+    setAnonymizationEnabled,
+    setDateRange,
+    setSheetConfig,
+    setSheetBootstrap: setSheetBootstrapPhase,
+    remember,
+    isRestoring,
+    dateRange,
+    anonymizationEnabled,
+    transactions: store.transactions,
+  })
+
+  syncExpenseCategoriesFromSheet(sheetConfig)
+
+  const clearImportError = () => dispatchPhase({ type: 'CLEAR_IMPORT_ERROR' })
+
+  const importActions = useWorkspaceImport({
+    store,
+    anonymizationEnabled,
+    pushToast,
+    dispatchPhase,
+    setDateRange,
+  })
+
+  const mutations = useWorkspaceMutations({
+    store,
+    pushToast,
+    setPendingSaves,
+    setAnonymizationEnabled,
+    setDateRange,
+    clearImportError,
+    anonymizationEnabled,
+    dateRange,
+    reprocess: importActions.reprocess,
+  })
+
+  const baseCurrency = useMemo(() => baseCurrencyOf(store.transactions), [store.transactions])
+  const foreignCurrencies = useMemo(
+    () => foreignCurrenciesOf(store.transactions, baseCurrency),
+    [store.transactions, baseCurrency],
+  )
+  const rates = useMemo<RateMap>(() => rateStore[baseCurrency] ?? {}, [rateStore, baseCurrency])
+  const displayTransactions = useMemo(
+    () => applyRates(store.transactions, baseCurrency, rates),
+    [store.transactions, baseCurrency, rates],
+  )
+
+  const toggleNumberFormat = () => {
+    const next: NumberFormat = numberFormat === 'point' ? 'comma' : 'point'
+
+    setNumberFormat(next)
+    setNumberFormatState(next)
+  }
+
+  const value: AppState = {
+    transactions: store.transactions,
+    displayTransactions,
+    baseCurrency,
+    foreignCurrencies,
+    rates,
+    onRatesChange: next => {
+      const updated = { ...rateStore, [baseCurrency]: next }
+
+      setRateStore(updated)
+      saveRateStore(updated)
+    },
+    dateRange,
+    setDateRange,
+    sheetConfig,
+    setSheetConfig,
+    isLoading,
+    isRestoring,
+    error,
+    workspacePhase,
+    sheetBootstrapPhase,
+    anonymizationEnabled,
+    toggleAnonymization: mutations.toggleAnonymization,
+    uploadFile: importActions.uploadFile,
+    addFile: importActions.addFile,
+    importBankTransactions: importActions.importBankTransactions,
+    clearData: mutations.clearData,
+    downloadCsv: mutations.downloadCsvExport,
+    updateTransaction: mutations.updateTransaction,
+    bulkUpdate: mutations.bulkUpdate,
+    split: mutations.split,
+    unsplit: mutations.unsplit,
+    renameMerchant: mutations.renameMerchant,
+    remember,
+    toggleRemember,
+    numberFormat,
+    toggleNumberFormat,
+    pendingSaves,
+    pushToast,
+  }
+
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+      {pendingImport && (
+        <ImportConfirm
+          fileName={pendingImport.fileName}
+          total={pendingImport.incoming.length}
+          duplicates={pendingImport.duplicates}
+          onSkip={() => importActions.resolvePendingImport('skip', pendingImport)}
+          onKeepAll={() => importActions.resolvePendingImport('keep', pendingImport)}
+          onCancel={() => importActions.resolvePendingImport('cancel', pendingImport)}
+        />
+      )}
+      <ToastHost toasts={toasts} onDismiss={dismissToast} />
+    </AppContext.Provider>
+  )
+}
+
+export function useApp(): AppState {
+  const value = useContext(AppContext)
+
+  if (!value) {
+    throw new Error('useApp must be used inside AppStateProvider')
+  }
+
+  return value
+}

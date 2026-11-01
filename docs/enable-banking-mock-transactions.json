@@ -1,0 +1,515 @@
+[
+  {
+    "entry_reference": "MOCK0027",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "2800.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "CRDT",
+    "booking_date": "2026-11-01",
+    "value_date": "2026-11-01",
+    "transaction_date": "2026-11-01",
+    "remittance_information": [
+      "Salary 2026-11"
+    ],
+    "debtor": {
+      "name": "Acme GmbH"
+    },
+    "debtor_account": {
+      "iban": "DE02120300000000202051"
+    }
+  },
+  {
+    "entry_reference": "MOCK0020",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "27.89",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-27",
+    "value_date": "2026-10-27",
+    "transaction_date": "2026-10-27",
+    "remittance_information": [
+      "Card payment groceries"
+    ],
+    "creditor": {
+      "name": "REWE Markt GmbH"
+    }
+  },
+  {
+    "entry_reference": "MOCK0019",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "21.28",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-24",
+    "value_date": "2026-10-24",
+    "transaction_date": "2026-10-24",
+    "remittance_information": [
+      "Card payment groceries"
+    ],
+    "creditor": {
+      "name": "REWE Markt GmbH"
+    }
+  },
+  {
+    "entry_reference": "MOCK0018",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "50.40",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-18",
+    "value_date": "2026-10-18",
+    "transaction_date": "2026-10-18",
+    "remittance_information": [
+      "Card payment groceries"
+    ],
+    "creditor": {
+      "name": "EDEKA"
+    }
+  },
+  {
+    "entry_reference": "MOCK0022",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "19.93",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-18",
+    "value_date": "2026-10-18",
+    "transaction_date": "2026-10-18",
+    "remittance_information": [
+      "DeepSeek API credits"
+    ],
+    "creditor": {
+      "name": "DeepSeek"
+    }
+  },
+  {
+    "entry_reference": "MOCK0017",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "50.01",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-16",
+    "value_date": "2026-10-16",
+    "transaction_date": "2026-10-16",
+    "remittance_information": [
+      "Card payment groceries"
+    ],
+    "creditor": {
+      "name": "REWE Markt GmbH"
+    }
+  },
+  {
+    "entry_reference": "MOCK0024",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "500.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-15",
+    "value_date": "2026-10-15",
+    "transaction_date": "2026-10-15",
+    "remittance_information": [
+      "Transfer to savings"
+    ],
+    "creditor": {
+      "name": "Own savings account"
+    },
+    "creditor_account": {
+      "iban": "DE89370400440532013000"
+    }
+  },
+  {
+    "entry_reference": "MOCK0025",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "500.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "CRDT",
+    "booking_date": "2026-10-15",
+    "value_date": "2026-10-15",
+    "transaction_date": "2026-10-15",
+    "remittance_information": [
+      "Transfer from current account"
+    ],
+    "debtor": {
+      "name": "Samson Negedu"
+    },
+    "debtor_account": {
+      "iban": "DE89370400440532013000"
+    }
+  },
+  {
+    "entry_reference": "MOCK0023",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "88.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-12",
+    "value_date": "2026-10-12",
+    "transaction_date": "2026-10-12",
+    "remittance_information": [
+      "Invoice 20931"
+    ],
+    "creditor": {
+      "name": "Unknown Vendor AG"
+    }
+  },
+  {
+    "entry_reference": "MOCK0021",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "56.67",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-06",
+    "value_date": "2026-10-06",
+    "transaction_date": "2026-10-06",
+    "remittance_information": [
+      "Fuel"
+    ],
+    "creditor": {
+      "name": "Shell"
+    }
+  },
+  {
+    "entry_reference": "MOCK0026",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "750.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-05",
+    "value_date": "2026-10-05",
+    "transaction_date": "2026-10-05",
+    "remittance_information": [
+      "Rent"
+    ],
+    "creditor": {
+      "name": "Hausverwaltung Mueller"
+    },
+    "creditor_account": {
+      "iban": "DE44500105175407324931"
+    }
+  },
+  {
+    "entry_reference": "MOCK0016",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "10.99",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-03",
+    "value_date": "2026-10-03",
+    "transaction_date": "2026-10-03",
+    "remittance_information": [
+      "Spotify Premium"
+    ],
+    "creditor": {
+      "name": "Spotify"
+    }
+  },
+  {
+    "entry_reference": "MOCK0015",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "9.99",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-10-02",
+    "value_date": "2026-10-02",
+    "transaction_date": "2026-10-02",
+    "remittance_information": [
+      "Netflix subscription"
+    ],
+    "creditor": {
+      "name": "Netflix"
+    }
+  },
+  {
+    "entry_reference": "MOCK0014",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "2800.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "CRDT",
+    "booking_date": "2026-10-01",
+    "value_date": "2026-10-01",
+    "transaction_date": "2026-10-01",
+    "remittance_information": [
+      "Salary 2026-10"
+    ],
+    "debtor": {
+      "name": "Acme GmbH"
+    },
+    "debtor_account": {
+      "iban": "DE02120300000000202051"
+    }
+  },
+  {
+    "entry_reference": "MOCK0007",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "41.22",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-22",
+    "value_date": "2026-09-22",
+    "transaction_date": "2026-09-22",
+    "remittance_information": [
+      "Card payment groceries"
+    ],
+    "creditor": {
+      "name": "REWE Markt GmbH"
+    }
+  },
+  {
+    "entry_reference": "MOCK0005",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "42.74",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-21",
+    "value_date": "2026-09-21",
+    "transaction_date": "2026-09-21",
+    "remittance_information": [
+      "Card payment groceries"
+    ],
+    "creditor": {
+      "name": "EDEKA"
+    }
+  },
+  {
+    "entry_reference": "MOCK0006",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "59.23",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-20",
+    "value_date": "2026-09-20",
+    "transaction_date": "2026-09-20",
+    "remittance_information": [
+      "Card payment groceries"
+    ],
+    "creditor": {
+      "name": "REWE Markt GmbH"
+    }
+  },
+  {
+    "entry_reference": "MOCK0004",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "27.87",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-18",
+    "value_date": "2026-09-18",
+    "transaction_date": "2026-09-18",
+    "remittance_information": [
+      "Card payment groceries"
+    ],
+    "creditor": {
+      "name": "EDEKA"
+    }
+  },
+  {
+    "entry_reference": "MOCK0011",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "500.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-15",
+    "value_date": "2026-09-15",
+    "transaction_date": "2026-09-15",
+    "remittance_information": [
+      "Transfer to savings"
+    ],
+    "creditor": {
+      "name": "Own savings account"
+    },
+    "creditor_account": {
+      "iban": "DE89370400440532013000"
+    }
+  },
+  {
+    "entry_reference": "MOCK0012",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "500.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "CRDT",
+    "booking_date": "2026-09-15",
+    "value_date": "2026-09-15",
+    "transaction_date": "2026-09-15",
+    "remittance_information": [
+      "Transfer from current account"
+    ],
+    "debtor": {
+      "name": "Samson Negedu"
+    },
+    "debtor_account": {
+      "iban": "DE89370400440532013000"
+    }
+  },
+  {
+    "entry_reference": "MOCK0010",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "88.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-12",
+    "value_date": "2026-09-12",
+    "transaction_date": "2026-09-12",
+    "remittance_information": [
+      "Invoice 20931"
+    ],
+    "creditor": {
+      "name": "Unknown Vendor AG"
+    }
+  },
+  {
+    "entry_reference": "MOCK0009",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "22.72",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-09",
+    "value_date": "2026-09-09",
+    "transaction_date": "2026-09-09",
+    "remittance_information": [
+      "DeepSeek API credits"
+    ],
+    "creditor": {
+      "name": "DeepSeek"
+    }
+  },
+  {
+    "entry_reference": "MOCK0008",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "50.93",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-08",
+    "value_date": "2026-09-08",
+    "transaction_date": "2026-09-08",
+    "remittance_information": [
+      "Fuel"
+    ],
+    "creditor": {
+      "name": "Shell"
+    }
+  },
+  {
+    "entry_reference": "MOCK0013",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "750.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-05",
+    "value_date": "2026-09-05",
+    "transaction_date": "2026-09-05",
+    "remittance_information": [
+      "Rent"
+    ],
+    "creditor": {
+      "name": "Hausverwaltung Mueller"
+    },
+    "creditor_account": {
+      "iban": "DE44500105175407324931"
+    }
+  },
+  {
+    "entry_reference": "MOCK0003",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "10.99",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-03",
+    "value_date": "2026-09-03",
+    "transaction_date": "2026-09-03",
+    "remittance_information": [
+      "Spotify Premium"
+    ],
+    "creditor": {
+      "name": "Spotify"
+    }
+  },
+  {
+    "entry_reference": "MOCK0002",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "9.99",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "DBIT",
+    "booking_date": "2026-09-02",
+    "value_date": "2026-09-02",
+    "transaction_date": "2026-09-02",
+    "remittance_information": [
+      "Netflix subscription"
+    ],
+    "creditor": {
+      "name": "Netflix"
+    }
+  },
+  {
+    "entry_reference": "MOCK0001",
+    "status": "BOOK",
+    "transaction_amount": {
+      "amount": "2800.00",
+      "currency": "EUR"
+    },
+    "credit_debit_indicator": "CRDT",
+    "booking_date": "2026-09-01",
+    "value_date": "2026-09-01",
+    "transaction_date": "2026-09-01",
+    "remittance_information": [
+      "Salary 2026-09"
+    ],
+    "debtor": {
+      "name": "Acme GmbH"
+    },
+    "debtor_account": {
+      "iban": "DE02120300000000202051"
+    }
+  }
+]

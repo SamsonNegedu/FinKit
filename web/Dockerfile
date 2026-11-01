@@ -1,7 +1,7 @@
 # ============================================
 # Dependencies stage
 # ============================================
-FROM node:20-alpine AS deps
+FROM node:26-alpine AS deps
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN npm ci
 # ============================================
 # Build stage
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -33,7 +33,7 @@ RUN test -f dist/index.html && test -f dist/app/index.html
 # ============================================
 # Production stage
 # ============================================
-FROM node:20-alpine AS production
+FROM node:26-alpine AS production
 
 WORKDIR /app
 

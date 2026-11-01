@@ -25,31 +25,46 @@
   <h1>FinKit privacy</h1>
   <p class="meta">Last updated: 1 November 2026</p>
 
-  <p>FinKit is a personal tool that one person uses to look at their own bank accounts. It is not offered to the public and has no other users.</p>
+  <p>FinKit is <strong>self-hosted software</strong>: the web app and API run on infrastructure you (or your operator) control. This page describes how that deployment handles data. It is written for a private instance used by the people its operator allows (for example a household), where each person sees only their own data—not a service sold to the public.</p>
 
-  <h2>What FinKit reads</h2>
+  <h2>No data gathering by FinKit</h2>
   <ul>
-    <li>Account names (with only the last digits), balances and transactions of the owner's own accounts.</li>
-    <li>This happens only after the owner approves access at their bank, through the open-banking service Enable Banking.</li>
-    <li>FinKit never sees or stores the owner's bank login or password.</li>
+    <li>FinKit does not include analytics, advertising, crash reporting, or usage telemetry.</li>
+    <li>There is no FinKit-operated cloud that receives your transactions, categories, or settings.</li>
+    <li>The application does not phone home to the software authors or any other third party unless you turn on an optional integration listed below.</li>
   </ul>
 
-  <h2>Where the data goes</h2>
+  <h2>Where your data lives (all self-hosted)</h2>
+  <p>“Server” here means the <strong>FinKit API you run yourself</strong> (Docker container, VPS, or local `npm run dev`)—not a service operated by the FinKit authors. The static web app is served from the same deployment or another host you control.</p>
   <ul>
-    <li>Transactions are shown in the owner's browser. The FinKit server does not keep them.</li>
-    <li>The server keeps the bank connection itself, encrypted, so it can fetch new transactions later.</li>
-    <li>The owner's browser may keep a local copy of the transactions so the page can be reopened. It can be switched off and cleared in the app.</li>
-    <li>Nothing is sold, shared with other people, or used for advertising or profiling.</li>
+    <li><strong>Your browser</strong> — Transaction rows you import or sync are processed and shown here. If you enable “remember session”, a copy can be stored locally in your browser (IndexedDB) so a refresh does not lose work. You can turn that off and clear it in the app.</li>
+    <li><strong>Your self-hosted API</strong> (SQLite file on your disk or Docker volume) — Each person’s email address, merchant→category rules and sheet/settings preferences. If bank sync is enabled, also the encrypted bank connection details needed to keep syncing and <strong>the bank transactions synced through it</strong>. Each transaction (date, amount, description, names and IBANs) is encrypted at rest with a key held in your server’s configuration, so a copy of the database file or a backup is unreadable without it. Anyone who controls the running server can still read the data. <strong>Transactions you import from files are not stored on the server.</strong></li>
+    <li><strong>Your backups and host</strong> — Anyone with access to your machine, server disk, database volume, or browser profile can see what is stored there. Securing that infrastructure is part of self-hosting.</li>
   </ul>
 
-  <h2>Control and deletion</h2>
+  <h2>What leaves your deployment</h2>
+  <p>By default, nothing is exported or uploaded anywhere else. Data only leaves your setup if you configure one of these:</p>
   <ul>
-    <li>A bank connection can be removed in FinKit or in the bank's own app at any time. Removing it in FinKit deletes the stored connection.</li>
-    <li>Access to each bank expires on its own, after at most 180 days, unless approved again.</li>
+    <li><strong>Google Sheets (optional)</strong> — When you set up a Google service account and export from the app, FinKit sends the summary row you choose to a spreadsheet you control. Google’s terms and privacy policy apply to that copy.</li>
+    <li><strong>Open Banking (optional)</strong> — When bank sync is enabled, <strong>your self-hosted API</strong> calls Enable Banking and your bank, about twice a day and when you press Sync, and keeps the transactions it fetches for you on <strong>your server</strong>. When you press Sync, your IP address and browser identifier are passed on to your bank so it can tell a person is present; FinKit does not store them. FinKit never receives or stores your bank login password. Enable Banking’s and your bank’s terms apply to that traffic.</li>
+    <li><strong>Access gate (optional)</strong> — Production setups may sit behind Cloudflare Access or similar; that provider processes sign-in metadata according to its own policy.</li>
   </ul>
+  <p>FinKit does not sell, share, or use your financial data for advertising or profiling.</p>
+
+  <h2>Bank connections</h2>
+  <ul>
+    <li>Read-only access: account labels, balances, and transactions after you approve access at your bank (via Enable Banking when sync is on).</li>
+    <li>Connection secrets are encrypted at rest on your server so sync can continue until you disconnect or consent expires.</li>
+    <li>You can remove a connection in FinKit or revoke it at your bank. Removing it in FinKit also revokes access at the bank and deletes the connection and the transactions synced through it from your server.</li>
+    <li>Synced transactions are kept until you delete them (Banks → Stored bank data) or disconnect the bank. Sync history is kept for 90 days and the activity log for a year. To delete everything else (your account, rules and settings), ask this instance’s operator.</li>
+    <li>Bank consent expires on its own (typically within the period your bank allows, up to about 180 days) unless renewed.</li>
+  </ul>
+
+  <h2>File import</h2>
+  <p>CSV/XLSX files you upload are parsed in your browser. Merchant names and categories may be sent to <strong>your own API</strong> when you save learned rules or settings. The transactions themselves stay in your browser; only bank-synced transactions are stored on the server.</p>
 
   <h2>Contact</h2>
-  <p>Questions about data protection: <a href="mailto:samson.negedu.a@gmail.com">samson.negedu.a@gmail.com</a></p>
+  <p>Questions about this deployment: <a href="mailto:samson.negedu.a@gmail.com">samson.negedu.a@gmail.com</a></p>
   </main>
 
   <footer>

@@ -25,27 +25,48 @@
   <h1>FinKit terms of use</h1>
   <p class="meta">Last updated: 1 November 2026</p>
 
+  <h2>Self-hosted software</h2>
+  <ul>
+    <li>FinKit is open-source software you run yourself (or on a server you control). It is not a hosted SaaS product operated by a FinKit vendor.</li>
+    <li>You are responsible for installing updates, securing the host, restricting who can sign in, and backing up or deleting data on your server and in your browser.</li>
+    <li>These terms apply to use of this instance and its documentation, not to a separate commercial support contract (there isn’t one unless you arrange it yourself).</li>
+  </ul>
+
   <h2>Who it is for</h2>
   <ul>
-    <li>FinKit is for personal, non-commercial use by its owner, on the owner's own accounts.</li>
-    <li>It is not a service offered to others, and it is not used for any business or professional purpose.</li>
+    <li>This instance is for personal, non-commercial use by the people its operator has allowed (for example a household), each on their own accounts. Each person sees only their own data.</li>
+    <li>It is not offered as a public service to others and is not intended for business or professional client data unless you accept that responsibility yourself.</li>
+  </ul>
+
+  <h2>Your data stays yours</h2>
+  <ul>
+    <li>FinKit does not collect usage statistics, sell data, or run advertising.</li>
+    <li>Everything persists on <strong>your</strong> deployment: the browser you use and the self-hosted API (SQLite on your disk or volume), including transactions synced from a connected bank, which stay until you delete them or disconnect the bank. Nothing is copied to a FinKit-operated cloud.</li>
+    <li>Data only leaves that setup if you explicitly use optional features such as Google Sheets export or open-banking sync—see the <a href="/privacy.html">privacy page</a>.</li>
   </ul>
 
   <h2>No warranty</h2>
   <ul>
-    <li>FinKit is provided as is. Categories and totals can be wrong, so check important figures with your bank.</li>
-    <li>FinKit does not give financial, tax or legal advice.</li>
+    <li>FinKit is provided as is. Categories, totals, and exports can be wrong; check important figures with your bank and your spreadsheet.</li>
+    <li>FinKit does not provide financial, tax, or legal advice.</li>
+  </ul>
+
+  <h2>Optional third-party services</h2>
+  <ul>
+    <li>If you enable bank sync, Enable Banking and your bank’s terms apply to that connection.</li>
+    <li>If you enable Google Sheets export, Google’s terms apply to data written to your sheet.</li>
+    <li>If you use Cloudflare Access or another reverse proxy, that provider’s terms apply to access control in front of FinKit.</li>
   </ul>
 
   <h2>Bank data</h2>
   <ul>
-    <li>Bank data is obtained through Enable Banking and is subject to Enable Banking's terms and to each bank's own terms.</li>
-    <li>FinKit only reads account information. It cannot make payments or transfers.</li>
+    <li>Bank data is read-only through open banking where configured. FinKit cannot initiate payments or transfers.</li>
   </ul>
 
   <h2>Changes and access</h2>
   <ul>
-    <li>Access can be changed or withdrawn at any time, and these terms may be updated.</li>
+    <li>Access to this instance can be changed or withdrawn at any time by its operator.</li>
+    <li>These terms may be updated on this site; the “Last updated” date will change when they do.</li>
   </ul>
 
   <h2>Contact</h2>

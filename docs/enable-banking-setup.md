@@ -63,12 +63,12 @@ Set in `.env` (values you get from the steps above and from Cloudflare):
 ```
 BANKING_PROVIDER=enablebanking
 EB_APP_ID=...                      # shown in the Control Panel after registering
-EB_PRIVATE_KEY_PATH=/run/secrets/enablebanking.key
+EB_PRIVATE_KEY_PATH=/run/secrets/enablebanking.pem
 BANKING_REDIRECT_URL=https://YOUR-DOMAIN/api/banking/callback
 BANKING_ENCRYPTION_KEY=...         # openssl rand -base64 32
 CF_ACCESS_TEAM_DOMAIN=...          # the part before .cloudflareaccess.com
 CF_ACCESS_AUD=...                  # Access, Applications, your app, Overview: AUD tag
-BANKING_ADMIN_EMAILS=you@example.com
+ALLOWED_USER_EMAILS=you@example.com   # who may use FinKit; without one nobody can sign in
 ```
 
-Mount the private key into the API container read-only (for example `./secrets/enablebanking.key:/run/secrets/enablebanking.key:ro`). Never put it in the image or in git.
+Mount the private key into the API container read-only (for example `./secrets/enablebanking.pem:/run/secrets/enablebanking.pem:ro`). Never put it in the image or in git.
