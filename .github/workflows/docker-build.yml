@@ -14,10 +14,43 @@ permissions:
 
 jobs:
   # ============================================
+  # Lint, types and tests: nothing is built until these pass
+  # ============================================
+  check:
+    name: Check (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, web]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - run: npm ci
+      - name: Lint and format
+        run: npm run check
+      - name: Types (web; the API check already includes them)
+        if: matrix.app == 'web'
+        run: npx tsc --noEmit -p .
+      - name: Tests
+        run: npm test
+
+  # ============================================
   # API Dependencies (cached node_modules)
   # ============================================
   api-deps:
     name: API deps (cached node_modules)
+    needs: [check]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:
@@ -123,6 +156,7 @@ jobs:
   # ============================================
   web:
     name: Web app
+    needs: [check]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 10
     steps:

@@ -43,6 +43,7 @@ function stampMatches() {
   try {
     const stamp = JSON.parse(fs.readFileSync(STAMP_PATH, 'utf8'))
     const want = expectedStamp()
+
     return (
       stamp.version === want.version &&
       stamp.nodeAbi === want.nodeAbi &&
@@ -74,6 +75,7 @@ function binaryLooksNative() {
   }
   try {
     const kind = execSync(`file -b ${JSON.stringify(BINARY_PATH)}`, { encoding: 'utf8' })
+
     return kind.includes('Mach-O')
   } catch {
     return false
@@ -87,7 +89,9 @@ function canOpenDatabase() {
   try {
     const Database = require(BETTER_SQLITE3_PATH)
     const db = new Database(':memory:')
+
     db.close()
+
     return true
   } catch {
     return false
