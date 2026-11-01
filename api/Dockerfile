@@ -1,25 +1,36 @@
-# Build stage - uses cached dependencies from Dockerfile.deps
-ARG BUILDER_DEPS_IMAGE=builder-deps:latest
-ARG PRODUCTION_DEPS_IMAGE=production-deps:latest
+# Production node_modules come from the published Dockerfile.deps image when CI passes one (main
+# and tags). With no build arg, such as in a pull request or a plain `docker build`, they are
+# installed right here, so a PR needs to publish nothing and never uses a stale image.
+ARG PRODUCTION_DEPS_IMAGE=local-deps-production
 
-FROM ${BUILDER_DEPS_IMAGE} AS deps-builder
+FROM node:26-alpine AS local-deps-production
+WORKDIR /app
+RUN apk add --no-cache python3 make g++ git
+COPY package*.json ./
+COPY scripts ./scripts
+RUN npm ci --omit=dev
+RUN test -f node_modules/better-sqlite3/build/Release/better_sqlite3.node || \
+    (echo "ERROR: better-sqlite3 binary not found" && exit 1)
+
 FROM ${PRODUCTION_DEPS_IMAGE} AS deps-production
 
 # ============================================
-# Builder stage
+# Builder stage (devDependencies + compile; do not reuse production-only deps image)
 # ============================================
 FROM node:26-alpine AS builder
 
 WORKDIR /app
 
-# Copy cached node_modules from deps-builder
-COPY --from=deps-builder /app/node_modules ./node_modules
-COPY --from=deps-builder /app/package*.json ./
+RUN apk add --no-cache python3 make g++
 
-# Copy source code
+COPY package*.json ./
+COPY scripts ./scripts
+
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+
 COPY . .
 
-# Build TypeScript
 RUN npm run build
 
 # ============================================
