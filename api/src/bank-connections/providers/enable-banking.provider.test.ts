@@ -114,7 +114,13 @@ describe('Enable Banking client (fake server)', () => {
   })
 
   function fake(
-    handler: (req: { method: string; path: string; body: any; auth: string | null }) => {
+    handler: (req: {
+      method: string
+      path: string
+      body: any
+      auth: string | null
+      headers: Record<string, string>
+    }) => {
       status?: number
       body?: unknown
     },
@@ -124,6 +130,7 @@ describe('Enable Banking client (fake server)', () => {
       path: string
       body: any
       auth: string | null
+      headers: Record<string, string>
     }> = []
     const fetchImpl = (async (url: string, init: RequestInit) => {
       const u = new URL(url)
@@ -132,6 +139,7 @@ describe('Enable Banking client (fake server)', () => {
         path: u.pathname + u.search,
         body: init.body ? JSON.parse(String(init.body)) : undefined,
         auth: (init.headers as Record<string, string>).Authorization || null,
+        headers: init.headers as Record<string, string>,
       }
 
       calls.push(req)
@@ -211,6 +219,64 @@ describe('Enable Banking client (fake server)', () => {
       sessionId: 'S1',
       validUntil: '2027-01-01T00:00:00Z',
       accounts: [{ uid: 'u1', stableId: 'h1', label: '…1234', currency: 'EUR', iban: 'DE001234' }],
+    })
+  })
+  describe('PSU headers and the longest history', () => {
+    const account = { uid: 'u1', stableId: 'h1', label: '' }
+    const empty = () => ({ body: { transactions: [] } })
+    const run = (
+      provider: ReturnType<typeof fake>['provider'],
+      extra: Record<string, unknown> = {},
+      required?: string[],
+    ) =>
+      provider.fetchTransactions({
+        session: { sessionId: 'S', accounts: [], validUntil: '', requiredPsuHeaders: required },
+        account,
+        from: '2026-10-01',
+        to: '2026-10-31',
+        ...extra,
+      } as never)
+
+    it('sends the person’s IP and browser when the bank asks for exactly those', async () => {
+      const { provider, calls } = fake(empty)
+
+      await run(provider, { psu: { ip: '203.0.113.7', userAgent: 'Mozilla/5.0' } }, [
+        'Psu-Ip-Address',
+        'Psu-User-Agent',
+      ])
+      expect(calls[0].headers).toMatchObject({ 'Psu-Ip-Address': '203.0.113.7', 'Psu-User-Agent': 'Mozilla/5.0' })
+    })
+    it('sends none when the bank wants something we cannot honestly supply', async () => {
+      const { provider, calls } = fake(empty)
+
+      await run(provider, { psu: { ip: '203.0.113.7', userAgent: 'x' } }, ['Psu-Ip-Address', 'Psu-Geo-Location'])
+      expect(Object.keys(calls[0].headers).filter(h => h.startsWith('Psu'))).toEqual([])
+    })
+    it('sends none for scheduled fetches, or when the bank asks for none', async () => {
+      const { provider, calls } = fake(empty)
+
+      await run(provider, {}, ['Psu-Ip-Address'])
+      await run(provider, { psu: { ip: '203.0.113.7' } })
+      expect(calls.every(c => !Object.keys(c.headers).some(h => h.startsWith('Psu')))).toBe(true)
+    })
+    it('asks for the longest history without dates, and falls back to the window if refused', async () => {
+      const ok = fake(empty)
+
+      await run(ok.provider, { longest: true })
+      expect(ok.calls[0].path).toContain('strategy=longest')
+      expect(ok.calls[0].path).not.toContain('date_from')
+
+      const refuse = fake(r => (r.path.includes('strategy=longest') ? { status: 400 } : empty()))
+
+      await run(refuse.provider, { longest: true })
+      expect(refuse.calls).toHaveLength(2)
+      expect(refuse.calls[1].path).toContain('date_from=2026-10-01')
+    })
+    it('does not fall back when the bank is limiting us or the consent is gone', async () => {
+      const { provider, calls } = fake(() => ({ status: 429 }))
+
+      await expect(run(provider, { longest: true })).rejects.toMatchObject({ kind: 'rate_limited' })
+      expect(calls).toHaveLength(1)
     })
   })
   it('fails instead of quietly cutting the list short when the bank never stops paging', async () => {

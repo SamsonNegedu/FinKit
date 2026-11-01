@@ -24,7 +24,7 @@ Parsed transactions and optionally the session (IndexedDB, "remember session"), 
 
 ## Who else receives data
 
-- **Enable Banking** (bank connection provider): receives the user's choice of bank and returns account and transaction data under the user's own consent. FinKit never sees bank passwords.
+- **Enable Banking** (bank connection provider): receives the user's choice of bank and returns account and transaction data under the user's own consent. FinKit never sees bank passwords. When a person presses Sync, their IP address and browser string are forwarded to the bank (through Enable Banking) so the bank can tell a person is present; FinKit does not store them. Scheduled syncs send neither.
 - **Cloudflare Access**: signs people in and supplies their email address to the API.
 - **Google Sheets**: only when the user exports; receives the monthly summary row they chose, into a spreadsheet they control.
 - **The hosting provider**: runs the server and holds the database file and its backups.

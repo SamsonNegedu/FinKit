@@ -26,6 +26,7 @@ import {
   BankTransaction,
   ProviderError,
   ProviderSession,
+  PsuInfo,
 } from '../providers/bank-provider'
 import { BankTransactionsStore } from '../transactions/bank-transactions.store'
 
@@ -46,7 +47,7 @@ export class BankSyncService {
     return this.clock.now()
   }
 
-  async sync(actor: Actor, id: string, input: SyncInput) {
+  async sync(actor: Actor, id: string, input: SyncInput, psu?: PsuInfo) {
     const row = this.store.getOwnedConnection(id, actor.userId)
 
     if (!row || row.status === 'revoked' || row.status === 'replaced') {
@@ -76,11 +77,18 @@ export class BankSyncService {
       throw new HttpException({ error: 'Please wait a minute before syncing again.' }, 429)
     }
 
-    return this.runSync(row, from, to, actor.email)
+    // A connection's very first fetch asks for all the history the bank will give
+    return this.runSync(row, from, to, actor.email, { psu, longest: !row.last_sync_to && !input.from })
   }
 
   /** Fetches, stores and logs one sync. Used by people pressing Sync and by the scheduled catch-up. */
-  private async runSync(row: ConnectionRow, from: string, to: string, who: string) {
+  private async runSync(
+    row: ConnectionRow,
+    from: string,
+    to: string,
+    who: string,
+    opts: { psu?: PsuInfo; longest?: boolean } = {},
+  ) {
     const userId = row.user_id!
 
     this.store.markSyncStarted(row.id, this.now().toISOString())
@@ -89,7 +97,7 @@ export class BankSyncService {
     try {
       const secret = JSON.parse(decrypt(row.secret_blob, this.config.encryptionKey)) as Pick<
         ProviderSession,
-        'sessionId' | 'accounts'
+        'sessionId' | 'accounts' | 'requiredPsuHeaders'
       >
       const session: ProviderSession = {
         ...secret,
@@ -103,6 +111,8 @@ export class BankSyncService {
           account,
           from,
           to,
+          psu: opts.psu,
+          longest: opts.longest,
         })
 
         // Stamp where each one came from, so the app can browse bank → account → transactions
@@ -154,7 +164,7 @@ export class BankSyncService {
         : day(addDays(now, -DEFAULT_SYNC_HISTORY_DAYS))
 
       try {
-        await this.runSync(row, from, today, 'scheduler')
+        await this.runSync(row, from, today, 'scheduler', { longest: !row.last_sync_to })
         done++
       } catch {
         /* already logged and audited; try the next one */

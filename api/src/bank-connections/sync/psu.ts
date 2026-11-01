@@ -8,10 +8,9 @@ import type { PsuInfo } from '../providers/bank-provider'
  */
 export function psuFromRequest(req: Request, behindCloudflare: boolean): PsuInfo {
   const raw = (behindCloudflare ? req.header('cf-connecting-ip') : req.ip)?.trim().replace(/^::ffff:/, '')
-  // oxlint-disable-next-line no-control-regex
-  const ua = req
-    .header('user-agent')
-    ?.replace(/[\u0000-\u001f\u007f]/g, '')
+  const ua = Array.from(req.header('user-agent') ?? '')
+    .filter(ch => ch.charCodeAt(0) > 31 && ch.charCodeAt(0) !== 127)
+    .join('')
     .trim()
     .slice(0, 512)
 

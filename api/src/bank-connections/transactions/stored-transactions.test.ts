@@ -3,6 +3,7 @@ import request from 'supertest'
 import { SIGNED_IN_HEADERS as H, TestAppOptions, createTestApp } from '../../testing/test-app'
 import { BankAutoSync } from '../sync/bank-auto-sync'
 import { BankSyncService } from '../sync/bank-sync.service'
+import { TestBankProvider } from '../providers/test-bank.provider'
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>
 const open: TestApp[] = []
@@ -134,6 +135,48 @@ describe('connections made before the account IBAN was kept', () => {
       .prepare('UPDATE bank_connections SET account_labels = ? WHERE id = ?')
       .run(JSON.stringify([{ id: 'a1', label: '…1234', currency: 'EUR' }]), id)
     expect((await list()).reconnectSuggested).toBe(true)
+  })
+})
+
+describe('telling the bank who is syncing', () => {
+  class Spy extends TestBankProvider {
+    seen: Array<{ psu?: unknown; longest?: boolean; required?: string[] }> = []
+
+    async listBanks(country: string) {
+      return (await super.listBanks(country)).map(b => ({ ...b, requiredPsuHeaders: ['Psu-Ip-Address'] }))
+    }
+
+    async fetchTransactions(p: Parameters<TestBankProvider['fetchTransactions']>[0]) {
+      this.seen.push({
+        psu: (p as { psu?: unknown }).psu,
+        longest: (p as { longest?: boolean }).longest,
+        required: p.session.requiredPsuHeaders,
+      })
+
+      return super.fetchTransactions(p)
+    }
+  }
+
+  it('passes the person and the bank’s needs to a manual sync, and nothing to a scheduled one', async () => {
+    const provider = new Spy()
+    let now = new Date('2026-10-20T12:00:00Z')
+    const t = await make({ provider, clock: { now: () => now } })
+    const id = await connect(t, ALICE)
+
+    await request(t.server)
+      .post(`/api/banking/connections/${id}/sync`)
+      .set(as(ALICE))
+      .set('User-Agent', 'TestBrowser/1.0')
+      .send({})
+      .expect(200)
+    expect(provider.seen[0]).toMatchObject({
+      required: ['Psu-Ip-Address'],
+      longest: true, // the very first fetch
+      psu: { userAgent: 'TestBrowser/1.0' },
+    })
+    now = new Date('2026-10-21T04:00:00Z')
+    await t.app.get(BankSyncService).syncDue(12)
+    expect(provider.seen.at(-1)).toMatchObject({ psu: undefined, longest: false })
   })
 })
 
