@@ -50,6 +50,8 @@ COPY --from=deps-production --chown=nodejs:nodejs /app/node_modules ./node_modul
 USER nodejs
 
 ENV NODE_ENV=production
+# Must match EXPOSE and the HEALTHCHECK below (the code's own default is 3003)
+ENV PORT=3000
 ENV DATA_DIR=/data
 
 EXPOSE 3000
