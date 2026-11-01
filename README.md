@@ -1,124 +1,98 @@
 # FinKit
 
-A simple tool to parse and visualize transaction records exported from FinanzGuru.
+**Self-hosted** personal finance tooling: you run the web app and API on your own machine or server. Import transactions (CSV/XLSX or optional bank sync), categorize them, explore spending, and optionally push summary rows to **your** Google Sheet.
+
+There is no FinKit cloud, no vendor account, and **no built-in analytics, telemetry, or data collection**. Nothing is sent to the authors of this software unless **you** configure an optional integration below.
+
+## Privacy & data (short version)
+
+| Where (all on **your** deployment) | What is kept |
+|--------|----------------|
+| **Your browser** | Parsed transactions while you work; optional local session (IndexedDB) if you leave “remember session” on. Optional in-memory anonymization mappings (never persisted). |
+| **Your self-hosted API** (SQLite file on **your** server or laptop) | Merchant→category rules, sheet/settings preferences, encrypted bank connection tokens (if bank sync is on). **Transaction history is not written to this database**—only connection metadata and rules. |
+| **Nowhere else by default** | No FinKit-operated cloud, no background uploads, crash reports, usage stats, or third-party trackers in the app. |
+
+**Optional outbound connections (you enable these):**
+
+- **Google Sheets** — only when you configure a service account and click export; sends the summary row you choose to a spreadsheet you control.
+- **Open Banking (Enable Banking)** — only when `BANKING_PROVIDER=enablebanking`; **your** self-hosted API calls Enable Banking and your bank; transactions land in **your** browser. FinKit never sees your bank password.
+- **Cloudflare Access** — optional gate in front of a production deploy; Cloudflare’s privacy terms apply to that layer.
+
+See [web/public/privacy.html](./web/public/privacy.html) and [web/public/terms.html](./web/public/terms.html) for the full privacy and terms copy shown on the landing site.
 
 ## Features
 
-- **CSV/XLSX Import**: Parse transaction exports from FinanzGuru
-- **Privacy-First**: Anonymizes personal data before processing
-- **Smart Categorization**: Rule-based categorization with AI fallback
-- **Recurring Detection**: Identifies recurring transactions automatically
-- **Interactive Dashboard**: View spending trends, category breakdowns, and top expenses
-- **Bulk Editing**: Select and recategorize multiple transactions at once
-- **Google Sheets Export**: Export to your existing yearly budget spreadsheet
+- **Import**: FinanzGuru CSV/XLSX; optional Open Banking sync when configured
+- **Categorization**: Client-side rules, recurring detection, and server-stored merchant rules (learned when you recategorize)
+- **Review & edit**: Inline categories, bulk actions, income and review queues
+- **Analytics**: Trends, category breakdowns, top expenses (computed in your browser from your data)
+- **Export**: Optional push of monthly totals to your Google Sheet
+- **Privacy**: Optional in-browser anonymization of names, IBANs, emails, and similar fields
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
+- Node.js 20+ (matches Docker images)
+- For Sheets export: Google Cloud service account with Sheets API enabled
+- For production deploy: see [example.env](./example.env) (tunnel, registry, Google credentials)
+- For bank sync: see [api/.env.example](./api/.env.example) (`BANKING_PROVIDER`, Enable Banking keys, Cloudflare Access)
 
-- Node.js 18+ 
-- OpenAI API key (for AI categorization)
-- Google Service Account (for Sheets export, optional)
-
-### 1. Setup Environment
-
-Create `.env` file in the `api/` directory:
-
-```env
-OPENAI_API_KEY=your-openai-api-key
-GOOGLE_SERVICE_ACCOUNT_KEY_PATH=/path/to/service-account.json
-```
-
-### 2. Install & Run with Docker
+## Local development
 
 ```bash
-# Development
-docker-compose up
-
-# Production
-docker-compose -f docker-compose.prod.yml up -d
+cd api && npm install && npm run dev    # http://localhost:3003
+cd web && npm install && npm run dev    # http://localhost:5173 — proxies /api → :3003
 ```
 
-The web app will be available at `http://localhost:5173` (dev) or `http://localhost` (production).
+Open **http://localhost:5173/app/** for the app (landing page is at `/`).
 
-### 3. Manual Setup (without Docker)
+Copy [api/.env.example](./api/.env.example) to `api/.env` and adjust optional features. Defaults are enough for import, categorization, and merchant rules (SQLite under `api/data` on your machine).
+
+### Tests
 
 ```bash
-# Install API dependencies
-cd api
-npm install
-
-# Install Web dependencies
-cd ../web
-npm install
-
-# Run both (in separate terminals)
-cd api && npm run dev      # API runs on :3003
-cd web && npm run dev      # Web runs on :5173
+cd api && npm test
+cd web && npm test
 ```
 
-## Usage
+## Production (Docker)
 
-1. **Export from FinanzGuru**: Export your transactions as CSV or XLSX
-2. **Upload**: Drag and drop the file into the web interface
-3. **Review**: Check auto-categorized transactions, edit as needed
-4. **Analyze**: View charts and spending breakdowns
-5. **Export**: (Optional) Export to Google Sheets
+You host the containers; data stays in volumes you control:
 
-## Project Structure
-
-```
-├── api/                    # Backend API (Hono)
-│   ├── src/
-│   │   ├── routes/         # API endpoints
-│   │   ├── services/       # OpenAI, Sheets integration
-│   │   └── lib/            # Anonymization logic
-│   └── Dockerfile
-│
-├── web/                    # Frontend (React + Vite)
-│   ├── src/
-│   │   ├── components/     # UI components
-│   │   ├── lib/            # Parsers, categorization
-│   │   └── types.ts
-│   └── Dockerfile
-│
-└── docker-compose.yml      # Development setup
+```bash
+cp example.env .env   # fill in values
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-## Data Privacy
+API health: `GET /health`. Persistent SQLite data uses the `finkit-api-data` volume on **your** host.
 
-All sensitive data is anonymized before processing:
+Root [docker-compose.yml](./docker-compose.yml) builds the same web and API images for local or CI use; wire ports or a reverse proxy so the browser can reach the web container and `/api` can reach the API.
 
-- **Names**: `Person_ABC`
-- **IBANs**: `DE**********5515`
-- **Account Numbers**: `Acc_XYZ123`
-- **Emails**: `j***@gmail.com`
-- **Phone Numbers**: `+*********1234`
+## Google Sheets (optional)
 
-Anonymization mappings are kept in memory only and never persisted.
+Only runs when you set credentials and export from the app:
 
-## Google Sheets Setup (Optional)
+1. In [Google Cloud Console](https://console.cloud.google.com/), enable the Sheets API and create a service account.
+2. Share your spreadsheet with the service account email (Editor).
+3. **Local API**: set `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` in `api/.env` to the JSON key file.
+4. **Docker production**: set `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY` in root `.env` (see [example.env](./example.env)).
+5. In the app **Settings**, set sheet URL/ID, tab name (e.g. `2026`), and map categories to columns.
 
-### 1. Create Service Account
+The export expects a monthly summary layout (month row plus category columns and totals). Use Settings to align mappings with your sheet.
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Enable Google Sheets API
-3. Create a Service Account and download JSON key
-4. Share your Google Sheet with the service account email
+## Project layout
 
-### 2. Configure in App
+```
+api/          NestJS API — merchant rules, settings, Sheets export, optional banking
+web/          React + Vite — parsing, categorization, UI (/ and /app/)
+example.env   Production compose secrets template
+```
 
-1. Open Settings panel
-2. Enter your Google Sheet URL or ID
-3. Set the target tab name (e.g., "2026")
-4. Map categories to sheet columns
+## Tech stack
 
-## Tech Stack
-
-- **Frontend**: React 18, Vite, TailwindCSS, Recharts
-- **Backend**: Hono (Node.js)
-- **AI**: OpenAI GPT-4o-mini
-- **Export**: Google Sheets API
+- **Web**: React 18, Vite, TanStack Router, TailwindCSS, Recharts
+- **API**: NestJS, SQLite (better-sqlite3), Zod
+- **Export**: Google Sheets API (optional)
 
 ## License
 

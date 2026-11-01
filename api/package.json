@@ -1,26 +1,43 @@
 {
   "name": "finkit-api",
   "version": "2.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsup src/index.ts --format esm --dts --clean",
-    "start": "node dist/index.js",
-    "postinstall": "node scripts/install-better-sqlite3.cjs || npm rebuild better-sqlite3"
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "postinstall": "node scripts/install-better-sqlite3.cjs || npm rebuild better-sqlite3",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "check": "oxlint && oxfmt --check"
   },
   "dependencies": {
-    "@hono/node-server": "^2.1.5",
+    "@nestjs/common": "^12.3.2",
+    "@nestjs/core": "^12.3.2",
+    "@nestjs/platform-express": "^12.3.2",
     "better-sqlite3": "12.8.0",
     "googleapis": "^189.0.0",
-    "hono": "^4.13.16",
-    "openai": "^7.47.0",
+    "helmet": "^8.3.0",
+    "jose": "^5.10.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@nestjs/cli": "^12.0.11",
+    "@nestjs/testing": "^12.3.2",
+    "@swc/core": "^1.16.21",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.10.0",
-    "tsup": "^8.5.1",
-    "tsx": "^4.23.15",
-    "typescript": "~5.6.2"
+    "@types/supertest": "^7.2.1",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "supertest": "^7.3.1",
+    "typescript": "~5.6.2",
+    "unplugin-swc": "^2.0.0",
+    "vitest": "^2.1.9"
   }
 }
