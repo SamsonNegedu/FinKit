@@ -34,7 +34,7 @@ See [web/public/privacy.html](./web/public/privacy.html) and [web/public/terms.h
 
 - Node.js 26.13+ (matches Docker `node:26-alpine`; see `.nvmrc`). Nest 12 CLI officially supports the 26.x line.
 - For Sheets export: Google Cloud service account with Sheets API enabled
-- For production deploy: [example.env](./example.env) (tunnel, registry, Google credentials, **Cloudflare Access**, **ALLOWED_ORIGIN**, **ALLOWED_USER_EMAILS**)
+- For production deploy: [.env.example](./.env.example) (tunnel, registry, Google credentials, **Cloudflare Access**, **ALLOWED_ORIGIN**, **ALLOWED_USER_EMAILS**)
 - For bank sync: [api/.env.example](./api/.env.example) and [Enable Banking setup](./docs/enable-banking-setup.md)
 
 ## Local development
@@ -77,7 +77,7 @@ npm run build         # production build both packages
 
 You host the containers; data stays in volumes you control.
 
-1. Copy [example.env](./example.env) to `.env` and set at least **`ALLOWED_USER_EMAILS`**, **`CF_ACCESS_TEAM_DOMAIN`**, **`CF_ACCESS_AUD`**, and **`ALLOWED_ORIGIN`** (the API **will not start** in production without Cloudflare Access config and a fixed web origin). See [users and access](./docs/users-and-access.md).
+1. Copy [.env.example](./.env.example) to `.env` and set at least **`ALLOWED_USER_EMAILS`**, **`CF_ACCESS_TEAM_DOMAIN`**, **`CF_ACCESS_AUD`**, and **`ALLOWED_ORIGIN`** (the API **will not start** in production without Cloudflare Access config and a fixed web origin). See [users and access](./docs/users-and-access.md).
 2. Deploy:
 
 ```bash
@@ -114,7 +114,7 @@ Only runs when you set credentials and export from the app:
 1. In [Google Cloud Console](https://console.cloud.google.com/), enable the Sheets API and create a service account.
 2. Share **only** the spreadsheet FinKit should use with the service account email (Editor). Export calls pass a spreadsheet id from the app; **narrow sharing on the SA** is what limits where it can write ([users and access — Sheets](./docs/users-and-access.md#google-sheets-export)).
 3. **Local API**: `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` in `api/.env`.
-4. **Docker production**: mount the JSON key as a secret and set `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` in the root `.env` (see [example.env](./example.env)).
+4. **Docker production**: mount the JSON key as a secret and set `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` in the root `.env` (see [.env.example](./.env.example)).
 5. In **Settings**, set sheet URL/ID, tab name, and category column mappings.
 
 Tab names and column letters are validated before any Google API call. The export expects a monthly summary layout (month row plus category columns and totals).
@@ -126,7 +126,7 @@ package.json  Root scripts: dev, build, test, lint, format, check (both packages
 api/          NestJS API — access control, per-user rules/settings, Sheets export, optional banking
 web/          React + Vite SPA (see docs/web-architecture.md)
 docs/         Architecture and integration guides
-example.env   Production compose and secrets template
+.env.example  Production compose and secrets template
 ```
 
 ## Tech stack

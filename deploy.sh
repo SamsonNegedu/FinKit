@@ -41,8 +41,8 @@ case "${1:-update}" in
   update|"")
     # Check .env
     if [ ! -f .env ]; then
-      if [ -f example.env ]; then
-        cp example.env .env
+      if [ -f .env.example ]; then
+        cp .env.example .env
         warn "Created .env from example. Edit it with your credentials, then run again."
         exit 1
       fi
