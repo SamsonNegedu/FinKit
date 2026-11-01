@@ -8,6 +8,7 @@ import { tx } from './testFixtures'
 describe('local dates', () => {
   it('parses a plain day as that day in any timezone', () => {
     const d = parseLocalDate('2026-10-01')
+
     expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 9, 1])
     expect(toISODate(d)).toBe('2026-10-01')
   })
@@ -16,6 +17,7 @@ describe('local dates', () => {
 describe('exchange rate store', () => {
   it('ignores the old flat format and keeps rates per base currency', () => {
     const data: Record<string, string> = {}
+
     ;(globalThis as any).localStorage = {
       getItem: (k: string) => data[k] ?? null,
       setItem: (k: string, v: string) => {
@@ -41,6 +43,7 @@ describe('old session id migration', () => {
       tx({ id: 'tx_1761990000000_1', doubleBookingMatch: 'tx_1761990000000_0' }),
     ]
     const migrated = migrateOldIds(old, raw)
+
     expect(migrated[0].id).toBe(`tx_${hashKey(rawKey(raw[0]))}_1`)
     expect(migrated[1].doubleBookingMatch).toBe(migrated[0].id)
     expect(migrateOldIds(migrated, raw)).toBe(migrated)

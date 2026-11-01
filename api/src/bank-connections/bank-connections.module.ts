@@ -1,18 +1,24 @@
 import { DynamicModule, Logger, Module } from '@nestjs/common'
 import { ACCESS_REFUSED } from '../access/access.guard'
 import { loadAccessSettings } from '../access/access.settings'
-import { loadBankingConfig } from './banking.config'
-import { BankAdminController } from './bank-admin.controller'
-import { BankCallbackController } from './bank-callback.controller'
-import { BankConnectionsController } from './bank-connections.controller'
-import { BankConnectionsService } from './bank-connections.service'
-import { BankConnectionsStore } from './bank-connections.store'
-import { BANKING_CONFIG, BANKING_STATE, CLOCK } from './bank-connections.tokens'
-import { BANK_PROVIDER } from './bank-provider'
+import { loadBankingConfig } from './config/banking.config'
+import { BankAdminController } from './admin/bank-admin.controller'
+import { BankCallbackController } from './connections/bank-callback.controller'
+import { BankConnectionsController } from './connections/bank-connections.controller'
+import { BankConnectionsService } from './connections/bank-connections.service'
+import { BankAutoSync } from './sync/bank-auto-sync'
+import { BankSyncController } from './sync/bank-sync.controller'
+import { BankSyncService } from './sync/bank-sync.service'
+import { StoredTransactionsController } from './transactions/stored-transactions.controller'
+import { StoredTransactionsService } from './transactions/stored-transactions.service'
+import { BankConnectionsStore } from './connections/bank-connections.store'
+import { BankTransactionsStore } from './transactions/bank-transactions.store'
+import { BANKING_CONFIG, BANKING_STATE, CLOCK } from './config/bank-connections.tokens'
+import { BANK_PROVIDER } from './providers/bank-provider'
 import { BankingUnavailableController } from './banking-unavailable.controller'
 import { EnableBankingProvider } from './providers/enable-banking.provider'
 import { TestBankProvider } from './providers/test-bank.provider'
-import { TestBankController } from './test-bank.controller'
+import { TestBankController } from './providers/test-bank.controller'
 
 @Module({})
 export class BankConnectionsModule {
@@ -32,20 +38,31 @@ export class BankConnectionsModule {
     ]
 
     if (!config || problems.length) {
-      if (problems.length) logger.error(`Banking is disabled: ${problems.join('; ')}`)
+      if (problems.length) {
+        logger.error(`Banking is disabled: ${problems.join('; ')}`)
+      }
+
       return {
         module: BankConnectionsModule,
         controllers: [BankingUnavailableController],
-        providers: [{ provide: BANKING_STATE, useValue: problems.length ? 'misconfigured' : 'off' }],
+        providers: [
+          {
+            provide: BANKING_STATE,
+            useValue: problems.length ? 'misconfigured' : 'off',
+          },
+        ],
       }
     }
 
     logger.log(`Banking enabled (${config.provider}, access: ${access.mode})`)
     const useTestBank = config.provider === 'mock'
+
     return {
       module: BankConnectionsModule,
       controllers: [
         BankConnectionsController,
+        BankSyncController,
+        StoredTransactionsController,
         BankCallbackController,
         BankAdminController,
         ...(useTestBank && !config.isProd ? [TestBankController] : []),
@@ -57,10 +74,17 @@ export class BankConnectionsModule {
           provide: BANK_PROVIDER,
           useValue: useTestBank
             ? new TestBankProvider()
-            : new EnableBankingProvider({ appId: config.ebAppId!, privateKey: config.ebPrivateKey! }),
+            : new EnableBankingProvider({
+                appId: config.ebAppId!,
+                privateKey: config.ebPrivateKey!,
+              }),
         },
         BankConnectionsStore,
+        BankTransactionsStore,
         BankConnectionsService,
+        BankSyncService,
+        StoredTransactionsService,
+        BankAutoSync,
         // Refused sign-ins are recorded in the bank audit log
         {
           provide: ACCESS_REFUSED,

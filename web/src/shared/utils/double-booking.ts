@@ -38,6 +38,7 @@ export function detectDoubleBookings(transactions: Transaction[]): Transaction[]
 
   // Group by date for efficient matching
   const byDate = new Map<string, Transaction[]>()
+
   for (const tx of transactions) {
     if (!byDate.has(tx.date)) {
       byDate.set(tx.date, [])
@@ -50,13 +51,19 @@ export function detectDoubleBookings(transactions: Transaction[]): Transaction[]
     const incomes = dayTxs.filter(tx => tx.type === 'income' && markedAsInternal.has(tx.id))
 
     for (const expense of expenses) {
-      if (pairedIds.has(expense.id)) continue
+      if (pairedIds.has(expense.id)) {
+        continue
+      }
 
       for (const income of incomes) {
-        if (pairedIds.has(income.id)) continue
+        if (pairedIds.has(income.id)) {
+          continue
+        }
 
         // Match by amount (within 1 cent)
-        if (Math.abs(expense.amount - income.amount) > 0.01) continue
+        if (Math.abs(expense.amount - income.amount) > 0.01) {
+          continue
+        }
 
         pairs.push({
           outgoing: expense,
@@ -93,6 +100,7 @@ export function detectDoubleBookings(transactions: Transaction[]): Transaction[]
           : undefined,
       }
     }
+
     return tx
   })
 
@@ -102,7 +110,9 @@ export function detectDoubleBookings(transactions: Transaction[]): Transaction[]
 // Check if a transaction is an internal transfer between user's own accounts
 function isInternalTransfer(tx: Transaction, userAccounts: Set<string>, userAccountNames: Set<string>): boolean {
   // Check if already flagged as transfer in source data
-  if (tx.isTransfer) return true
+  if (tx.isTransfer) {
+    return true
+  }
 
   const description = (tx.description || '').toLowerCase()
   const recipient = (tx.recipient || '').toLowerCase()

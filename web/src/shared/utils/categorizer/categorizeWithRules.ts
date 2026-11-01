@@ -5,9 +5,11 @@ import { findLearnedCategory } from './learnedMappings'
 
 function extractMerchant(text: string, pattern: RegExp): string | undefined {
   const match = text.match(pattern)
+
   if (match) {
     return match[0].charAt(0).toUpperCase() + match[0].slice(1).toLowerCase()
   }
+
   return undefined
 }
 
@@ -24,6 +26,7 @@ export function categorizeWithRules(transactions: Transaction[]): Transaction[] 
     }
 
     const learnedCategory = findLearnedCategory(tx)
+
     if (learnedCategory) {
       return { ...tx, category: learnedCategory, categorySource: 'learned' as const }
     }

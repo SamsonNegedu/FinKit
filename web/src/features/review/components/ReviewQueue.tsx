@@ -31,21 +31,27 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
   }, [derived.groups.length])
 
   const assign = (category: string) => {
-    if (!derived.current) return
+    if (!derived.current) {
+      return
+    }
     onBulkUpdate(
       derived.current.items.map(t => t.id),
       { category },
     )
   }
   const exclude = () => {
-    if (!derived.current) return
+    if (!derived.current) {
+      return
+    }
     onBulkUpdate(
       derived.current.items.map(t => t.id),
       { isExcluded: true },
     )
   }
   const skip = () => {
-    if (!derived.current) return
+    if (!derived.current) {
+      return
+    }
     dispatchSession({ type: 'SKIP', merchantKey: derived.current.key })
   }
 

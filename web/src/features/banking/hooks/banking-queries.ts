@@ -10,8 +10,11 @@ import {
   listBanks,
   listConnections,
   startConnect,
+  deleteStoredTransactions,
+  storedTransactions,
   syncConnection,
 } from '../api/banking.api'
+import { BANKING_BANK_LIST_STALE_MS, BANKING_STATUS_STALE_MS } from '../constants'
 
 // Query keys in one place, so a change to connections refreshes everything that shows them
 const bankingKeys = {
@@ -34,13 +37,13 @@ export const statusQuery = queryOptions({
 const connectionsQuery = queryOptions({
   queryKey: bankingKeys.connections,
   queryFn: listConnections,
-  staleTime: 10_000,
+  staleTime: BANKING_STATUS_STALE_MS,
 })
 const banksQuery = (country = 'DE') =>
   queryOptions({
     queryKey: bankingKeys.banks(country),
     queryFn: () => listBanks(country),
-    staleTime: 3_600_000,
+    staleTime: BANKING_BANK_LIST_STALE_MS,
     retry: 1,
   })
 
@@ -50,6 +53,7 @@ export function useBankingStatus() {
 
 export function useConnections() {
   const { data: status } = useBankingStatus()
+
   return useQuery({ ...connectionsQuery, enabled: !!status?.enabled })
 }
 
@@ -63,6 +67,7 @@ export const useAdminAudit = () => useQuery({ queryKey: bankingKeys.audit, query
 
 export function useSyncConnection() {
   const client = useQueryClient()
+
   return useMutation({
     mutationFn: ({ id, from }: { id: string; from?: string }) => syncConnection(id, from ? { from } : {}),
     // Whether it worked or not, the card's "last sync" and status may have changed
@@ -72,6 +77,7 @@ export function useSyncConnection() {
 
 export function useDisconnectBank() {
   const client = useQueryClient()
+
   return useMutation({
     mutationFn: (id: string) => disconnectBank(id),
     onSettled: () => client.invalidateQueries({ queryKey: bankingKeys.all }),
@@ -80,6 +86,7 @@ export function useDisconnectBank() {
 
 export function useAgeConnection() {
   const client = useQueryClient()
+
   return useMutation({
     mutationFn: ({ id, mode }: { id: string; mode: 'expiring' | 'expired' }) => adminExpire(id, mode),
     onSettled: () => client.invalidateQueries({ queryKey: bankingKeys.all }),
@@ -91,6 +98,7 @@ export function useStartConnect() {
   return useMutation({
     mutationFn: async ({ bank, country = 'DE', reconnect }: { bank: string; country?: string; reconnect?: string }) => {
       const url = await startConnect(bank, country, reconnect)
+
       window.location.href = url
     },
   })
@@ -98,4 +106,24 @@ export function useStartConnect() {
 
 export function errorMessage(error: unknown, fallback: string): string {
   return error instanceof BankingError || error instanceof Error ? error.message : fallback
+}
+
+/** The server's copy of this person's synced transactions; refetched when the tab regains focus. */
+export function useStoredTransactions(enabled: boolean) {
+  return useQuery({
+    queryKey: [...bankingKeys.all, 'stored'],
+    queryFn: storedTransactions,
+    enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
+  })
+}
+
+export function useDeleteStoredTransactions() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: deleteStoredTransactions,
+    onSettled: () => client.invalidateQueries({ queryKey: bankingKeys.all }),
+  })
 }

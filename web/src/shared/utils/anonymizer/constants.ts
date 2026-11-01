@@ -111,14 +111,22 @@ const BUSINESS_SUFFIXES = [
 ]
 
 export function isLikelyBusiness(name: string): boolean {
-  if (!name) return false
+  if (!name) {
+    return false
+  }
   const lower = name.toLowerCase().trim()
+
   for (const merchant of KNOWN_MERCHANTS) {
-    if (lower.includes(merchant)) return true
+    if (lower.includes(merchant)) {
+      return true
+    }
   }
   for (const suffix of BUSINESS_SUFFIXES) {
-    if (lower.includes(suffix)) return true
+    if (lower.includes(suffix)) {
+      return true
+    }
   }
+
   return false
 }
 

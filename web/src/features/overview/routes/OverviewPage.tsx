@@ -21,7 +21,9 @@ export default function OverviewPage() {
   const { data: banking } = useBankingStatus()
   const { data: connections = [] } = useConnections()
 
-  if (app.isRestoring) return <DashboardSkeleton />
+  if (app.isRestoring) {
+    return <DashboardSkeleton />
+  }
 
   // Nothing yet: connect a bank first, with file import as the fallback
   if (app.transactions.length === 0) {

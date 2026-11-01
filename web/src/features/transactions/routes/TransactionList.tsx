@@ -14,6 +14,7 @@ interface Props {
 export default function TransactionList({ transactions, viewMode, onViewModeChange, hideViewToggle }: Props) {
   const app = useApp()
   const selection = useSelection(transactions, app.bulkUpdate)
+
   return (
     <TransactionTable
       transactions={transactions}

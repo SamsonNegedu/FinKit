@@ -117,5 +117,6 @@ export function normalizeColumnName(header: string): string {
       return mapping[header] as string
     }
   }
+
   return header.toLowerCase().replace(/[^a-z0-9]/g, '_')
 }

@@ -99,6 +99,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const toggleNumberFormat = () => {
     const next: NumberFormat = numberFormat === 'point' ? 'comma' : 'point'
+
     setNumberFormat(next)
     setNumberFormatState(next)
   }
@@ -111,6 +112,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     rates,
     onRatesChange: next => {
       const updated = { ...rateStore, [baseCurrency]: next }
+
       setRateStore(updated)
       saveRateStore(updated)
     },
@@ -163,6 +165,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
 export function useApp(): AppState {
   const value = useContext(AppContext)
-  if (!value) throw new Error('useApp must be used inside AppStateProvider')
+
+  if (!value) {
+    throw new Error('useApp must be used inside AppStateProvider')
+  }
+
   return value
 }

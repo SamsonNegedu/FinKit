@@ -9,19 +9,23 @@ import { MerchantRulesRepository } from './merchant-rules.repository'
 export class MerchantRulesService {
   constructor(private readonly rules: MerchantRulesRepository) {}
 
-  list() {
-    return this.rules.findAll()
+  list(userId: string) {
+    return this.rules.findAll(userId)
   }
-  stats() {
-    return this.rules.stats()
+
+  stats(userId: string) {
+    return this.rules.stats(userId)
   }
-  learn(merchant: string, category: string) {
-    this.rules.save(merchant, category)
+
+  learn(userId: string, merchant: string, category: string) {
+    this.rules.save(userId, merchant, category)
   }
-  learnMany(rules: Array<{ merchant: string; category: string }>) {
-    this.rules.saveMany(rules)
+
+  learnMany(userId: string, rules: Array<{ merchant: string; category: string }>) {
+    this.rules.saveMany(userId, rules)
   }
-  forget(merchant: string) {
-    this.rules.delete(merchant)
+
+  forget(userId: string, merchant: string) {
+    this.rules.delete(userId, merchant)
   }
 }

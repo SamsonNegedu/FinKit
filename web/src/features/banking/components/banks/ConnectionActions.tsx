@@ -17,6 +17,7 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
   const [showFrom, setShowFrom] = useState(false)
   const [from, setFrom] = useState('')
   const [confirming, setConfirming] = useState(false)
+  const [todayMax] = useState(() => new Date().toISOString().slice(0, 10))
   const working = actions.syncingId === c.id || actions.busyId === c.id
 
   return (
@@ -84,7 +85,9 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
               <button
                 onClick={async () => {
                   setConfirming(false)
-                  if (await actions.disconnect(c)) onDisconnected?.()
+                  if (await actions.disconnect(c)) {
+                    onDisconnected?.()
+                  }
                 }}
                 className="text-sm px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 border border-red-500/40"
               >
@@ -116,7 +119,7 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
             type="date"
             className="input py-1.5 text-sm"
             value={from}
-            max={new Date().toISOString().slice(0, 10)}
+            max={todayMax}
             onChange={e => setFrom(e.target.value)}
           />
           <button

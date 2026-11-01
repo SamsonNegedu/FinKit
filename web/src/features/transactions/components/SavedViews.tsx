@@ -12,6 +12,7 @@ const KEY = 'finkit.savedViews'
 function load(): SavedView[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(KEY) ?? '[]')
+
     return Array.isArray(parsed) ? parsed.filter(v => v && typeof v.name === 'string' && v.search) : []
   } catch {
     return []
@@ -67,7 +68,10 @@ export default function SavedViews({
           onSubmit={e => {
             e.preventDefault()
             const name = String(new FormData(e.currentTarget).get('name') ?? '').trim()
-            if (name) update([...views.filter(v => v.name !== name), { name, search: current }])
+
+            if (name) {
+              update([...views.filter(v => v.name !== name), { name, search: current }])
+            }
             setNaming(false)
           }}
         >

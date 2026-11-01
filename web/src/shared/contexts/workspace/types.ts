@@ -32,7 +32,7 @@ export interface AppState {
   toggleAnonymization: () => void
   uploadFile: (file: File, options: ImportOptions) => Promise<void>
   addFile: (file: File) => Promise<void>
-  importBankTransactions: (incoming: RawTransaction[], bankName: string) => void
+  importBankTransactions: (incoming: RawTransaction[], bankName: string, quiet?: boolean) => void
   clearData: () => void
   downloadCsv: () => void
   updateTransaction: (id: string, updates: Partial<Transaction>) => void

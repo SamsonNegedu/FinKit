@@ -11,6 +11,7 @@ export function useSelection(
     bulkUpdate([...selectedIds], updates)
     setSelectedIds(new Set())
   }
+
   return {
     selectedIds,
     setSelectedIds,

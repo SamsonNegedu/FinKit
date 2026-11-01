@@ -1,47 +1,66 @@
-import { HttpCode, Body, Controller, Delete, Get, NotFoundException, Param, Post } from '@nestjs/common'
+import { HttpCode, Body, Controller, Delete, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common'
+import { AccessGuard, CurrentActor } from '../access/access.guard'
+import { Actor } from '../access/access.settings'
+import { CsrfGuard } from '../access/csrf.guard'
 import { ZodValidationPipe } from '../shared/http/zod-validation.pipe'
 import { SettingsService } from './settings.service'
 import { SheetConfig, SheetConfigSchema } from './sheet-config.schema'
 
 @Controller('api/settings')
+@UseGuards(AccessGuard, CsrfGuard)
 export class SettingsController {
   constructor(private readonly service: SettingsService) {}
 
   @Get('sheet')
-  sheet() {
-    return { success: true, data: this.service.sheetConfig() }
+  sheet(@CurrentActor() actor: Actor) {
+    return { success: true, data: this.service.sheetConfig(actor.userId) }
   }
 
   @Post('sheet')
   @HttpCode(200) // the previous API answered 200, not 201
-  saveSheet(@Body(new ZodValidationPipe(SheetConfigSchema, { shape: 'success-false' })) config: SheetConfig) {
-    this.service.saveSheetConfig(config)
+  saveSheet(
+    @CurrentActor() actor: Actor,
+    @Body(new ZodValidationPipe(SheetConfigSchema, { shape: 'success-false' }))
+    config: SheetConfig,
+  ) {
+    this.service.saveSheetConfig(actor.userId, config)
+
     return { success: true, message: 'Settings saved' }
   }
 
   @Delete('sheet')
-  resetSheet() {
-    this.service.resetSheetConfig()
+  resetSheet(@CurrentActor() actor: Actor) {
+    this.service.resetSheetConfig(actor.userId)
+
     return { success: true, message: 'Reset to defaults' }
   }
 
   @Get()
-  all() {
-    return { success: true, data: this.service.everything() }
+  all(@CurrentActor() actor: Actor) {
+    return { success: true, data: this.service.everything(actor.userId) }
   }
 
   // Generic key-value (declared after the fixed routes above)
   @Get(':key')
-  get(@Param('key') key: string) {
-    const value = this.service.get(key)
-    if (value === null) throw new NotFoundException({ success: false, error: 'Not found' })
+  get(@CurrentActor() actor: Actor, @Param('key') key: string) {
+    const value = this.service.get(actor.userId, key)
+
+    if (value === null) {
+      throw new NotFoundException({ success: false, error: 'Not found' })
+    }
+
     return { success: true, data: value }
   }
 
   @Post(':key')
   @HttpCode(200) // the previous API answered 200, not 201
-  set(@Param('key') key: string, @Body() body: { value?: unknown } & Record<string, unknown>) {
-    this.service.set(key, body?.value ?? body)
+  set(
+    @CurrentActor() actor: Actor,
+    @Param('key') key: string,
+    @Body() body: { value?: unknown } & Record<string, unknown>,
+  ) {
+    this.service.set(actor.userId, key, body?.value ?? body)
+
     return { success: true }
   }
 }

@@ -25,7 +25,10 @@ const root = createRootRouteWithContext<{ queryClient: QueryClient }>()({
 
 const requireBanking = async ({ context }: { context: { queryClient: QueryClient } }) => {
   const status = await context.queryClient.ensureQueryData(statusQuery)
-  if (!status.enabled) throw redirect({ to: '/' })
+
+  if (!status.enabled) {
+    throw redirect({ to: '/' })
+  }
 }
 
 const index = createRoute({ getParentRoute: () => root, path: '/', component: OverviewPage })
@@ -117,20 +120,29 @@ export const queryClient = new QueryClient({ defaultOptions: { queries: { refetc
 
 const stringifySearch = (search: Record<string, unknown>) => {
   const params = new URLSearchParams()
+
   for (const [key, value] of Object.entries(search)) {
-    if (value === undefined || value === null || value === '') continue
-    for (const item of Array.isArray(value) ? value : [value]) params.append(key, String(item))
+    if (value === undefined || value === null || value === '') {
+      continue
+    }
+    for (const item of Array.isArray(value) ? value : [value]) {
+      params.append(key, String(item))
+    }
   }
   const text = params.toString()
+
   return text ? `?${text}` : ''
 }
 const parseSearch = (query: string) => {
   const params = new URLSearchParams(query)
   const out: Record<string, unknown> = {}
+
   for (const key of new Set(params.keys())) {
     const all = params.getAll(key)
+
     out[key] = all.length > 1 ? all : all[0]
   }
+
   return out
 }
 

@@ -16,7 +16,10 @@ export class DatabaseService implements OnModuleDestroy {
 
   constructor(@Optional() @Inject(DATABASE_FILE) file?: string) {
     const path = file ?? join(process.env.DATA_DIR || join(process.cwd(), 'data'), 'categorizations.db')
-    if (path !== ':memory:' && !existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true })
+
+    if (path !== ':memory:' && !existsSync(dirname(path))) {
+      mkdirSync(dirname(path), { recursive: true })
+    }
     this.db = new Database(path)
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('synchronous = NORMAL')

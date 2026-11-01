@@ -16,6 +16,7 @@ export const DATE_FILTER_OPTIONS = [
 
 export function buildImportOptions(dateFilter: ImportOptions['dateFilter']): ImportOptions {
   const options: ImportOptions = { dateFilter }
+
   if (dateFilter !== 'all' && dateFilter !== 'custom') {
     const now = new Date()
     const months = dateFilter === '1m' ? 1 : dateFilter === '3m' ? 3 : dateFilter === '6m' ? 6 : 12
@@ -23,6 +24,7 @@ export function buildImportOptions(dateFilter: ImportOptions['dateFilter']): Imp
     if (dateFilter === '1m') {
       options.customStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
       const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+
       options.customEndDate = new Date(lastDayPrevMonth)
       options.customEndDate.setHours(23, 59, 59, 999)
     } else {
@@ -30,5 +32,6 @@ export function buildImportOptions(dateFilter: ImportOptions['dateFilter']): Imp
       options.customEndDate = now
     }
   }
+
   return options
 }

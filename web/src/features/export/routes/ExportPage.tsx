@@ -7,6 +7,7 @@ import { inPeriod } from '@/shared/utils/summary'
 export default function ExportPage() {
   const app = useApp()
   const rows = inPeriod(app.displayTransactions, app.dateRange).filter(t => t.category !== 'Transfer')
+
   return (
     <div>
       <PageHeader

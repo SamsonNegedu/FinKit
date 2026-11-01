@@ -1,11 +1,26 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": ["@stylistic/eslint-plugin"],
   "plugins": ["typescript", "unicorn", "oxc", "import", "node", "promise", "vitest"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn"
   },
   "rules": {
+    "curly": ["error", "all"],
+    "@stylistic/max-statements-per-line": ["error", { "max": 1 }],
+    "@stylistic/padding-line-between-statements": [
+      "error",
+      { "blankLine": "always", "prev": "*", "next": "return" },
+      { "blankLine": "always", "prev": ["const", "let", "var"], "next": "*" },
+      { "blankLine": "any", "prev": ["const", "let", "var"], "next": ["const", "let", "var"] }
+    ],
+    "@stylistic/lines-between-class-members": [
+      "error",
+      {
+        "enforce": [{ "blankLine": "always", "prev": "*", "next": "method" }]
+      }
+    ],
     "typescript/no-extraneous-class": "off",
     "vitest/expect-expect": [
       "error",
@@ -20,6 +35,12 @@
   },
   "ignorePatterns": ["dist", "node_modules", "data"],
   "overrides": [
+    {
+      "files": ["src/main.ts"],
+      "rules": {
+        "import/no-unassigned-import": "off"
+      }
+    },
     {
       "files": ["**/*.test.ts"],
       "rules": {

@@ -5,6 +5,7 @@ export function useRememberPreference(pushToast: (t: { message: string; tone: 's
   const [remember, setRemember] = useState(getRememberPreference)
   const toggleRemember = () => {
     const next = !remember
+
     setRemember(next)
     setRememberPreference(next)
     if (!next) {
@@ -12,5 +13,6 @@ export function useRememberPreference(pushToast: (t: { message: string; tone: 's
       pushToast({ message: 'Data is no longer saved on this device', tone: 'success' })
     }
   }
+
   return { remember, toggleRemember }
 }

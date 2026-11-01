@@ -1,13 +1,19 @@
 import { AnalysisSummary, DateRange, Transaction } from '@/shared/types'
 import { displayNameOf } from './aliases'
 import { getCategoryColor } from './categorizer'
+import { DEFAULT_SUMMARY_PERIOD_DAYS } from '@/shared/constants/periods'
+import { MS_PER_DAY } from '@/shared/constants/time'
 import { parseLocalDate } from './dates'
 
 /** Transactions inside the chosen period (all of them when no period is set). */
 export function inPeriod(transactions: Transaction[], range: DateRange | null): Transaction[] {
-  if (!range) return transactions
+  if (!range) {
+    return transactions
+  }
+
   return transactions.filter(tx => {
     const d = parseLocalDate(tx.date)
+
     return d >= range.startDate && d <= range.endDate
   })
 }
@@ -22,16 +28,22 @@ export function summarize(transactions: Transaction[], range: DateRange | null, 
 
   const byCategory = new Map<string, { total: number; count: number }>()
   const byMerchant = new Map<string, { total: number; count: number }>()
+
   for (const tx of expenses) {
     const category = tx.category || 'Other'
     const c = byCategory.get(category) ?? { total: 0, count: 0 }
+
     byCategory.set(category, { total: c.total + tx.amount, count: c.count + 1 })
     const merchant = displayNameOf(tx)
     const m = byMerchant.get(merchant) ?? { total: 0, count: 0 }
+
     byMerchant.set(merchant, { total: m.total + tx.amount, count: m.count + 1 })
   }
 
-  const days = range ? Math.ceil((range.endDate.getTime() - range.startDate.getTime()) / 86400000) + 1 : 30
+  const days = range
+    ? Math.ceil((range.endDate.getTime() - range.startDate.getTime()) / MS_PER_DAY) + 1
+    : DEFAULT_SUMMARY_PERIOD_DAYS
+
   return {
     totalIncome,
     totalExpense,

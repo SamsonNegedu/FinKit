@@ -28,11 +28,14 @@ export function columnIndex(letter: string): number {
 export function columnLetter(index: number): string {
   let n = index + 1
   let out = ''
+
   while (n > 0) {
     const rem = (n - 1) % 26
+
     out = String.fromCharCode(65 + rem) + out
     n = Math.floor((n - 1) / 26)
   }
+
   return out
 }
 
@@ -46,9 +49,15 @@ export function classifyHeaders(headers: SheetHeaderColumn[]): SheetColumn[] {
 
   return sorted.map((h, i): SheetColumn => {
     const key = norm(h.name)
-    if (i === monthIdx) return { ...h, kind: 'month' }
-    if (NAMED_KINDS[key]) return { ...h, kind: NAMED_KINDS[key] }
+
+    if (i === monthIdx) {
+      return { ...h, kind: 'month' }
+    }
+    if (NAMED_KINDS[key]) {
+      return { ...h, kind: NAMED_KINDS[key] }
+    }
     const isBeforeTotal = totalIdx === -1 ? i > monthIdx : i < totalIdx
+
     return { ...h, kind: isBeforeTotal && i > monthIdx ? 'category' : 'other' }
   })
 }
@@ -64,6 +73,7 @@ export const DEFAULT_LAYOUT: SheetColumn[] = (() => {
     'Gross Investment',
     'Net Income',
   ]
+
   return classifyHeaders(names.map((name, i) => ({ column: columnLetter(i), name })))
 })()
 
@@ -82,6 +92,7 @@ export function configPartsFromLayout(
     .filter(c => c.kind === 'category')
     .map(c => ({ appCategory: categoryFromHeader(c.name), sheetColumn: c.column }))
   const writable = new Set<SheetColumnKind>(['month', 'category', 'income', 'savings', 'investment'])
+
   return {
     categoryMappings,
     constantColumns: layout.filter(c => !writable.has(c.kind)).map(c => c.column),

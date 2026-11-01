@@ -33,6 +33,7 @@ class AnonymizationStore {
         break
       case 'email': {
         const [local, domain] = original.split('@')
+
         anonymized = `${local[0]}***@${domain}`
         break
       }
@@ -48,6 +49,7 @@ class AnonymizationStore {
     }
 
     const mapping: AnonymizationMapping = { original, anonymized, type }
+
     this.mappings.set(key, mapping)
 
     return anonymized
@@ -61,10 +63,12 @@ class AnonymizationStore {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     let id = ''
     let n = num
+
     while (n > 0 || id.length < 3) {
       id = chars[n % chars.length] + id
       n = Math.floor(n / chars.length)
     }
+
     return id
   }
 }
@@ -72,7 +76,9 @@ class AnonymizationStore {
 export const anonymizationStore = new AnonymizationStore()
 
 export function anonymizeText(text: string, personalNames: Set<string>): string {
-  if (!text) return text
+  if (!text) {
+    return text
+  }
 
   let result = text
 
@@ -84,6 +90,7 @@ export function anonymizeText(text: string, personalNames: Set<string>): string 
     if (name && name.length > 3) {
       const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const namePattern = new RegExp(`\\b${escapedName}\\b`, 'gi')
+
       result = result.replace(namePattern, anonymizationStore.getOrCreate(name, 'name'))
     }
   }

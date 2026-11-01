@@ -21,25 +21,36 @@ const DAY_TOLERANCE = 3
 function calculateDaysBetween(date1: string, date2: string): number {
   const d1 = parseLocalDate(date1)
   const d2 = parseLocalDate(date2)
+
   return Math.abs(d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24)
 }
 
 function detectFrequency(intervals: number[]): 'weekly' | 'monthly' | 'quarterly' | 'yearly' | null {
-  if (intervals.length === 0) return null
+  if (intervals.length === 0) {
+    return null
+  }
 
   const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length
 
   // Weekly: ~7 days
-  if (avgInterval >= 5 && avgInterval <= 9) return 'weekly'
+  if (avgInterval >= 5 && avgInterval <= 9) {
+    return 'weekly'
+  }
 
   // Monthly: ~30 days
-  if (avgInterval >= 25 && avgInterval <= 35) return 'monthly'
+  if (avgInterval >= 25 && avgInterval <= 35) {
+    return 'monthly'
+  }
 
   // Quarterly: ~90 days
-  if (avgInterval >= 80 && avgInterval <= 100) return 'quarterly'
+  if (avgInterval >= 80 && avgInterval <= 100) {
+    return 'quarterly'
+  }
 
   // Yearly: ~365 days
-  if (avgInterval >= 350 && avgInterval <= 380) return 'yearly'
+  if (avgInterval >= 350 && avgInterval <= 380) {
+    return 'yearly'
+  }
 
   return null
 }
@@ -49,7 +60,9 @@ function groupByMerchantAndAmount(transactions: Transaction[]): Map<string, Tran
 
   for (const tx of transactions) {
     // Skip income and transfers
-    if (tx.type === 'income' || tx.category === 'Transfer') continue
+    if (tx.type === 'income' || tx.category === 'Transfer') {
+      continue
+    }
 
     // Create a key based on merchant/description and approximate amount
     const merchant = tx.merchant || tx.recipient || tx.description.slice(0, 30)
@@ -68,6 +81,7 @@ function groupByMerchantAndAmount(transactions: Transaction[]): Map<string, Tran
 function isAmountSimilar(amount1: number, amount2: number): boolean {
   const diff = Math.abs(amount1 - amount2)
   const maxAmount = Math.max(amount1, amount2)
+
   return diff / maxAmount <= AMOUNT_TOLERANCE
 }
 
@@ -79,7 +93,9 @@ export function detectRecurring(transactions: Transaction[]): Transaction[] {
   const groups = groupByMerchantAndAmount(transactions)
 
   for (const [_key, txGroup] of groups) {
-    if (txGroup.length < MIN_OCCURRENCES) continue
+    if (txGroup.length < MIN_OCCURRENCES) {
+      continue
+    }
 
     // Sort by date
     const sorted = txGroup.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -87,23 +103,32 @@ export function detectRecurring(transactions: Transaction[]): Transaction[] {
     // Check if amounts are similar
     const firstAmount = sorted[0].amount
     const allSimilarAmount = sorted.every(tx => isAmountSimilar(tx.amount, firstAmount))
-    if (!allSimilarAmount) continue
+
+    if (!allSimilarAmount) {
+      continue
+    }
 
     // Calculate intervals between transactions
     const intervals: number[] = []
+
     for (let i = 1; i < sorted.length; i++) {
       intervals.push(calculateDaysBetween(sorted[i - 1].date, sorted[i].date))
     }
 
     // Detect frequency
     const frequency = detectFrequency(intervals)
-    if (!frequency) continue
+
+    if (!frequency) {
+      continue
+    }
 
     // Check if intervals are consistent
     const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length
     const isConsistent = intervals.every(interval => Math.abs(interval - avgInterval) <= DAY_TOLERANCE * 2)
 
-    if (!isConsistent && intervals.length > 1) continue
+    if (!isConsistent && intervals.length > 1) {
+      continue
+    }
 
     patterns.push({
       merchant: sorted[0].merchant || sorted[0].recipient || sorted[0].description.slice(0, 30),
@@ -133,6 +158,7 @@ export function detectRecurring(transactions: Transaction[]): Transaction[] {
         recurringFrequency: recurringFrequencies.get(tx.id),
       }
     }
+
     return tx
   })
 }

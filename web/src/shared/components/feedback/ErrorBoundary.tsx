@@ -14,7 +14,10 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
   }
 
   render() {
-    if (!this.state.error) return this.props.children
+    if (!this.state.error) {
+      return this.props.children
+    }
+
     return (
       <div className="min-h-screen bg-midnight-950 flex items-center justify-center p-6">
         <div className="card max-w-md text-center space-y-4">

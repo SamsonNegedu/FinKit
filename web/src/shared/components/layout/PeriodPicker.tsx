@@ -21,9 +21,12 @@ export default function PeriodPicker({ dateRange, onChange, transactions }: Peri
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
+
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
@@ -35,33 +38,43 @@ export default function PeriodPicker({ dateRange, onChange, transactions }: Peri
   }
 
   const label = () => {
-    if (!dateRange) return 'All time'
+    if (!dateRange) {
+      return 'All time'
+    }
     const { startDate: s, endDate: e } = dateRange
-    if (same(dateRange, yearRange(s.getFullYear()))) return String(s.getFullYear())
-    if (same(dateRange, monthRange(s.getFullYear(), s.getMonth())))
+
+    if (same(dateRange, yearRange(s.getFullYear()))) {
+      return String(s.getFullYear())
+    }
+    if (same(dateRange, monthRange(s.getFullYear(), s.getMonth()))) {
       return s.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    }
+
     return `${formatDay(s)} ${s.getFullYear()} – ${formatDay(e)} ${e.getFullYear()}`
   }
 
-  const now = new Date()
-  const presets: Array<[string, DateRange]> = [
-    ['This month', monthRange(now.getFullYear(), now.getMonth())],
-    ['Last month', monthRange(now.getFullYear(), now.getMonth() - 1)],
-    [
-      'Last 3 months',
-      {
-        startDate: new Date(now.getFullYear(), now.getMonth() - 2, 1),
-        endDate: endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
-      },
-    ],
-    [
-      'Last 12 months',
-      {
-        startDate: new Date(now.getFullYear(), now.getMonth() - 11, 1),
-        endDate: endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
-      },
-    ],
-  ]
+  const [presets] = useState<Array<[string, DateRange]>>(() => {
+    const now = new Date()
+
+    return [
+      ['This month', monthRange(now.getFullYear(), now.getMonth())],
+      ['Last month', monthRange(now.getFullYear(), now.getMonth() - 1)],
+      [
+        'Last 3 months',
+        {
+          startDate: new Date(now.getFullYear(), now.getMonth() - 2, 1),
+          endDate: endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+        },
+      ],
+      [
+        'Last 12 months',
+        {
+          startDate: new Date(now.getFullYear(), now.getMonth() - 11, 1),
+          endDate: endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+        },
+      ],
+    ]
+  })
 
   return (
     <div ref={ref} className="relative">
@@ -95,6 +108,7 @@ export default function PeriodPicker({ dateRange, onChange, transactions }: Peri
               </div>
               {years.map(({ year, months }) => {
                 const isOpen = (expanded ?? dateRange?.startDate.getFullYear()) === year
+
                 return (
                   <div key={year}>
                     <div className="flex items-stretch">
@@ -116,6 +130,7 @@ export default function PeriodPicker({ dateRange, onChange, transactions }: Peri
                     {isOpen &&
                       months.map(m => {
                         const range = monthRange(year, m)
+
                         return (
                           <button
                             key={m}

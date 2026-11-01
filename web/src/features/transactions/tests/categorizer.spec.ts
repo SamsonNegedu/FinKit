@@ -13,6 +13,7 @@ describe('learned rule matching', () => {
       tx({ id: '2', description: 'Reweaving Studio' }),
       tx({ id: '3', description: 'Amazon Prime Video' }),
     ])
+
     expect(a.category).toBe('Groceries')
     expect(b.category).not.toBe('Groceries')
     expect(c.category).toBe('Subscriptions')

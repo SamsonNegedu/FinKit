@@ -30,6 +30,7 @@ export default function SearchFilter({
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
+
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 

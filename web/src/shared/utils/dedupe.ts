@@ -11,15 +11,19 @@ export function mergeWithoutDuplicates(
   incoming: RawTransaction[],
 ): { merged: RawTransaction[]; added: number; skipped: number } {
   const available = new Map<string, number>()
+
   for (const r of existing) {
     const key = rawKey(r)
+
     available.set(key, (available.get(key) || 0) + 1)
   }
   const fresh: RawTransaction[] = []
   let skipped = 0
+
   for (const r of incoming) {
     const key = rawKey(r)
     const left = available.get(key) || 0
+
     if (left > 0) {
       available.set(key, left - 1)
       skipped++
@@ -27,5 +31,6 @@ export function mergeWithoutDuplicates(
       fresh.push(r)
     }
   }
+
   return { merged: [...existing, ...fresh], added: fresh.length, skipped }
 }

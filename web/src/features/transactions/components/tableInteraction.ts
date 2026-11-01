@@ -25,6 +25,7 @@ export function tableInteractionReducer(state: TableInteraction, action: TableIn
       if (state.kind === 'category_picker' && state.targetId === action.targetId) {
         return { kind: 'idle' }
       }
+
       return { kind: 'category_picker', targetId: action.targetId, position: action.position }
     case 'START_SPLIT':
       return { kind: 'split', transaction: action.transaction }

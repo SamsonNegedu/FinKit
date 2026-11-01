@@ -1,17 +1,21 @@
 import { z } from 'zod'
+import { ColumnSchema, SheetIdSchema, TabNameSchema } from './a1'
 
 export const ExportRequestSchema = z.object({
-  sheetId: z.string(),
-  tabName: z.string(),
+  sheetId: SheetIdSchema,
+  tabName: TabNameSchema,
   month: z.string(),
   monthFormat: z.enum(['short', 'long', 'numeric']),
-  categoryValues: z.array(z.object({ column: z.string(), value: z.number() })),
+  categoryValues: z.array(z.object({ column: ColumnSchema, value: z.number() })),
   income: z.number(),
   savings: z.number().optional(),
   investment: z.number().optional(),
-  constantColumns: z.array(z.string()).optional(),
-  incomeColumn: z.string().optional(),
-  savingsColumn: z.string().optional(),
-  investmentColumn: z.string().optional(),
+  constantColumns: z.array(ColumnSchema).optional(),
+  incomeColumn: ColumnSchema.optional(),
+  savingsColumn: ColumnSchema.optional(),
+  investmentColumn: ColumnSchema.optional(),
 })
 export type ExportRequest = z.infer<typeof ExportRequestSchema>
+
+export const LayoutRequestSchema = z.object({ sheetId: SheetIdSchema, tabName: TabNameSchema })
+export const MetadataRequestSchema = z.object({ sheetId: SheetIdSchema })

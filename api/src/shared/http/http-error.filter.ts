@@ -20,18 +20,23 @@ export class HttpErrorFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost) {
     const res = host.switchToHttp().getResponse<Response>()
+
     if (exception instanceof HttpException) {
       const status = exception.getStatus()
       const body = exception.getResponse()
       // Nest's own errors look like { statusCode, message, error }; ours are already final
       const ours = typeof body === 'object' && body !== null && !('statusCode' in body)
+
       return res.status(status).json(ours ? body : { error: TEXT[status] ?? 'Error' })
     }
     // body-parser errors (oversized or malformed JSON) carry their own status
     const status = (exception as { status?: number })?.status
-    if (typeof status === 'number' && status >= 400 && status < 500)
+
+    if (typeof status === 'number' && status >= 400 && status < 500) {
       return res.status(status).json({ error: TEXT[status] ?? 'Bad Request' })
+    }
     this.logger.error(exception instanceof Error ? (exception.stack ?? exception.message) : String(exception))
+
     return res.status(500).json({ error: 'Internal Server Error' })
   }
 }

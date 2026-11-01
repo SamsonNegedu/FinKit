@@ -27,15 +27,22 @@ export function buildSheetRow(transactions: Transaction[], layout: SheetColumn[]
   let grossInvestment = 0
 
   for (const tx of transactions) {
-    if (tx.isExcluded) continue
+    if (tx.isExcluded) {
+      continue
+    }
     if (tx.type === 'income') {
       income += tx.amount
       continue
     }
     const category = tx.category || 'Other'
-    if (category === 'Savings') grossSavings += tx.amount
-    else if (category === 'Investment') grossInvestment += tx.amount
-    else if (category !== 'Transfer') totals.set(category, (totals.get(category) || 0) + tx.amount)
+
+    if (category === 'Savings') {
+      grossSavings += tx.amount
+    } else if (category === 'Investment') {
+      grossInvestment += tx.amount
+    } else if (category !== 'Transfer') {
+      totals.set(category, (totals.get(category) || 0) + tx.amount)
+    }
   }
 
   const known = new Set(layoutCategories(layout))
@@ -59,9 +66,11 @@ export function buildSheetRow(transactions: Transaction[], layout: SheetColumn[]
   const cells: RowCell[] = []
   const last = layout.length ? columnIndex(layout[layout.length - 1].column) : -1
   const byLetter = new Map(layout.map(c => [c.column, c]))
+
   for (let i = 0; i <= last; i++) {
     const letter = columnLetter(i)
     const col = byLetter.get(letter)
+
     if (!col) {
       cells.push({ column: letter, label: '', kind: 'other', value: null })
     } else if (col.kind === 'month') {

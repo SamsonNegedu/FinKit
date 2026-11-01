@@ -4,7 +4,7 @@ import { BankInfo } from '@/features/banking/api/banking.api'
 import { errorMessage, useBanks, useStartConnect } from '@/features/banking/hooks/banking-queries'
 import BankTile from './BankTile'
 
-const PINNED = ['N26', 'Wise', 'Revolut']
+const PINNED = ['Mock ASPSP', 'N26', 'Wise', 'Revolut']
 
 /** Choose a bank, see what will be read, then continue to the bank's own approval page. */
 export default function ConnectBank({ initialBank }: { initialBank?: string }) {
@@ -17,21 +17,25 @@ export default function ConnectBank({ initialBank }: { initialBank?: string }) {
   const shown = useMemo(() => {
     const all = banks ?? []
     const q = query.trim().toLowerCase()
-    if (!q)
+
+    if (!q) {
       return {
         pinned: PINNED.map(n => all.find(b => b.name === n)).filter((b): b is BankInfo => !!b),
         results: [] as BankInfo[],
       }
+    }
+
     return { pinned: [] as BankInfo[], results: all.filter(b => b.name.toLowerCase().includes(q)).slice(0, 30) }
   }, [banks, query])
   const bank = banks?.find(b => b.name === selected)
 
-  if (banksQuery.isLoading)
+  if (banksQuery.isLoading) {
     return (
       <div className="flex justify-center py-10">
         <Loader2 className="w-6 h-6 animate-spin text-accent" />
       </div>
     )
+  }
   if (banksQuery.isError || !banks) {
     return (
       <div

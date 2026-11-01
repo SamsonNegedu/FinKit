@@ -1,6 +1,9 @@
 import { z } from 'zod'
 
-const CategoryMappingSchema = z.object({ appCategory: z.string(), sheetColumn: z.string() })
+const CategoryMappingSchema = z.object({
+  appCategory: z.string(),
+  sheetColumn: z.string(),
+})
 
 // One column of the Google Sheet's header row, read from the sheet (or pasted by the user)
 const SheetColumnSchema = z.object({

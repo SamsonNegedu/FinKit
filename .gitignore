@@ -76,3 +76,10 @@ data/
 *.pem
 secrets/
 .finkit-secrets/
+
+# Real bank exports used to test the Enable Banking mock. Never commit.
+tilisy*.json
+**/mock-upload*.json
+
+# Playwright MCP scratch output
+.playwright-mcp/

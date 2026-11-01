@@ -5,6 +5,7 @@ import { classifyHeaders, columnIndex, columnLetter, configPartsFromLayout, norm
 export async function syncSheetLayout(config: SheetConfig): Promise<SheetConfig> {
   const { headerRow, columns } = await fetchSheetLayout(config.sheetId, config.tabName)
   const layout = classifyHeaders(columns)
+
   return {
     ...config,
     ...configPartsFromLayout(layout),
@@ -20,12 +21,19 @@ export function layoutFromPaste(text: string, startColumn = 'A'): { layout: Shee
     .split('\n')
     .map(r => r.split('\t').map(c => c.trim()))
   const filled = rows.filter(r => r.some(Boolean))
-  if (filled.length === 0) return null
+
+  if (filled.length === 0) {
+    return null
+  }
   const row =
     filled.find(r => r.some(c => norm(c) === 'totalexpenditure')) ??
     filled.reduce((best, r) => (r.filter(Boolean).length > best.filter(Boolean).length ? r : best))
   const start = Math.max(0, columnIndex((startColumn || 'A').toUpperCase()))
   const headers = row.map((name, i) => ({ column: columnLetter(start + i), name })).filter(h => h.name)
-  if (headers.length < 2) return null
+
+  if (headers.length < 2) {
+    return null
+  }
+
   return { layout: classifyHeaders(headers), headerRow: 0 }
 }

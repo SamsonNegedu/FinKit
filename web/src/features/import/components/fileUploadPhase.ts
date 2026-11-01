@@ -15,12 +15,18 @@ export type FileUploadUiAction =
 export function fileUploadUiReducer(phase: FileUploadUiPhase, action: FileUploadUiAction): FileUploadUiPhase {
   switch (action.type) {
     case 'TOGGLE_FILE_DROP':
-      if (phase.kind !== 'pick') return phase
+      if (phase.kind !== 'pick') {
+        return phase
+      }
+
       return { ...phase, revealFileDrop: !phase.revealFileDrop }
     case 'FILE_SELECTED':
       return { kind: 'options', file: action.file, dateFilter: '3m' }
     case 'SET_DATE_FILTER':
-      if (phase.kind !== 'options') return phase
+      if (phase.kind !== 'options') {
+        return phase
+      }
+
       return { ...phase, dateFilter: action.dateFilter }
     case 'CANCEL_OPTIONS':
       return { kind: 'pick', revealFileDrop: true }

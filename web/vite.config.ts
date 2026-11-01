@@ -10,6 +10,7 @@ const appRoutes = (): Plugin => ({
   configureServer(server) {
     server.middlewares.use((req, _res, next) => {
       const [pathname, query] = (req.url ?? '').split('?')
+
       if (pathname.startsWith('/app/') && !pathname.includes('.') && !pathname.startsWith('/app/@')) {
         req.url = '/app/index.html' + (query ? `?${query}` : '')
       }
@@ -34,11 +35,22 @@ export default defineConfig({
       output: {
         // Libraries change rarely, so they get their own files and stay cached between deploys
         manualChunks: id => {
-          if (!id.includes('node_modules')) return undefined
-          if (/recharts|d3-|victory-vendor/.test(id)) return 'charts'
-          if (/@tanstack/.test(id)) return 'tanstack'
-          if (/xlsx/.test(id)) return 'xlsx'
-          if (/react|scheduler/.test(id)) return 'react'
+          if (!id.includes('node_modules')) {
+            return undefined
+          }
+          if (/recharts|d3-|victory-vendor/.test(id)) {
+            return 'charts'
+          }
+          if (/@tanstack/.test(id)) {
+            return 'tanstack'
+          }
+          if (/xlsx/.test(id)) {
+            return 'xlsx'
+          }
+          if (/react|scheduler/.test(id)) {
+            return 'react'
+          }
+
           return undefined
         },
       },

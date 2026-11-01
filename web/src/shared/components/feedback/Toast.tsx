@@ -14,13 +14,16 @@ interface ToastHostProps {
   onDismiss: (id: number) => void
 }
 
-function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }) {
+function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: number) => void }) {
   useEffect(() => {
-    const timer = setTimeout(onDismiss, toast.tone === 'error' ? 10000 : 7000)
+    const ms = toast.tone === 'error' ? 10000 : 7000
+    const timer = setTimeout(() => onDismiss(toast.id), ms)
+
     return () => clearTimeout(timer)
-  }, [toast.id])
+  }, [toast.id, toast.tone, onDismiss])
 
   const Icon = toast.tone === 'error' ? AlertTriangle : CheckCircle2
+
   return (
     <div
       role="status"
@@ -32,14 +35,18 @@ function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }
         <button
           onClick={() => {
             toast.onAction?.()
-            onDismiss()
+            onDismiss(toast.id)
           }}
           className="text-sm font-medium text-accent hover:underline shrink-0"
         >
           {toast.actionLabel}
         </button>
       )}
-      <button onClick={onDismiss} aria-label="Dismiss" className="text-midnight-400 hover:text-white shrink-0">
+      <button
+        onClick={() => onDismiss(toast.id)}
+        aria-label="Dismiss"
+        className="text-midnight-400 hover:text-white shrink-0"
+      >
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -50,7 +57,7 @@ export default function ToastHost({ toasts, onDismiss }: ToastHostProps) {
   return (
     <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 items-center">
       {toasts.map(t => (
-        <Toast key={t.id} toast={t} onDismiss={() => onDismiss(t.id)} />
+        <Toast key={t.id} toast={t} onDismiss={onDismiss} />
       ))}
     </div>
   )

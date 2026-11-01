@@ -85,8 +85,13 @@ export default function MerchantGroupRow({
                 onClick={() =>
                   setCollapsed(prev => {
                     const next = new Set(prev)
-                    if (next.has(group.key)) next.delete(group.key)
-                    else next.add(group.key)
+
+                    if (next.has(group.key)) {
+                      next.delete(group.key)
+                    } else {
+                      next.add(group.key)
+                    }
+
                     return next
                   })
                 }

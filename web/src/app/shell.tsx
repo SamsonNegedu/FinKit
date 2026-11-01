@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import BankBanners from '@/features/banking/components/BankBanners'
+import StoredBankTransactions from '@/features/banking/components/StoredBankTransactions'
 import HeaderMenu from '@/shared/components/layout/HeaderMenu'
 import PeriodPicker from '@/shared/components/layout/PeriodPicker'
 import { needsReview } from '@/features/review/components/ReviewQueue'
@@ -54,6 +55,7 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen bg-midnight-950 md:flex">
+      <StoredBankTransactions />
       <aside className="hidden md:block w-60 shrink-0 border-r border-midnight-800 bg-midnight-900/60 sticky top-0 h-screen">
         <AppShellSidebar nav={nav} />
       </aside>
@@ -126,7 +128,10 @@ export default function AppShell() {
                     className="hidden"
                     onChange={e => {
                       const file = e.target.files?.[0]
-                      if (file) app.addFile(file)
+
+                      if (file) {
+                        app.addFile(file)
+                      }
                       e.target.value = ''
                     }}
                   />

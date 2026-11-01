@@ -41,11 +41,17 @@ function childrenOf(parent: Transaction, parts: SplitPart[]): Transaction[] {
 /** Replace each split parent by its parts. Parents missing from the list are ignored. */
 export function applySplits(txs: Transaction[], splits: SplitMap): Transaction[] {
   const out: Transaction[] = []
+
   for (const t of txs) {
     const record = splits[t.id]
-    if (record && isValidSplit(t.amount, record.parts)) out.push(...childrenOf(t, record.parts))
-    else out.push(t)
+
+    if (record && isValidSplit(t.amount, record.parts)) {
+      out.push(...childrenOf(t, record.parts))
+    } else {
+      out.push(t)
+    }
   }
+
   return out
 }
 
@@ -53,14 +59,18 @@ export function applySplits(txs: Transaction[], splits: SplitMap): Transaction[]
 export function removeSplit(txs: Transaction[], parentId: string, original: Transaction): Transaction[] {
   const out: Transaction[] = []
   let inserted = false
+
   for (const t of txs) {
     if (t.splitOf === parentId) {
-      if (!inserted) out.push(original)
+      if (!inserted) {
+        out.push(original)
+      }
       inserted = true
     } else {
       out.push(t)
     }
   }
+
   return out
 }
 
@@ -70,13 +80,22 @@ export function removeSplit(txs: Transaction[], parentId: string, original: Tran
  */
 export function syncSplits(splits: SplitMap, txs: Transaction[]): SplitMap {
   const byId = new Map<string, Transaction>()
-  for (const t of txs) if (t.splitOf) byId.set(t.id, t)
-  if (byId.size === 0) return splits
+
+  for (const t of txs) {
+    if (t.splitOf) {
+      byId.set(t.id, t)
+    }
+  }
+  if (byId.size === 0) {
+    return splits
+  }
 
   let changed = false
   const next: SplitMap = {}
+
   for (const [id, record] of Object.entries(splits)) {
     const children = record.parts.map((_, i) => byId.get(`${id}~${i + 1}`))
+
     if (children.some(c => !c)) {
       next[id] = record
       continue
@@ -85,11 +104,17 @@ export function syncSplits(splits: SplitMap, txs: Transaction[]): SplitMap {
       const c = children[i]!
       const category = c.category || p.category
       const isExcluded = c.excludedManually ? !!c.isExcluded : p.isExcluded
-      if (category === p.category && isExcluded === p.isExcluded) return p
+
+      if (category === p.category && isExcluded === p.isExcluded) {
+        return p
+      }
       changed = true
+
       return { ...p, category, isExcluded }
     })
+
     next[id] = parts === record.parts ? record : { ...record, parts }
   }
+
   return changed ? next : splits
 }

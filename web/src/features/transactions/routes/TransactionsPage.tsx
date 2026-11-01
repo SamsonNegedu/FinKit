@@ -26,31 +26,48 @@ export default function TransactionsPage() {
   const sources = useMemo(() => {
     const banks = new Map<string, Map<string, string>>() // bank → accountRef → label
     let files = false
+
     for (const t of period) {
-      if (!t.bankName) files = true
-      else {
+      if (!t.bankName) {
+        files = true
+      } else {
         const accounts = banks.get(t.bankName) ?? new Map<string, string>()
-        if (t.accountRef) accounts.set(t.accountRef, t.accountLabel ?? t.accountRef)
+
+        if (t.accountRef) {
+          accounts.set(t.accountRef, t.accountLabel ?? t.accountRef)
+        }
         banks.set(t.bankName, accounts)
       }
     }
+
     return { banks, files }
   }, [period])
 
   const filtered = useMemo(() => {
     const q = search.q?.toLowerCase()
+
     return period.filter(tx => {
-      if (search.bank === FILES ? !!tx.bankName : search.bank && tx.bankName !== search.bank) return false
-      if (search.account && tx.accountRef !== search.account) return false
-      if (!search.transfers && tx.category === 'Transfer') return false
+      if (search.bank === FILES ? !!tx.bankName : search.bank && tx.bankName !== search.bank) {
+        return false
+      }
+      if (search.account && tx.accountRef !== search.account) {
+        return false
+      }
+      if (!search.transfers && tx.category === 'Transfer') {
+        return false
+      }
       if (
         q &&
         !`${tx.description} ${tx.displayName || ''} ${tx.merchant || ''} ${tx.category || ''} ${tx.recipient || ''}`
           .toLowerCase()
           .includes(q)
-      )
+      ) {
         return false
-      if (search.cat?.length && !search.cat.includes(tx.category || 'Other')) return false
+      }
+      if (search.cat?.length && !search.cat.includes(tx.category || 'Other')) {
+        return false
+      }
+
       return true
     })
   }, [period, search])

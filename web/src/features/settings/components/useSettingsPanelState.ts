@@ -64,6 +64,7 @@ export function useSettingsPanelState(config: SheetConfig | null, onSave: (confi
   const fetchSheetTabs = async () => {
     if (!sheetId || sheetId.length < 10) {
       dispatchAsync({ type: 'FAIL', message: 'Please enter a valid Sheet ID or URL' })
+
       return
     }
 
@@ -71,6 +72,7 @@ export function useSettingsPanelState(config: SheetConfig | null, onSave: (confi
 
     try {
       const tabs = await fetchSheetMetadata(sheetId)
+
       setAvailableTabs(tabs)
       if (tabs.length > 0 && !tabName) {
         setTabName(tabs[0].title)
@@ -86,15 +88,18 @@ export function useSettingsPanelState(config: SheetConfig | null, onSave: (confi
 
   const handleApplyPaste = () => {
     const result = layoutFromPaste(pasteText, pasteStart)
+
     if (!result) {
       setSyncMessage('')
       dispatchAsync({
         type: 'FAIL',
         message: "Couldn't find a header row. Copy the cells of your header row in Google Sheets and paste them here.",
       })
+
       return
     }
     const parts = configPartsFromLayout(result.layout)
+
     setLayout(result.layout)
     setHeaderRow(undefined)
     setMappings(parts.categoryMappings)
@@ -107,6 +112,7 @@ export function useSettingsPanelState(config: SheetConfig | null, onSave: (confi
   const handleSyncLayout = async () => {
     if (!sheetId || !tabName) {
       dispatchAsync({ type: 'FAIL', message: 'Enter a Sheet ID and tab first' })
+
       return
     }
     dispatchAsync({ type: 'START', operation: 'syncing_layout' })
@@ -120,11 +126,13 @@ export function useSettingsPanelState(config: SheetConfig | null, onSave: (confi
         categoryMappings: mappings,
         constantColumns,
       })
+
       setLayout(synced.layout)
       setHeaderRow(synced.headerRow)
       setMappings(synced.categoryMappings)
       setConstantColumns(synced.constantColumns)
       const names = layoutCategories(synced.layout || [])
+
       setSyncMessage(`Synced ${names.length} categories from row ${synced.headerRow}`)
       dispatchAsync({ type: 'DONE' })
     } catch (err) {
@@ -143,6 +151,7 @@ export function useSettingsPanelState(config: SheetConfig | null, onSave: (confi
   const handleSave = async () => {
     if (!sheetId) {
       alert('Please enter a Google Sheet ID')
+
       return
     }
 

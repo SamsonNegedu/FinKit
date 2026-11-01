@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Transaction, DateRange } from '@/shared/types'
+import { MS_PER_DAY } from '@/shared/constants/time'
 import { toISODate, formatDay } from '@/shared/utils/dates'
 
 export function useSpendingTrendData(transactions: Transaction[], dateRange: DateRange | null) {
@@ -7,7 +8,9 @@ export function useSpendingTrendData(transactions: Transaction[], dateRange: Dat
     const byDate = new Map<string, { expenses: number; income: number }>()
 
     for (const tx of transactions) {
-      if (tx.isExcluded || tx.category === 'Transfer') continue
+      if (tx.isExcluded || tx.category === 'Transfer') {
+        continue
+      }
 
       const date = tx.date
       const existing = byDate.get(date) || { expenses: 0, income: 0 }
@@ -23,9 +26,11 @@ export function useSpendingTrendData(transactions: Transaction[], dateRange: Dat
 
     if (dateRange) {
       const start = new Date(dateRange.startDate)
-      const days = Math.floor((new Date(dateRange.endDate).getTime() - start.getTime()) / 86400000)
+      const days = Math.floor((new Date(dateRange.endDate).getTime() - start.getTime()) / MS_PER_DAY)
+
       for (let i = 0; i <= days; i++) {
         const dateStr = toISODate(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i))
+
         if (!byDate.has(dateStr)) {
           byDate.set(dateStr, { expenses: 0, income: 0 })
         }
@@ -48,11 +53,13 @@ export function useSpendingTrendData(transactions: Transaction[], dateRange: Dat
       dailyData.reduce<Array<(typeof dailyData)[number] & { cumulative: number; cumulativeIncome: number }>>(
         (rows, d) => {
           const prev = rows[rows.length - 1]
+
           rows.push({
             ...d,
             cumulative: (prev?.cumulative ?? 0) + d.expenses,
             cumulativeIncome: (prev?.cumulativeIncome ?? 0) + d.income,
           })
+
           return rows
         },
         [],

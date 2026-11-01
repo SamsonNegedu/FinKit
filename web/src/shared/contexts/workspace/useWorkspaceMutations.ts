@@ -41,16 +41,20 @@ export function useWorkspaceMutations(deps: MutationDeps) {
     const prevSplits = store.splitsRef.current
     const existing = prevSplits[id]
     const target = existing ? existing.parent : current.find(t => t.id === id)
-    if (!target) return
+
+    if (!target) {
+      return
+    }
     const base = existing ? removeSplit(current, id, target) : current
-    store.splitsRef.current = { ...prevSplits, [id]: { parent: target, parts } }
+
+    store.replaceSplits({ ...prevSplits, [id]: { parent: target, parts } })
     store.commit(applySplits(base, { [id]: { parent: target, parts } }))
     pushToast({
       message: `Split into ${parts.length} parts`,
       tone: 'success',
       actionLabel: 'Undo',
       onAction: () => {
-        store.splitsRef.current = prevSplits
+        store.replaceSplits(prevSplits)
         store.commit(current)
       },
     })
@@ -60,16 +64,20 @@ export function useWorkspaceMutations(deps: MutationDeps) {
     const current = store.transactionsRef.current
     const prevSplits = store.splitsRef.current
     const record = prevSplits[parentId]
-    if (!record) return
+
+    if (!record) {
+      return
+    }
     const { [parentId]: _removed, ...rest } = prevSplits
-    store.splitsRef.current = rest
+
+    store.replaceSplits(rest)
     store.commit(removeSplit(current, parentId, record.parent))
     pushToast({
       message: 'Split removed',
       tone: 'success',
       actionLabel: 'Undo',
       onAction: () => {
-        store.splitsRef.current = prevSplits
+        store.replaceSplits(prevSplits)
         store.commit(current)
       },
     })
@@ -78,6 +86,7 @@ export function useWorkspaceMutations(deps: MutationDeps) {
   const renameMerchant = (merchantKey: string, name: string) => {
     const current = store.transactionsRef.current
     const previousName = current.find(t => sameMerchant(merchantKeyOf(t), merchantKey))?.displayName
+
     saveAlias(merchantKey, name)
     store.commit(
       current.map(t =>
@@ -102,7 +111,8 @@ export function useWorkspaceMutations(deps: MutationDeps) {
       splits: store.splitsRef.current,
       dateRange,
     }
-    store.splitsRef.current = {}
+
+    store.replaceSplits({})
     store.commit([])
     setDateRange(null)
     clearImportError()
@@ -112,8 +122,8 @@ export function useWorkspaceMutations(deps: MutationDeps) {
       tone: 'success',
       actionLabel: 'Undo',
       onAction: () => {
-        store.rawTransactionsRef.current = snapshot.raw
-        store.splitsRef.current = snapshot.splits
+        store.replaceRaw(snapshot.raw)
+        store.replaceSplits(snapshot.splits)
         store.commit(snapshot.transactions)
         setDateRange(snapshot.dateRange)
       },
@@ -126,6 +136,7 @@ export function useWorkspaceMutations(deps: MutationDeps) {
 
   const toggleAnonymization = () => {
     const newValue = !anonymizationEnabled
+
     setAnonymizationEnabled(newValue)
     if (store.rawTransactionsRef.current.length > 0) {
       store.commit(reprocess(store.rawTransactionsRef.current, newValue))

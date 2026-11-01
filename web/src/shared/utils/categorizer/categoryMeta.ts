@@ -60,9 +60,15 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export function getCategoryColor(category: string | undefined): string {
   const name = category || 'Other'
-  if (CATEGORY_COLORS[name]) return CATEGORY_COLORS[name]
+
+  if (CATEGORY_COLORS[name]) {
+    return CATEGORY_COLORS[name]
+  }
   let hash = 0
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0
+
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0
+  }
   const h = hash % 360,
     sat = 0.65,
     l = 0.55
@@ -70,9 +76,11 @@ export function getCategoryColor(category: string | undefined): string {
   const f = (n: number) => {
     const k = (n + h / 30) % 12
     const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+
     return Math.round(255 * c)
       .toString(16)
       .padStart(2, '0')
   }
+
   return `#${f(0)}${f(8)}${f(4)}`
 }

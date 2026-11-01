@@ -36,15 +36,23 @@ export function useWorkspaceBootstrap({
   anonymizationEnabled,
   transactions,
 }: BootstrapArgs) {
+  // `store` is a new object on every render, so effects depend on its stable parts only.
+  // Depending on `store` itself re-ran the restore on every render and hammered the API.
+  const { commit, replaceRaw, replaceSplits, rawTransactionsRef, splitsRef } = store
+
   useEffect(() => {
     async function init() {
       const mappings = await getLearnedMappings()
-      if (mappings.length > 0) setLearnedMappings(mappings)
+
+      if (mappings.length > 0) {
+        setLearnedMappings(mappings)
+      }
       const saved = getRememberPreference() ? await loadSession() : null
+
       if (saved && saved.transactions.length > 0) {
-        store.rawTransactionsRef.current = saved.raw
-        store.splitsRef.current = saved.splits || {}
-        store.commit(migrateOldIds(saved.transactions, saved.raw))
+        replaceRaw(saved.raw)
+        replaceSplits(saved.splits || {})
+        commit(migrateOldIds(saved.transactions, saved.raw))
         setAnonymizationEnabled(saved.anonymizationEnabled)
         if (saved.dateRange) {
           setDateRange({ startDate: new Date(saved.dateRange.start), endDate: new Date(saved.dateRange.end) })
@@ -53,28 +61,39 @@ export function useWorkspaceBootstrap({
       dispatchPhase({ type: 'RESTORE_DONE' })
     }
     init()
-  }, [store, setAnonymizationEnabled, setDateRange, dispatchPhase])
+  }, [commit, replaceRaw, replaceSplits, setAnonymizationEnabled, setDateRange, dispatchPhase])
 
   useEffect(() => {
     let cancelled = false
+
     async function loadSheet() {
       setSheetBootstrap({ kind: 'loading_config' })
       const config = await getSheetConfig()
+
       if (!config || cancelled) {
-        if (!cancelled) setSheetBootstrap({ kind: 'ready' })
+        if (!cancelled) {
+          setSheetBootstrap({ kind: 'ready' })
+        }
+
         return
       }
       setSheetConfig(config)
       if (!config.sheetId || !config.headerRow) {
         setSheetBootstrap({ kind: 'ready' })
+
         return
       }
       setSheetBootstrap({ kind: 'syncing_layout' })
       try {
         const synced = await syncSheetLayout(config)
-        if (cancelled) return
+
+        if (cancelled) {
+          return
+        }
         setSheetConfig(synced)
-        if (JSON.stringify(synced.layout) !== JSON.stringify(config.layout)) saveSheetConfig(synced)
+        if (JSON.stringify(synced.layout) !== JSON.stringify(config.layout)) {
+          saveSheetConfig(synced)
+        }
         setSheetBootstrap({ kind: 'ready' })
       } catch (e) {
         if (!cancelled) {
@@ -86,24 +105,28 @@ export function useWorkspaceBootstrap({
       }
     }
     loadSheet()
+
     return () => {
       cancelled = true
     }
   }, [setSheetConfig, setSheetBootstrap])
 
   useEffect(() => {
-    if (isRestoring || transactions.length === 0 || !remember) return
+    if (isRestoring || transactions.length === 0 || !remember) {
+      return
+    }
     const timer = setTimeout(() => {
       saveSession({
         transactions,
-        raw: store.rawTransactionsRef.current,
+        raw: rawTransactionsRef.current,
         dateRange,
         anonymizationEnabled,
-        splits: store.splitsRef.current,
+        splits: splitsRef.current,
       })
     }, 500)
+
     return () => clearTimeout(timer)
-  }, [transactions, dateRange, anonymizationEnabled, isRestoring, remember, store])
+  }, [transactions, dateRange, anonymizationEnabled, isRestoring, remember, rawTransactionsRef, splitsRef])
 }
 
 export function syncExpenseCategoriesFromSheet(sheetConfig: SheetConfig | null) {

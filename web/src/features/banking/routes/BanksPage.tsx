@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { Landmark, Loader2, Plus, RefreshCw } from 'lucide-react'
+import DeleteStoredData from '../components/DeleteStoredData'
 import ConnectionCard from '../components/banks/ConnectionCard'
 import { useConnectionActions } from '../components/banks/useConnectionActions'
 import BankTile from '../components/banks/BankTile'
@@ -25,8 +26,13 @@ export default function BanksPage() {
 
   useEffect(() => {
     const phase = parseBankConnectReturn(search)
-    if (phase.kind === 'none') return
-    if (announced.current.kind !== 'none' && JSON.stringify(announced.current) === JSON.stringify(phase)) return
+
+    if (phase.kind === 'none') {
+      return
+    }
+    if (announced.current.kind !== 'none' && JSON.stringify(announced.current) === JSON.stringify(phase)) {
+      return
+    }
     announced.current = phase
 
     if (phase.kind === 'success') {
@@ -48,7 +54,9 @@ export default function BanksPage() {
             {connections.some(c => c.status !== 'expired') && (
               <button
                 onClick={async () => {
-                  for (const c of connections.filter(x => x.status !== 'expired')) await actions.sync(c)
+                  for (const c of connections.filter(x => x.status !== 'expired')) {
+                    await actions.sync(c)
+                  }
                 }}
                 disabled={actions.operation.kind !== 'idle'}
                 className="btn-secondary flex items-center gap-2"
@@ -97,6 +105,7 @@ export default function BanksPage() {
           {connections.map(c => (
             <ConnectionCard key={c.id} connection={c} actions={actions} mock={!!status?.mock} />
           ))}
+          <DeleteStoredData />
         </div>
       )}
     </div>

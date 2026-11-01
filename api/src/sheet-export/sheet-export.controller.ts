@@ -6,12 +6,16 @@ import {
   InternalServerErrorException,
   Logger,
   Post,
+  UseGuards,
 } from '@nestjs/common'
+import { AccessGuard } from '../access/access.guard'
+import { CsrfGuard } from '../access/csrf.guard'
 import { ZodValidationPipe } from '../shared/http/zod-validation.pipe'
 import { GoogleSheetsService } from './google-sheets.service'
-import { ExportRequest, ExportRequestSchema } from './sheet-export.schemas'
+import { ExportRequest, ExportRequestSchema, LayoutRequestSchema, MetadataRequestSchema } from './sheet-export.schemas'
 
 @Controller('api/export')
+@UseGuards(AccessGuard, CsrfGuard)
 export class SheetExportController {
   private readonly logger = new Logger(SheetExportController.name)
 
@@ -21,7 +25,12 @@ export class SheetExportController {
   @Post('sheets')
   @HttpCode(200) // the previous API answered 200, not 201
   async exportRow(
-    @Body(new ZodValidationPipe(ExportRequestSchema, { message: 'Invalid request body' })) body: ExportRequest,
+    @Body(
+      new ZodValidationPipe(ExportRequestSchema, {
+        message: 'Invalid request body',
+      }),
+    )
+    body: ExportRequest,
   ) {
     return {
       success: true,
@@ -33,10 +42,19 @@ export class SheetExportController {
   @Post('sheets/layout')
   @HttpCode(200) // the previous API answered 200, not 201
   async layout(@Body() body: { sheetId?: string; tabName?: string }) {
-    if (!body?.sheetId || !body?.tabName) throw new BadRequestException({ error: 'Missing sheetId or tabName' })
+    if (!body?.sheetId || !body?.tabName) {
+      throw new BadRequestException({ error: 'Missing sheetId or tabName' })
+    }
+
+    const ok = LayoutRequestSchema.safeParse(body)
+
+    if (!ok.success) {
+      throw new BadRequestException({ error: 'Invalid sheetId or tabName' })
+    }
+
     return {
       success: true,
-      data: await this.run(() => this.sheets.layout(body.sheetId!, body.tabName!), 'Failed to read sheet layout'),
+      data: await this.run(() => this.sheets.layout(ok.data.sheetId, ok.data.tabName), 'Failed to read sheet layout'),
     }
   }
 
@@ -44,10 +62,19 @@ export class SheetExportController {
   @Post('sheets/metadata')
   @HttpCode(200) // the previous API answered 200, not 201
   async metadata(@Body() body: { sheetId?: string }) {
-    if (!body?.sheetId) throw new BadRequestException({ error: 'Missing sheetId' })
+    if (!body?.sheetId) {
+      throw new BadRequestException({ error: 'Missing sheetId' })
+    }
+
+    const ok = MetadataRequestSchema.safeParse(body)
+
+    if (!ok.success) {
+      throw new BadRequestException({ error: 'Invalid sheetId' })
+    }
+
     return {
       success: true,
-      data: await this.run(() => this.sheets.metadata(body.sheetId!), 'Failed to fetch sheet metadata'),
+      data: await this.run(() => this.sheets.metadata(ok.data.sheetId), 'Failed to fetch sheet metadata'),
     }
   }
 
@@ -55,8 +82,8 @@ export class SheetExportController {
     try {
       return await action()
     } catch (error) {
-      this.logger.error(error instanceof Error ? error.message : String(error))
-      throw new InternalServerErrorException({ error: error instanceof Error ? error.message : fallback })
+      this.logger.error(error instanceof Error ? (error.stack ?? error.message) : String(error))
+      throw new InternalServerErrorException({ error: fallback })
     }
   }
 }

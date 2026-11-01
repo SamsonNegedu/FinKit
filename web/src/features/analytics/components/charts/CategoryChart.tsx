@@ -9,8 +9,11 @@ interface CategoryChartProps {
 }
 
 function CategoryTooltip({ active, payload, currency }: { active?: boolean; payload?: any[]; currency: string }) {
-  if (!active || !payload?.length) return null
+  if (!active || !payload?.length) {
+    return null
+  }
   const entry = payload[0].payload
+
   return (
     <div className="bg-midnight-800 border border-midnight-600 rounded-lg px-3 py-2 shadow-xl">
       <p className="font-medium text-white">{entry.category}</p>
@@ -25,17 +28,21 @@ function CategoryTooltip({ active, payload, currency }: { active?: boolean; payl
 export default function CategoryChart({ categorySummary, currency, onSelectCategory }: CategoryChartProps) {
   // The grouped "Other (n categories)" slice isn't a real category, so it isn't clickable
   const select = (category: string) => {
-    if (onSelectCategory && !category.startsWith('Other (')) onSelectCategory(category)
+    if (onSelectCategory && !category.startsWith('Other (')) {
+      onSelectCategory(category)
+    }
   }
   // Take top 8 categories and group rest as "Other"
   const topCategories = categorySummary.slice(0, 8)
   const otherCategories = categorySummary.slice(8)
 
   const data = [...topCategories]
+
   if (otherCategories.length > 0) {
     const otherTotal = otherCategories.reduce((sum, c) => sum + c.total, 0)
     const otherCount = otherCategories.reduce((sum, c) => sum + c.count, 0)
     const otherPercentage = otherCategories.reduce((sum, c) => sum + c.percentage, 0)
+
     data.push({
       category: `Other (${otherCategories.length} categories)`,
       total: otherTotal,

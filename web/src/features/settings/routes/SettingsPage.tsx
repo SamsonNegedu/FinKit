@@ -15,8 +15,9 @@ export default function SettingsPage({ section }: { section: Section }) {
     ['sheet', 'Google Sheet'],
     ['columns', 'Columns'],
     ['rules', 'Learned rules'],
-    ...(banking?.canAdmin ? ([['back-office', 'Back office']] as Array<[Section, string]>) : []),
+    ...(banking?.enabled ? ([['back-office', 'Back office']] as Array<[Section, string]>) : []),
   ]
+
   return (
     <div>
       <PageHeader title="Settings" />
@@ -48,5 +49,6 @@ export default function SettingsPage({ section }: { section: Section }) {
 
 function BackOffice() {
   const { section } = useSearch({ from: '/settings/back-office' }) as BackOfficeSearch
+
   return <BackOfficePanel section={section ?? 'overview'} />
 }

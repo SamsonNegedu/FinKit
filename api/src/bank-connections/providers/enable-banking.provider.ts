@@ -1,14 +1,22 @@
 import { createSign } from 'node:crypto'
 import {
+  DEFAULT_CONSENT_DAYS,
+  DEFAULT_CONSENT_VALIDITY_SECONDS,
+  ENABLE_BANKING_JWT_REFRESH_BUFFER_SECONDS,
+  ENABLE_BANKING_JWT_TTL_SECONDS,
+  ENABLE_BANKING_MAX_TRANSACTION_PAGES,
+  ENABLE_BANKING_REQUEST_TIMEOUT_MS,
+} from '../constants'
+import { isoDaysFromNow, SECONDS_PER_DAY } from '../../shared/constants/time'
+import {
   BankInfo,
   BankProvider,
   BankTransaction,
   ProviderAccount,
   ProviderError,
   ProviderSession,
-} from '../bank-provider'
-
-// ---------------- transaction mapping ----------------
+  PsuInfo,
+} from './bank-provider'
 // Shape of an Enable Banking transaction (only the fields we use)
 interface EbTransaction {
   entry_reference?: string | null
@@ -29,10 +37,15 @@ interface EbTransaction {
 
 /** Booked transactions only: pending ones can change or disappear. */
 export function mapEbTransaction(tx: EbTransaction, accountStableId: string): BankTransaction | null {
-  if (tx.status && tx.status !== 'BOOK') return null
+  if (tx.status && tx.status !== 'BOOK') {
+    return null
+  }
   const date = tx.booking_date || tx.value_date || tx.transaction_date
   const raw = Number(tx.transaction_amount?.amount)
-  if (!date || !Number.isFinite(raw)) return null
+
+  if (!date || !Number.isFinite(raw)) {
+    return null
+  }
 
   const debit = tx.credit_debit_indicator === 'DBIT'
   const counterparty = debit ? tx.creditor : tx.debtor
@@ -63,7 +76,6 @@ export function mapEbTransaction(tx: EbTransaction, accountStableId: string): Ba
 // the live API.
 
 const BASE_URL = 'https://api.enablebanking.com'
-const MAX_PAGES = 50
 
 const b64url = (v: Buffer | string) => Buffer.from(v).toString('base64url')
 
@@ -71,7 +83,7 @@ export function signJwt(
   appId: string,
   privateKeyPem: string,
   nowSeconds = Math.floor(Date.now() / 1000),
-  ttlSeconds = 3600,
+  ttlSeconds = ENABLE_BANKING_JWT_TTL_SECONDS,
 ): string {
   const header = { typ: 'JWT', alg: 'RS256', kid: appId }
   const payload = {
@@ -82,6 +94,7 @@ export function signJwt(
   }
   const unsigned = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}`
   const signature = createSign('RSA-SHA256').update(unsigned).sign(privateKeyPem)
+
   return `${unsigned}.${b64url(signature)}`
 }
 
@@ -98,31 +111,53 @@ export class EnableBankingProvider implements BankProvider {
   private cachedJwt: { token: string; expires: number } | null = null
 
   constructor(
-    private readonly opts: { appId: string; privateKey: string; baseUrl?: string; fetchImpl?: typeof fetch },
+    private readonly opts: {
+      appId: string
+      privateKey: string
+      baseUrl?: string
+      fetchImpl?: typeof fetch
+    },
   ) {}
 
   private jwt(): string {
     const now = Math.floor(Date.now() / 1000)
-    if (this.cachedJwt && this.cachedJwt.expires - 60 > now) return this.cachedJwt.token
-    const token = signJwt(this.opts.appId, this.opts.privateKey, now, 3600)
-    this.cachedJwt = { token, expires: now + 3600 }
+
+    if (this.cachedJwt && this.cachedJwt.expires - ENABLE_BANKING_JWT_REFRESH_BUFFER_SECONDS > now) {
+      return this.cachedJwt.token
+    }
+    const token = signJwt(this.opts.appId, this.opts.privateKey, now, ENABLE_BANKING_JWT_TTL_SECONDS)
+
+    this.cachedJwt = { token, expires: now + ENABLE_BANKING_JWT_TTL_SECONDS }
+
     return token
   }
 
-  private async api<T>(method: string, path: string, body?: unknown): Promise<T> {
+  private async api<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<T> {
     const doFetch = this.opts.fetchImpl ?? fetch
     let res: Response
+
     try {
       res = await doFetch(`${this.opts.baseUrl ?? BASE_URL}${path}`, {
         method,
-        headers: { Authorization: `Bearer ${this.jwt()}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        headers: {
+          Authorization: `Bearer ${this.jwt()}`,
+          ...extraHeaders,
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
         body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(ENABLE_BANKING_REQUEST_TIMEOUT_MS),
       })
     } catch {
       throw new ProviderError('Could not reach the bank service', 'unavailable')
     }
-    if (res.ok) return (res.status === 204 ? undefined : await res.json()) as T
+    if (res.ok) {
+      return (res.status === 204 ? undefined : await res.json()) as T
+    }
     // Keep error detail short and free of anything sensitive
     const kind =
       res.status === 429
@@ -132,19 +167,28 @@ export class EnableBankingProvider implements BankProvider {
           : res.status >= 500
             ? 'unavailable'
             : 'rejected'
+
     throw new ProviderError(`Bank service returned ${res.status}`, kind, res.status)
   }
 
   async listBanks(country: string): Promise<BankInfo[]> {
     const data = await this.api<{
-      aspsps: Array<{ name: string; country: string; psu_types?: string[]; maximum_consent_validity?: number }>
+      aspsps: Array<{
+        name: string
+        country: string
+        psu_types?: string[]
+        maximum_consent_validity?: number
+        required_psu_headers?: string[]
+      }>
     }>('GET', `/aspsps?country=${encodeURIComponent(country.toUpperCase())}`)
+
     return (data.aspsps || [])
       .filter(a => !a.psu_types || a.psu_types.includes('personal'))
       .map(a => ({
         name: a.name,
         country: a.country,
-        maxConsentDays: Math.floor((a.maximum_consent_validity ?? 90 * 86400) / 86400),
+        maxConsentDays: Math.floor((a.maximum_consent_validity ?? DEFAULT_CONSENT_VALIDITY_SECONDS) / SECONDS_PER_DAY),
+        requiredPsuHeaders: a.required_psu_headers?.length ? a.required_psu_headers : undefined,
       }))
       .toSorted((a, b) => a.name.localeCompare(b.name))
   }
@@ -157,28 +201,32 @@ export class EnableBankingProvider implements BankProvider {
       redirect_url: p.redirectUrl,
       psu_type: 'personal',
     })
+
     return { url: data.url }
   }
 
   async completeAuth(code: string): Promise<ProviderSession> {
-    const data = await this.api<{ session_id: string; accounts: EbAccount[]; access?: { valid_until?: string } }>(
-      'POST',
-      '/sessions',
-      { code },
-    )
+    const data = await this.api<{
+      session_id: string
+      accounts: EbAccount[]
+      access?: { valid_until?: string }
+    }>('POST', '/sessions', { code })
     const accounts: ProviderAccount[] = (data.accounts || []).map(a => {
       const iban = a.account_id?.iban || ''
+
       return {
         uid: a.uid,
         stableId: a.identification_hash || iban || a.uid,
         label: iban ? `…${iban.slice(-4)}` : a.name || 'Account',
         currency: a.currency || undefined,
+        iban: iban || undefined,
       }
     })
+
     return {
       sessionId: data.session_id,
       accounts,
-      validUntil: data.access?.valid_until || new Date(Date.now() + 90 * 86400_000).toISOString(),
+      validUntil: data.access?.valid_until || isoDaysFromNow(DEFAULT_CONSENT_DAYS),
     }
   }
 
@@ -187,24 +235,61 @@ export class EnableBankingProvider implements BankProvider {
     account: ProviderAccount
     from: string
     to: string
+    psu?: PsuInfo
+    longest?: boolean
   }): Promise<BankTransaction[]> {
+    const headers = psuHeaders(p.session.requiredPsuHeaders, p.psu)
+    const window = () => new URLSearchParams({ date_from: p.from, date_to: p.to })
+
+    if (!p.longest) {
+      return this.collect(p.account, window(), headers)
+    }
+    try {
+      return await this.collect(p.account, new URLSearchParams({ strategy: 'longest' }), headers)
+    } catch (e) {
+      // Not every bank can do this: fall back to the normal window
+      if (e instanceof ProviderError && e.kind === 'rejected') {
+        return this.collect(p.account, window(), headers)
+      }
+      throw e
+    }
+  }
+
+  /** Follows the bank's pages until it says there are no more. */
+  private async collect(
+    account: ProviderAccount,
+    base: URLSearchParams,
+    headers: Record<string, string>,
+  ): Promise<BankTransaction[]> {
     const out: BankTransaction[] = []
     let key: string | undefined
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const qs = new URLSearchParams({ date_from: p.from, date_to: p.to })
-      if (key) qs.set('continuation_key', key)
-      const data = await this.api<{ transactions?: EbTransaction[]; continuation_key?: string | null }>(
-        'GET',
-        `/accounts/${encodeURIComponent(p.account.uid)}/transactions?${qs}`,
-      )
+
+    for (let page = 0; page < ENABLE_BANKING_MAX_TRANSACTION_PAGES; page++) {
+      const qs = new URLSearchParams(base)
+
+      if (key) {
+        qs.set('continuation_key', key)
+      }
+      const data = await this.api<{
+        transactions?: EbTransaction[]
+        continuation_key?: string | null
+      }>('GET', `/accounts/${encodeURIComponent(account.uid)}/transactions?${qs}`, undefined, headers)
+
       for (const tx of data.transactions || []) {
-        const mapped = mapEbTransaction(tx, p.account.stableId)
-        if (mapped) out.push(mapped)
+        const mapped = mapEbTransaction(tx, account.stableId)
+
+        if (mapped) {
+          mapped.referenceAccount = account.iban
+          out.push(mapped)
+        }
       }
       key = data.continuation_key || undefined
-      if (!key) break
+      if (!key) {
+        return out
+      }
     }
-    return out
+
+    throw new ProviderError('Too many transactions in this date range', 'too_large')
   }
 
   async revoke(sessionId: string): Promise<void> {
@@ -214,4 +299,27 @@ export class EnableBankingProvider implements BankProvider {
       /* best effort */
     }
   }
+}
+
+/**
+ * Banks list the headers that tell them "a person is here" (all or none, or the bank answers 422).
+ * We can honestly supply the person's IP address and browser; if the bank wants anything else, or
+ * nobody asked for this fetch, send none and the request counts as a background one.
+ */
+export function psuHeaders(required: string[] | undefined, psu: PsuInfo | undefined): Record<string, string> {
+  if (!psu || !required?.length) {
+    return {}
+  }
+  const have: Record<string, string | undefined> = { 'psu-ip-address': psu.ip, 'psu-user-agent': psu.userAgent }
+
+  if (!required.every(name => have[name.toLowerCase()])) {
+    return {}
+  }
+
+  return Object.fromEntries(
+    [
+      ['Psu-Ip-Address', psu.ip],
+      ['Psu-User-Agent', psu.userAgent],
+    ].filter((entry): entry is [string, string] => !!entry[1]),
+  )
 }

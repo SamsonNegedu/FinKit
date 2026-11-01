@@ -24,9 +24,15 @@ export function getFileType(file: File): 'csv' | 'excel' | 'ofx' | 'unknown' {
   const ext = '.' + file.name.split('.').pop()?.toLowerCase()
   const type = file.type.toLowerCase()
 
-  if (SUPPORTED_FILE_TYPES.csv.some(t => t === ext || t === type)) return 'csv'
-  if (SUPPORTED_FILE_TYPES.excel.some(t => t === ext || t === type)) return 'excel'
-  if (SUPPORTED_FILE_TYPES.ofx.some(t => t === ext || t === type)) return 'ofx'
+  if (SUPPORTED_FILE_TYPES.csv.some(t => t === ext || t === type)) {
+    return 'csv'
+  }
+  if (SUPPORTED_FILE_TYPES.excel.some(t => t === ext || t === type)) {
+    return 'excel'
+  }
+  if (SUPPORTED_FILE_TYPES.ofx.some(t => t === ext || t === type)) {
+    return 'ofx'
+  }
 
   return 'unknown'
 }

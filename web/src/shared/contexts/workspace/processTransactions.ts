@@ -11,5 +11,6 @@ export function processTransactions(raw: RawTransaction[], anonymize: boolean): 
   const processed = assignStableIds(base, raw)
   const categorized = categorizeWithRules(processed)
   const withDoubleBookings = detectDoubleBookings(categorized)
+
   return applyAliases(detectRecurring(withDoubleBookings))
 }

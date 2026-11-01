@@ -15,12 +15,17 @@ export async function getLearnedMappings(): Promise<LearnedMapping[]> {
     const response = await fetch(`${API_BASE}/learn/mappings`, {
       headers: getHeaders(false),
     })
-    if (!response.ok) return []
+
+    if (!response.ok) {
+      return []
+    }
 
     const result = await response.json()
+
     return result.data || []
   } catch {
     console.log('Learning API not available, using local categorization only')
+
     return []
   }
 }
@@ -32,6 +37,7 @@ export async function saveLearnedMapping(merchant: string, category: string): Pr
       headers: getHeaders(),
       body: JSON.stringify({ merchant, category }),
     })
+
     return response.ok
   } catch {
     return false
@@ -44,6 +50,7 @@ export async function deleteLearnedMapping(merchant: string): Promise<boolean> {
       method: 'DELETE',
       headers: getHeaders(false),
     })
+
     return response.ok
   } catch {
     return false
@@ -59,6 +66,7 @@ export async function saveBatchLearnedMappings(
       headers: getHeaders(),
       body: JSON.stringify({ mappings }),
     })
+
     return response.ok
   } catch {
     return false
@@ -70,12 +78,17 @@ export async function getSheetConfig(): Promise<SheetConfig | null> {
     const response = await fetch(`${API_BASE}/settings/sheet`, {
       headers: getHeaders(false),
     })
-    if (!response.ok) return null
+
+    if (!response.ok) {
+      return null
+    }
 
     const result = await response.json()
+
     return result.data || null
   } catch {
     console.log('Settings API not available')
+
     return null
   }
 }
@@ -87,9 +100,11 @@ export async function saveSheetConfig(config: SheetConfig): Promise<boolean> {
       headers: getHeaders(),
       body: JSON.stringify(config),
     })
+
     return response.ok
   } catch {
     console.log('Failed to save settings')
+
     return false
   }
 }

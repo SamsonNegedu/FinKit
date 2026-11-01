@@ -7,6 +7,7 @@ import { inPeriod } from '@/shared/utils/summary'
 export default function ReviewPage() {
   const app = useApp()
   const rows = inPeriod(app.displayTransactions, app.dateRange).filter(t => t.category !== 'Transfer')
+
   return (
     <div>
       <PageHeader title="Review" description="Transactions FinKit wasn't sure about." />

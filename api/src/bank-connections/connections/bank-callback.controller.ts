@@ -1,14 +1,18 @@
 import { Controller, Get, Query, Req, Res, UseInterceptors } from '@nestjs/common'
 import type { Request, Response } from 'express'
-import { NoStoreInterceptor } from '../shared/http/no-store.interceptor'
+import { NoStoreInterceptor } from '../../shared/http/no-store.interceptor'
 import { BankConnectionsService } from './bank-connections.service'
 import { STATE_COOKIE } from './bank-connections.controller'
 
 function cookieValue(req: Request, name: string): string | undefined {
   for (const part of (req.headers.cookie || '').split(';')) {
     const [k, ...v] = part.trim().split('=')
-    if (k === name) return decodeURIComponent(v.join('='))
+
+    if (k === name) {
+      return decodeURIComponent(v.join('='))
+    }
   }
+
   return undefined
 }
 
@@ -30,6 +34,7 @@ export class BankCallbackController {
     @Res() res: Response,
   ) {
     const cookieState = cookieValue(req, STATE_COOKIE)
+
     res.clearCookie(STATE_COOKIE, { path: '/api/banking' })
     const outcome = await this.connections.completeConnection({
       state,
@@ -37,6 +42,7 @@ export class BankCallbackController {
       error,
       cookieState,
     })
+
     return res.redirect(302, BankConnectionsService.returnUrl(outcome))
   }
 }

@@ -65,7 +65,7 @@ Add folders **only when they contain code**. Do not scaffold empty `api/`, `hook
 | `components/` | Presentational UI; no data fetching |
 | `hooks/`      | TanStack Query / local logic (e.g. `banking/hooks`, `transactions/hooks`) |
 | `api/`        | Backend calls owned by this feature (**`export/api`** — Google Sheet layout/metadata; **`settings/api`** — sheet config & learned mappings; **`banking/api`** — open banking) |
-| `constants/`  | Search params, magic strings |
+| `constants/`  | Search params, durations, domain numbers (see `constants.ts`; time units in `@/shared/constants/time`) |
 | `utils/`      | Pure helpers scoped to the feature |
 | `tests/`      | Vitest specs (e.g. `transactions/tests`) |
 

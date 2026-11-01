@@ -22,13 +22,16 @@ export function buildSheetConfig(params: {
     ...(layout ? { ...configPartsFromLayout(layout), layout, headerRow } : {}),
     layoutSyncedAt: layout ? Date.now() : undefined,
   }
+
   newConfig.categoryMappings = mappings.filter(m => m.sheetColumn)
   newConfig.constantColumns = constantColumns
+
   return newConfig
 }
 
 export async function persistSheetConfig(config: SheetConfig): Promise<void> {
   const saved = await saveSheetConfig(config)
+
   if (!saved) {
     console.warn('Failed to save to server, using local only')
   }

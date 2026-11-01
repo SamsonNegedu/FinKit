@@ -20,6 +20,7 @@ const SECTIONS: Array<{ id: BackOfficeSection; label: string }> = [
 /** Back office for the operator: is it set up correctly, what ran, who did what. */
 export default function BackOfficePanel({ section }: { section: BackOfficeSection }) {
   const { data: status } = useBankingStatus()
+
   return (
     <div className="space-y-5">
       <div className="flex gap-1 border-b border-midnight-700" role="tablist">
@@ -53,8 +54,14 @@ function Loading() {
 
 function Overview({ mock }: { mock: boolean }) {
   const { data, isLoading, error } = useAdminOverview()
-  if (isLoading) return <Loading />
-  if (!data) return <p className="text-sm text-red-300">{errorMessage(error, "Couldn't load.")}</p>
+
+  if (isLoading) {
+    return <Loading />
+  }
+  if (!data) {
+    return <p className="text-sm text-red-300">{errorMessage(error, "Couldn't load.")}</p>
+  }
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -126,8 +133,14 @@ function Table({ heads, children, empty }: { heads: string[]; children: React.Re
 
 function SyncLog() {
   const { data, isLoading, error } = useAdminSyncLog()
-  if (isLoading) return <Loading />
-  if (!data) return <p className="text-sm text-red-300">{errorMessage(error, "Couldn't load.")}</p>
+
+  if (isLoading) {
+    return <Loading />
+  }
+  if (!data) {
+    return <p className="text-sm text-red-300">{errorMessage(error, "Couldn't load.")}</p>
+  }
+
   return (
     <Table heads={['When', 'Bank', 'Range', 'Fetched', 'Result']} empty={data.length === 0}>
       {data.map((r, i) => (
@@ -154,12 +167,19 @@ function SyncLog() {
 
 function Audit() {
   const { data, isLoading, error } = useAdminAudit()
-  if (isLoading) return <Loading />
-  if (!data) return <p className="text-sm text-red-300">{errorMessage(error, "Couldn't load.")}</p>
+
+  if (isLoading) {
+    return <Loading />
+  }
+  if (!data) {
+    return <p className="text-sm text-red-300">{errorMessage(error, "Couldn't load.")}</p>
+  }
+
   return (
     <Table heads={['When', 'Who', 'Action', 'Detail']} empty={data.length === 0}>
       {data.map((r, i) => {
         const bad = String(r.action).includes('refused') || String(r.action).includes('failed')
+
         return (
           <tr key={i} className="border-b border-midnight-800">
             <td className="py-2 pr-4 whitespace-nowrap text-midnight-300">{timeAgo(String(r.ts))}</td>

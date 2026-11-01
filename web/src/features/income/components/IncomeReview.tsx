@@ -23,8 +23,13 @@ export default function IncomeReview({ transactions, onUpdateTransaction, curren
   )
 
   const filteredTransactions = incomeTransactions.filter(tx => {
-    if (filter === 'included') return !tx.isExcluded
-    if (filter === 'excluded') return tx.isExcluded
+    if (filter === 'included') {
+      return !tx.isExcluded
+    }
+    if (filter === 'excluded') {
+      return tx.isExcluded
+    }
+
     return true
   })
 

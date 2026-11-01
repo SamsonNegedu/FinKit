@@ -35,5 +35,6 @@ export function formatCurrency(amount: number, currency = 'EUR'): string {
 // Plain number for pasting into a sheet (no symbol, no thousands separator)
 export function formatForSheet(amount: number): string {
   const fixed = amount.toFixed(2)
+
   return current === 'point' ? fixed : fixed.replace('.', ',')
 }

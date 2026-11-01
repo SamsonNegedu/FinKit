@@ -17,8 +17,12 @@ export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
 
   transform(value: unknown): T {
     const result = this.schema.safeParse(value)
-    if (result.success) return result.data
+
+    if (result.success) {
+      return result.data
+    }
     const { message = 'Invalid request', shape = 'error-details' } = this.options
+
     throw new BadRequestException(
       shape === 'success-false'
         ? { success: false, error: result.error.issues }

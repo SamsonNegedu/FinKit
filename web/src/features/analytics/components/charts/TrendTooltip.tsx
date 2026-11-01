@@ -11,7 +11,10 @@ export default function TrendTooltip({
   label?: string
   currency: string
 }) {
-  if (!active || !payload?.length) return null
+  if (!active || !payload?.length) {
+    return null
+  }
+
   return (
     <div className="bg-midnight-800 border border-midnight-600 rounded-lg px-3 py-2 shadow-xl">
       <p className="font-medium text-white mb-1">{label}</p>

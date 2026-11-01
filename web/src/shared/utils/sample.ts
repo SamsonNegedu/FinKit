@@ -22,10 +22,13 @@ export function createSampleFile(): File {
     [28, 2800.0, 'Acme GmbH', 'Salary'],
   ]
   const lines = ['Date,Amount,Currency,Payee,Description']
+
   for (const [ago, amount, payee, desc] of rows) {
     const d = new Date(today)
+
     d.setDate(d.getDate() - ago)
     lines.push(`${fmt(d)},${amount},EUR,"${payee}","${desc}"`)
   }
+
   return new File([lines.join('\n')], 'sample-transactions.csv', { type: 'text/csv' })
 }

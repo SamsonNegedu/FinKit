@@ -9,11 +9,16 @@ export default function BankBanners({
   onReconnect: (c: BankConnection) => void
 }) {
   const items = connections.filter(c => c.status !== 'active')
-  if (items.length === 0) return null
+
+  if (items.length === 0) {
+    return null
+  }
+
   return (
     <div className="space-y-2 mb-6">
       {items.map(c => {
         const expired = c.status === 'expired'
+
         return (
           <div
             key={c.id}

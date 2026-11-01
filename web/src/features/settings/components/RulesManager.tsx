@@ -22,7 +22,10 @@ export default function RulesManager() {
 
   const change = async (rule: LearnedMapping, category: string) => {
     const ok = await saveLearnedMapping(rule.merchant, category)
-    if (!ok) return setError("Couldn't save the change")
+
+    if (!ok) {
+      return setError("Couldn't save the change")
+    }
     setError('')
     setLocalLearnedMapping(rule.merchant, category)
     setRules(prev => prev && prev.map(r => (r.merchant === rule.merchant ? { ...r, category } : r)))
@@ -30,7 +33,10 @@ export default function RulesManager() {
 
   const remove = async (rule: LearnedMapping) => {
     const ok = await deleteLearnedMapping(rule.merchant)
-    if (!ok) return setError("Couldn't delete the rule")
+
+    if (!ok) {
+      return setError("Couldn't delete the rule")
+    }
     setError('')
     setLocalLearnedMapping(rule.merchant, null)
     setRules(prev => prev && prev.filter(r => r.merchant !== rule.merchant))
@@ -60,7 +66,7 @@ export default function RulesManager() {
             className="input w-full text-sm mb-2"
             aria-label="Search rules"
           />
-          <div className="max-h-56 overflow-y-auto space-y-1">
+          <div className="max-h-[calc(100vh-20rem)] min-h-56 overflow-y-auto pr-2 grid content-start gap-x-8 gap-y-1 xl:grid-cols-2">
             {visible.map(rule => (
               <div key={rule.merchant} className="grid grid-cols-[1fr,180px,40px] gap-2 items-center">
                 <span className="text-sm text-white truncate" title={rule.merchantDisplay || rule.merchant}>
@@ -87,6 +93,7 @@ export default function RulesManager() {
                 </button>
               </div>
             ))}
+            {visible.length === 0 && <p className="text-sm text-midnight-400 xl:col-span-2">No rules match.</p>}
           </div>
         </>
       )}

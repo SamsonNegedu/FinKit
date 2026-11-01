@@ -4,6 +4,7 @@ import { getNumberFormat } from './format'
 // as UTC midnight, which is the previous day in timezones behind UTC. Parse them as local days.
 export function parseLocalDate(value: string): Date {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+
   return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(value)
 }
 
@@ -15,5 +16,6 @@ export function toISODate(d: Date): string {
 // Day + short month in the same style as the number format (31 Oct / 31. Okt.)
 export function formatDay(value: string | Date): string {
   const d = typeof value === 'string' ? parseLocalDate(value) : value
+
   return d.toLocaleDateString(getNumberFormat() === 'point' ? 'en-GB' : 'de-DE', { day: '2-digit', month: 'short' })
 }

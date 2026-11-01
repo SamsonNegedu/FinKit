@@ -6,6 +6,7 @@ import { inPeriod } from '@/shared/utils/summary'
 
 export default function IncomePage() {
   const app = useApp()
+
   return (
     <div>
       <PageHeader title="Income" description="Check what counts as income." />

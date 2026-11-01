@@ -85,6 +85,7 @@ export default function TransactionTable({
           value={`${state.sortField}:${state.sortDirection}`}
           onChange={e => {
             const [field, dir] = e.target.value.split(':')
+
             state.setSortField(field as SortField)
             state.setSortDirection(dir as SortDirection)
           }}

@@ -1,6 +1,7 @@
-import { SkipForward, EyeOff } from 'lucide-react'
+import { useState } from 'react'
+import { SkipForward, EyeOff, Search } from 'lucide-react'
 import { formatCurrency } from '@/shared/utils/format'
-import { getCategoryColor } from '@/shared/utils/categorizer'
+import { getCategoryColor, getExpenseCategories } from '@/shared/utils/categorizer'
 import type { ReviewGroup } from './reviewQueueUtils'
 
 interface ReviewQueuePanelProps {
@@ -32,6 +33,23 @@ export default function ReviewQueuePanel({
   onExclude,
   onFocusKey,
 }: ReviewQueuePanelProps) {
+  const [search, setSearch] = useState('')
+  const [showAll, setShowAll] = useState(false)
+  const query = search.trim().toLowerCase()
+  const selectable = getExpenseCategories().filter(c => c !== 'Transfer' && c !== 'Other')
+  const rest = selectable.filter(c => !quickPicks.includes(c))
+  // Frequent picks first (numbered for the 1-9 keys); the rest follow on request or when searching
+  const options = query
+    ? selectable.filter(c => c.toLowerCase().includes(query))
+    : showAll
+      ? [...quickPicks, ...rest]
+      : quickPicks
+  const pick = (category: string) => {
+    setSearch('')
+    onAssign(category)
+  }
+  const hiddenUpNext = Math.max(0, pendingCount - 1 - upNext.length)
+
   return (
     <div className="card space-y-5">
       <div>
@@ -65,18 +83,50 @@ export default function ReviewQueuePanel({
         </ul>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {quickPicks.map((category, i) => (
-          <button
-            key={category}
-            onClick={() => onAssign(category)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-midnight-800 hover:bg-midnight-700 text-left transition-colors"
-          >
-            <kbd className="text-xs text-midnight-400 border border-midnight-600 rounded px-1.5">{i + 1}</kbd>
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(category) }} />
-            <span className="text-sm truncate">{category}</span>
-          </button>
-        ))}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="w-4 h-4 text-midnight-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && options[0]) {
+                pick(options[0])
+              } else if (e.key === 'Escape') {
+                setSearch('')
+                e.currentTarget.blur()
+              }
+            }}
+            placeholder="Search categories, or press 1-9"
+            className="input w-full text-sm pl-9"
+            aria-label="Search categories"
+          />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+          {options.map((category, i) => (
+            <button
+              key={category}
+              onClick={() => pick(category)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-midnight-800 hover:bg-midnight-700 text-left transition-colors"
+            >
+              {!query && (
+                <kbd className="text-xs text-midnight-400 border border-midnight-600 rounded px-1.5">{i + 1}</kbd>
+              )}
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(category) }} />
+              <span className="text-sm truncate">{category}</span>
+            </button>
+          ))}
+          {!query && rest.length > 0 && (
+            <button
+              onClick={() => setShowAll(v => !v)}
+              className="px-3 py-2 rounded-lg border border-dashed border-midnight-600 text-sm text-midnight-300 hover:text-white hover:border-midnight-400 text-left"
+            >
+              {showAll ? 'Show fewer' : `Show all (${rest.length} more)`}
+            </button>
+          )}
+          {options.length === 0 && <p className="text-sm text-midnight-400 col-span-full">No categories match.</p>}
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -106,6 +156,7 @@ export default function ReviewQueuePanel({
               </li>
             ))}
           </ul>
+          {hiddenUpNext > 0 && <p className="text-xs text-midnight-500 mt-2">+ {hiddenUpNext} more after these</p>}
         </div>
       )}
     </div>

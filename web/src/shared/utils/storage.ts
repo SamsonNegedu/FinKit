@@ -19,6 +19,7 @@ const KEY = 'current'
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1)
+
     req.onupgradeneeded = () => req.result.createObjectStore(STORE)
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error)
@@ -27,9 +28,11 @@ function openDb(): Promise<IDBDatabase> {
 
 async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   const db = await openDb()
+
   try {
     return await new Promise<T>((resolve, reject) => {
       const req = fn(db.transaction(STORE, mode).objectStore(STORE))
+
       req.onsuccess = () => resolve(req.result)
       req.onerror = () => reject(req.error)
     })
@@ -56,6 +59,7 @@ export async function saveSession(data: {
       splits: data.splits,
       savedAt: Date.now(),
     }
+
     await run('readwrite', s => s.put(payload, KEY))
   } catch {
     // Persistence is a convenience only
@@ -65,6 +69,7 @@ export async function saveSession(data: {
 export async function loadSession(): Promise<SavedSession | null> {
   try {
     const result = await run<SavedSession | undefined>('readonly', s => s.get(KEY))
+
     return result ?? null
   } catch {
     return null

@@ -32,7 +32,9 @@ export default function FileUpload({ onFileUpload, isLoading, error, bankingEnab
   }
 
   const handleConfirmImport = () => {
-    if (phase.kind !== 'options') return
+    if (phase.kind !== 'options') {
+      return
+    }
     dispatch({ type: 'CONFIRM_OPTIONS' })
     onFileUpload(phase.file, buildImportOptions(phase.dateFilter))
   }

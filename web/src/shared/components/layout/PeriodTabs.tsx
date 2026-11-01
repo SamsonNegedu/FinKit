@@ -13,7 +13,10 @@ const pill = (active: boolean) =>
 export default function PeriodTabs() {
   const { displayTransactions, dateRange, setDateRange } = useApp()
   const years = useMemo(() => yearsWithData(displayTransactions), [displayTransactions])
-  if (years.length === 0) return null
+
+  if (years.length === 0) {
+    return null
+  }
 
   // The year being looked at: the one the current period sits inside, if any
   const start = dateRange?.startDate

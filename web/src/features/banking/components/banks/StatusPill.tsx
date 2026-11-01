@@ -13,6 +13,7 @@ export default function StatusPill({ connection }: { connection: BankConnection 
       : connection.status === 'expiring'
         ? `Expires in ${connection.daysLeft} days`
         : 'Expired'
+
   return (
     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${STYLE[connection.status]}`}>
       {label}

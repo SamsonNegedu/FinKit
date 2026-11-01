@@ -24,6 +24,7 @@ describe('splits', () => {
 
   it('replaces the parent by its parts and can restore it', () => {
     const split = applySplits([parent, tx({ id: 'o' })], { p: { parent, parts } })
+
     expect(split.map(t => t.id)).toEqual(['p~1', 'p~2', 'o'])
     expect(split[1]).toMatchObject({ amount: 40, category: 'Gifts', splitOf: 'p' })
     expect(removeSplit(split, 'p', parent).map(t => t.id)).toEqual(['p', 'o'])
@@ -32,6 +33,7 @@ describe('splits', () => {
   it('does not learn or spread rules from split parts', () => {
     const list = applySplits([parent, tx({ id: 'q', merchant: 'Amazon', category: 'Other' })], { p: { parent, parts } })
     const r = recategorize(list, ['p~1'], 'Gifts')!
+
     expect(r.merchants).toEqual([])
     expect(r.siblingCount).toBe(0)
   })
@@ -48,6 +50,7 @@ describe('split edits survive re-processing', () => {
     const shown = applySplits([parent], splits)
     const edited = recategorize(shown, ['p~2'], 'Travel')!.next
     const synced = syncSplits(splits, edited)
+
     expect(synced.p.parts[1].category).toBe('Travel')
     expect(applySplits([parent], synced).find(t => t.id === 'p~2')!.category).toBe('Travel')
   })
@@ -63,6 +66,7 @@ describe('split edits survive re-processing', () => {
       t.id === 'p~2' ? { ...t, isExcluded: true, excludedManually: true } : t,
     )
     const synced = syncSplits(splits, shown)
+
     expect(synced.p.parts[1].isExcluded).toBe(true)
     expect(applySplits([parent], synced).find(t => t.id === 'p~2')!.isExcluded).toBe(true)
     expect(syncSplits(splits, applySplits([parent], splits))).toBe(splits)

@@ -8,6 +8,7 @@ export class HealthController {
   @Get('health') plain() {
     return status()
   }
+
   @Get('api/health') api() {
     return status()
   }

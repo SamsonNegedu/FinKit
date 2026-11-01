@@ -21,6 +21,7 @@ export default function ConnectionCard({
   const count = transactions.filter(t => t.bankName === c.bank).length
   const consentDays = 180
   const left = Math.max(0, Math.min(consentDays, c.daysLeft))
+
   return (
     <div className="border border-midnight-700 rounded-xl p-4 bg-midnight-900 space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -71,6 +72,15 @@ export default function ConnectionCard({
           </div>
           <p className="text-[11px] text-midnight-500 mt-1">{c.daysLeft} days of access left</p>
         </div>
+      )}
+
+      {c.reconnectSuggested && c.status !== 'expired' && (
+        <p className="text-xs text-midnight-300 bg-midnight-800/60 rounded-lg px-3 py-2">
+          Reconnect this bank so FinKit can spot transfers between your own accounts.{' '}
+          <button onClick={() => actions.reconnect(c)} className="text-accent hover:underline">
+            Reconnect
+          </button>
+        </p>
       )}
 
       <ConnectionActions connection={c} actions={actions} mock={mock} />

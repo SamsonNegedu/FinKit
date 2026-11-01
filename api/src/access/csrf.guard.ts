@@ -4,7 +4,8 @@ import { ACCESS_SETTINGS, AccessSettings } from './access.settings'
 
 /**
  * Changing requests need a header a plain cross-site form or image tag can't send, and must
- * come from the allowed origin when one is configured.
+ * come from the allowed origin when one is configured. A missing Origin is refused too; Referer is
+ * deliberately not used as a fallback. With no allowed origin configured (local development), Origin is not checked.
  */
 @Injectable()
 export class CsrfGuard implements CanActivate {
@@ -12,11 +13,19 @@ export class CsrfGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<Request>()
-    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return true
-    if (req.header('x-finkit') !== '1') throw new ForbiddenException({ error: 'Forbidden' })
-    const origin = req.header('origin')
-    if (this.settings.allowedOrigin && origin && origin !== this.settings.allowedOrigin)
+
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+      return true
+    }
+    if (req.header('x-finkit') !== '1') {
       throw new ForbiddenException({ error: 'Forbidden' })
+    }
+    const origin = req.header('origin')
+
+    if (this.settings.allowedOrigin && origin !== this.settings.allowedOrigin) {
+      throw new ForbiddenException({ error: 'Forbidden' })
+    }
+
     return true
   }
 }

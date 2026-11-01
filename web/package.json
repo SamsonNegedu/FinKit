@@ -25,6 +25,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@stylistic/eslint-plugin": "^4.4.1",
     "@types/node": "^22.10.0",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^18.3.31",

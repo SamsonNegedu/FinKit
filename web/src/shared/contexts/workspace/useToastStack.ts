@@ -11,8 +11,10 @@ export function useToastStack() {
 
   const pushToast = useCallback((toast: Omit<ToastItem, 'id'>) => {
     const id = ++toastId.current
+
     setToasts(prev => {
       const kept = toast.actionLabel === 'Undo' ? prev.filter(t => t.actionLabel !== 'Undo') : prev
+
       return [...kept.slice(-2), { ...toast, id }]
     })
   }, [])

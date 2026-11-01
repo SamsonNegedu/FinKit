@@ -25,7 +25,10 @@ export default function FileDropZone({ isLoading, onFileSelect }: FileDropZonePr
       e.preventDefault()
       setIsDragging(false)
       const file = e.dataTransfer.files[0]
-      if (file && isFileSupported(file)) onFileSelect(file)
+
+      if (file && isFileSupported(file)) {
+        onFileSelect(file)
+      }
     },
     [onFileSelect],
   )
@@ -33,7 +36,10 @@ export default function FileDropZone({ isLoading, onFileSelect }: FileDropZonePr
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (file && isFileSupported(file)) onFileSelect(file)
+
+      if (file && isFileSupported(file)) {
+        onFileSelect(file)
+      }
       e.target.value = ''
     },
     [onFileSelect],

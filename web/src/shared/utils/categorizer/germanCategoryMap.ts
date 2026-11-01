@@ -38,7 +38,10 @@ const GERMAN_CATEGORY_MAP: Record<string, string> = {
 }
 
 export function mapGermanCategory(category?: string, subcategory?: string): string | undefined {
-  if (!category) return undefined
+  if (!category) {
+    return undefined
+  }
   const combined = subcategory ? `${category}/${subcategory}` : category
+
   return GERMAN_CATEGORY_MAP[combined] || GERMAN_CATEGORY_MAP[category]
 }

@@ -18,6 +18,7 @@ describe('exchange rates', () => {
   it('converts only when a rate is set and keeps the original', () => {
     expect(applyRates(list, 'EUR', {})[2].amount).toBe(100)
     const converted = applyRates(list, 'EUR', { USD: 0.9 })[2]
+
     expect(converted).toMatchObject({ amount: 90, currency: 'EUR', originalAmount: 100, originalCurrency: 'USD' })
   })
 })
@@ -28,6 +29,7 @@ describe('aliases', () => {
       amzn_mktp_de: 'x',
       'amzn mktp de': 'Amazon',
     })
+
     expect(t.displayName).toBe('Amazon')
     expect(t.merchant).toBe('AMZN Mktp DE')
     expect(displayNameOf(t)).toBe('Amazon')

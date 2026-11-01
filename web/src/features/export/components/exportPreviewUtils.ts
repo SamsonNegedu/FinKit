@@ -2,8 +2,12 @@ import { formatForSheet } from '@/shared/utils/format'
 import { buildSheetRow } from '@/shared/utils/sheetLayout'
 
 export function exportCellStyle(kind: string, value: number | null): string {
-  if (kind === 'month') return 'bg-midnight-800 text-white'
-  if (value === null) return 'bg-midnight-900 text-midnight-600'
+  if (kind === 'month') {
+    return 'bg-midnight-800 text-white'
+  }
+  if (value === null) {
+    return 'bg-midnight-900 text-midnight-600'
+  }
   switch (kind) {
     case 'total':
       return 'bg-expense/20 text-expense'

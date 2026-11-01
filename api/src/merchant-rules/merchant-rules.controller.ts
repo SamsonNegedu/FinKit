@@ -1,40 +1,50 @@
-import { HttpCode, Body, Controller, Delete, Get, Param, Post } from '@nestjs/common'
+import { HttpCode, Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { AccessGuard, CurrentActor } from '../access/access.guard'
+import { Actor } from '../access/access.settings'
+import { CsrfGuard } from '../access/csrf.guard'
 import { ZodValidationPipe } from '../shared/http/zod-validation.pipe'
 import { MerchantRulesService } from './merchant-rules.service'
 import { SaveRuleInput, SaveRuleSchema, SaveRulesInput, SaveRulesSchema } from './merchant-rules.schemas'
 
 @Controller('api/learn')
+@UseGuards(AccessGuard, CsrfGuard)
 export class MerchantRulesController {
   constructor(private readonly service: MerchantRulesService) {}
 
   @Get('mappings')
-  list() {
-    return { success: true, data: this.service.list() }
+  list(@CurrentActor() actor: Actor) {
+    return { success: true, data: this.service.list(actor.userId) }
   }
 
   @Get('stats')
-  stats() {
-    return { success: true, data: this.service.stats() }
+  stats(@CurrentActor() actor: Actor) {
+    return { success: true, data: this.service.stats(actor.userId) }
   }
 
   @Post('mapping')
   @HttpCode(200) // the previous API answered 200, not 201
-  learn(@Body(new ZodValidationPipe(SaveRuleSchema)) body: SaveRuleInput) {
-    this.service.learn(body.merchant, body.category)
-    return { success: true, message: `Learned: "${body.merchant}" → "${body.category}"` }
+  learn(@CurrentActor() actor: Actor, @Body(new ZodValidationPipe(SaveRuleSchema)) body: SaveRuleInput) {
+    this.service.learn(actor.userId, body.merchant, body.category)
+
+    return {
+      success: true,
+      message: `Learned: "${body.merchant}" → "${body.category}"`,
+    }
   }
 
   @Post('mappings/batch')
   @HttpCode(200) // the previous API answered 200, not 201
-  learnMany(@Body(new ZodValidationPipe(SaveRulesSchema)) body: SaveRulesInput) {
-    this.service.learnMany(body.mappings)
+  learnMany(@CurrentActor() actor: Actor, @Body(new ZodValidationPipe(SaveRulesSchema)) body: SaveRulesInput) {
+    this.service.learnMany(actor.userId, body.mappings)
+
     return { success: true, message: `Saved ${body.mappings.length} mappings` }
   }
 
   @Delete('mapping/:merchant')
-  forget(@Param('merchant') merchant: string) {
+  forget(@CurrentActor() actor: Actor, @Param('merchant') merchant: string) {
     // Express has already decoded the path segment
-    this.service.forget(merchant)
+    this.service.forget(actor.userId, merchant)
+
     return { success: true, message: `Deleted mapping for "${merchant}"` }
   }
 }

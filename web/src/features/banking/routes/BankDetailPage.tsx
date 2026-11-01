@@ -19,12 +19,13 @@ export default function BankDetailPage() {
   const actions = useConnectionActions()
   const c = connections?.find(x => x.id === connectionId)
 
-  if (isLoading)
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="w-6 h-6 animate-spin text-accent" />
       </div>
     )
+  }
   if (!c) {
     return (
       <div className="card text-center py-10 space-y-3">
@@ -37,6 +38,7 @@ export default function BankDetailPage() {
   }
 
   const mine = app.displayTransactions.filter(t => t.bankName === c.bank)
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -58,6 +60,7 @@ export default function BankDetailPage() {
           {c.accounts.map(a => {
             const rows = mine.filter(t => t.accountLabel === a.label)
             const net = rows.reduce((s, t) => s + (t.isExcluded ? 0 : t.type === 'income' ? t.amount : -t.amount), 0)
+
             return (
               <li key={a.id}>
                 <Link

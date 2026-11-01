@@ -47,7 +47,7 @@ export function deriveReviewQueuePhase(
   const pending = groups.filter(g => !session.skipped.has(g.key))
   const focused = session.focusKey ? pending.find(g => g.key === session.focusKey) : undefined
   const current = focused ?? pending[0]
-  const upNext = pending.filter(g => g !== current).slice(0, 6)
+  const upNext = pending.filter(g => g !== current).slice(0, 12)
   const transactionsLeft = pending.reduce((n, g) => n + g.items.length, 0)
   const total = session.totalAtStart ?? groups.length
   const done = Math.max(0, total - groups.length)
@@ -58,5 +58,6 @@ export function deriveReviewQueuePhase(
   if (!current) {
     return { phase: 'all_skipped', groups, current, pending, upNext, transactionsLeft, done, total }
   }
+
   return { phase: 'triaging', groups, current, pending, upNext, transactionsLeft, done, total }
 }

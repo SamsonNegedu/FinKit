@@ -11,14 +11,21 @@ interface CurrencyRatesProps {
 // Shown only when the data has more than one currency: lets you enter a rate for each foreign one
 export default function CurrencyRates({ base, foreign, rates, onChange }: CurrencyRatesProps) {
   const [open, setOpen] = useState(false)
-  if (foreign.length === 0) return null
+
+  if (foreign.length === 0) {
+    return null
+  }
 
   const missing = foreign.filter(c => !(rates[c] > 0))
   const set = (currency: string, value: string) => {
     const n = parseFloat(value.replace(',', '.'))
     const next = { ...rates }
-    if (n > 0) next[currency] = n
-    else delete next[currency]
+
+    if (n > 0) {
+      next[currency] = n
+    } else {
+      delete next[currency]
+    }
     onChange(next)
   }
 

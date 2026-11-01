@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
-import { DatabaseService } from '../shared/database/database.service'
+import { isoDaysAgo } from '../../shared/constants/time'
+import { AUDIT_LOG_RETENTION_DAYS, OAUTH_STATE_TTL_MS, SYNC_LOG_RETENTION_DAYS } from '../constants'
+import { DatabaseService } from '../../shared/database/database.service'
+import { ensureColumn } from '../../shared/database/migrate'
+import { UsersService } from '../../users/users.service'
 
 export type ConnectionStatus = 'active' | 'expired' | 'revoked' | 'replaced'
 
 export interface ConnectionRow {
   id: string
+  user_id: string | null
   provider: string
   aspsp_name: string
   aspsp_country: string
@@ -21,6 +26,7 @@ export interface ConnectionRow {
 
 interface AuthState {
   state: string
+  user_id: string | null
   aspsp_name: string
   aspsp_country: string
   expires_at: string
@@ -29,15 +35,15 @@ interface AuthState {
 }
 
 const iso = () => new Date().toISOString()
-const daysAgo = (days: number) => new Date(Date.now() - days * 86400_000).toISOString()
 
-/** All persistence for bank connections. Connection metadata only: transactions are never stored. */
+/** All persistence for bank connections: metadata only. Synced transactions live in BankTransactionsStore. */
 @Injectable()
 export class BankConnectionsStore {
   private readonly q
 
-  constructor(database: DatabaseService) {
+  constructor(database: DatabaseService, users: UsersService) {
     const { db } = database
+
     db.exec(`
       CREATE TABLE IF NOT EXISTS bank_connections (
         id TEXT PRIMARY KEY,
@@ -83,20 +89,34 @@ export class BankConnectionsStore {
       CREATE INDEX IF NOT EXISTS idx_bank_sync_log_started ON bank_sync_log(started_at);
       CREATE INDEX IF NOT EXISTS idx_bank_audit_ts ON bank_audit_log(ts);
     `)
+    // Older databases predate user accounts: add the owner column, and let the first user adopt old rows
+    ensureColumn(db, 'bank_connections', 'user_id', 'TEXT')
+    ensureColumn(db, 'bank_auth_states', 'user_id', 'TEXT')
+    ensureColumn(db, 'bank_audit_log', 'user_id', 'TEXT')
+    db.exec('CREATE INDEX IF NOT EXISTS idx_bank_connections_user ON bank_connections(user_id)')
+    users.onLegacyOwnerCreated(userId => {
+      db.prepare('UPDATE bank_connections SET user_id = ? WHERE user_id IS NULL').run(userId)
+      db.prepare('UPDATE bank_auth_states SET user_id = ? WHERE user_id IS NULL').run(userId)
+      db.prepare('UPDATE bank_audit_log SET user_id = ? WHERE user_id IS NULL').run(userId)
+    })
     this.q = {
       insertState: db.prepare(
-        'INSERT INTO bank_auth_states (state, aspsp_name, aspsp_country, expires_at, replace_connection_id) VALUES (?,?,?,?,?)',
+        'INSERT INTO bank_auth_states (state, user_id, aspsp_name, aspsp_country, expires_at, replace_connection_id) VALUES (?,?,?,?,?,?)',
       ),
       getState: db.prepare('SELECT * FROM bank_auth_states WHERE state = ?'),
       // Single-use: only one caller can flip used from 0 to 1
       useState: db.prepare('UPDATE bank_auth_states SET used = 1 WHERE state = ? AND used = 0'),
       purgeStates: db.prepare('DELETE FROM bank_auth_states WHERE expires_at < ?'),
       insertConn: db.prepare(`INSERT INTO bank_connections
-        (id, provider, aspsp_name, aspsp_country, status, secret_blob, account_labels, valid_until, created_at, last_sync_to)
-        VALUES (@id, @provider, @aspsp_name, @aspsp_country, 'active', @secret_blob, @account_labels, @valid_until, @created_at, @last_sync_to)`),
+        (id, user_id, provider, aspsp_name, aspsp_country, status, secret_blob, account_labels, valid_until, created_at, last_sync_to)
+        VALUES (@id, @user_id, @provider, @aspsp_name, @aspsp_country, 'active', @secret_blob, @account_labels, @valid_until, @created_at, @last_sync_to)`),
       getConn: db.prepare('SELECT * FROM bank_connections WHERE id = ?'),
       listConns: db.prepare(
-        "SELECT * FROM bank_connections WHERE status NOT IN ('revoked','replaced') ORDER BY created_at DESC",
+        "SELECT * FROM bank_connections WHERE user_id = ? AND status NOT IN ('revoked','replaced') ORDER BY created_at DESC",
+      ),
+      due: db.prepare(
+        `SELECT * FROM bank_connections WHERE status = 'active' AND user_id IS NOT NULL AND secret_blob != ''
+         AND valid_until > ? AND (last_sync_started_at IS NULL OR last_sync_started_at < ?)`,
       ),
       setStatus: db.prepare('UPDATE bank_connections SET status = ? WHERE id = ?'),
       wipeSecret: db.prepare("UPDATE bank_connections SET status = ?, secret_blob = '' WHERE id = ?"),
@@ -111,41 +131,62 @@ export class BankConnectionsStore {
       ),
       syncLog:
         db.prepare(`SELECT l.id, l.connection_id, c.aspsp_name AS bank, l.started_at, l.finished_at, l.date_from, l.date_to, l.status, l.fetched, l.error
-        FROM bank_sync_log l LEFT JOIN bank_connections c ON c.id = l.connection_id ORDER BY l.id DESC LIMIT ?`),
-      syncStats: db.prepare('SELECT status, COUNT(*) AS n FROM bank_sync_log WHERE started_at >= ? GROUP BY status'),
+        FROM bank_sync_log l JOIN bank_connections c ON c.id = l.connection_id WHERE c.user_id = ? ORDER BY l.id DESC LIMIT ?`),
+      syncStats:
+        db.prepare(`SELECT l.status, COUNT(*) AS n FROM bank_sync_log l JOIN bank_connections c ON c.id = l.connection_id
+        WHERE c.user_id = ? AND l.started_at >= ? GROUP BY l.status`),
       lastOk:
-        db.prepare(`SELECT l.finished_at, c.aspsp_name AS bank FROM bank_sync_log l LEFT JOIN bank_connections c ON c.id = l.connection_id
-        WHERE l.status = 'ok' ORDER BY l.id DESC LIMIT 1`),
-      insertAudit: db.prepare('INSERT INTO bank_audit_log (ts, actor, action, target, detail) VALUES (?,?,?,?,?)'),
-      audit: db.prepare('SELECT ts, actor, action, target, detail FROM bank_audit_log ORDER BY id DESC LIMIT ?'),
+        db.prepare(`SELECT l.finished_at, c.aspsp_name AS bank FROM bank_sync_log l JOIN bank_connections c ON c.id = l.connection_id
+        WHERE c.user_id = ? AND l.status = 'ok' ORDER BY l.id DESC LIMIT 1`),
+      insertAudit: db.prepare(
+        'INSERT INTO bank_audit_log (ts, actor, action, target, detail, user_id) VALUES (?,?,?,?,?,?)',
+      ),
+      audit: db.prepare(
+        'SELECT ts, actor, action, target, detail FROM bank_audit_log WHERE user_id = ? ORDER BY id DESC LIMIT ?',
+      ),
       pruneSync: db.prepare('DELETE FROM bank_sync_log WHERE started_at < ?'),
       pruneAudit: db.prepare('DELETE FROM bank_audit_log WHERE ts < ?'),
     }
   }
 
   // ---- sign-in requests started by the user (single use, ten minutes) ----
-  createState(p: { state: string; bankName: string; country: string; replaceConnectionId?: string; ttlMs?: number }) {
+  createState(p: {
+    state: string
+    userId: string
+    bankName: string
+    country: string
+    replaceConnectionId?: string
+    ttlMs?: number
+  }) {
     this.q.purgeStates.run(iso())
     this.q.insertState.run(
       p.state,
+      p.userId,
       p.bankName,
       p.country,
-      new Date(Date.now() + (p.ttlMs ?? 600_000)).toISOString(),
+      new Date(Date.now() + (p.ttlMs ?? OAUTH_STATE_TTL_MS)).toISOString(),
       p.replaceConnectionId ?? null,
     )
   }
+
   getState(state: string) {
     return this.q.getState.get(state) as AuthState | undefined
   }
+
   /** Returns the request only for the first caller within its validity window. */
   consumeState(state: string): AuthState | null {
     const row = this.getState(state)
-    if (!row || row.used || row.expires_at < iso()) return null
+
+    if (!row || row.used || row.expires_at < iso()) {
+      return null
+    }
+
     return this.q.useState.run(state).changes === 1 ? row : null
   }
 
   // ---- connections ----
   createConnection(p: {
+    userId: string
     provider: string
     bankName: string
     country: string
@@ -155,8 +196,10 @@ export class BankConnectionsStore {
     lastSyncTo?: string | null
   }) {
     const id = randomUUID()
+
     this.q.insertConn.run({
       id,
+      user_id: p.userId,
       provider: p.provider,
       aspsp_name: p.bankName,
       aspsp_country: p.country,
@@ -166,26 +209,47 @@ export class BankConnectionsStore {
       created_at: iso(),
       last_sync_to: p.lastSyncTo ?? null,
     })
+
     return id
   }
+
+  /** Any connection by id. Callers that act for a user must also check `ownedBy`. */
   getConnection(id: string) {
     return this.q.getConn.get(id) as ConnectionRow | undefined
   }
-  listConnections() {
-    return this.q.listConns.all() as ConnectionRow[]
+
+  /** The connection, only when it belongs to this user. */
+  getOwnedConnection(id: string, userId: string) {
+    const row = this.getConnection(id)
+
+    return row && row.user_id === userId ? row : undefined
   }
+
+  listConnections(userId: string) {
+    return this.q.listConns.all(userId) as ConnectionRow[]
+  }
+
+  /** Active connections not synced since `before`, for the scheduled catch-up. */
+  dueForSync(now: string, before: string) {
+    return this.q.due.all(now, before) as ConnectionRow[]
+  }
+
   setStatus(id: string, status: ConnectionStatus) {
     this.q.setStatus.run(status, id)
   }
+
   retire(id: string, status: 'revoked' | 'replaced') {
     this.q.wipeSecret.run(status, id)
   } // also erases the stored link
+
   markSyncStarted(id: string, at: string = iso()) {
     this.q.syncStarted.run(at, id)
   }
+
   markSyncDone(id: string, to: string, at: string = iso()) {
     this.q.syncDone.run(at, to, id)
   }
+
   setValidUntil(id: string, validUntil: string) {
     this.q.setValidUntil.run(validUntil, id)
   }
@@ -194,39 +258,53 @@ export class BankConnectionsStore {
   startSyncLog(connectionId: string, from: string, to: string) {
     return Number(this.q.insertSync.run(connectionId, iso(), from, to, 'running').lastInsertRowid)
   }
+
   finishSyncLog(id: number, status: 'ok' | 'failed' | 'rate_limited', fetched: number, error?: string) {
     this.q.finishSync.run(iso(), status, fetched, error ? error.slice(0, 200) : null, id)
   }
-  syncLog(limit = 100) {
-    return this.q.syncLog.all(limit) as Array<Record<string, unknown>>
+
+  syncLog(userId: string, limit = 100) {
+    return this.q.syncLog.all(userId, limit) as Array<Record<string, unknown>>
   }
-  syncStats(days = 30) {
-    const rows = this.q.syncStats.all(daysAgo(days)) as Array<{ status: string; n: number }>
+
+  syncStats(userId: string, days = 30) {
+    const rows = this.q.syncStats.all(userId, isoDaysAgo(days)) as Array<{
+      status: string
+      n: number
+    }>
     const by = Object.fromEntries(rows.map(r => [r.status, r.n]))
+
     return {
       ok: by.ok ?? 0,
       failed: (by.failed ?? 0) + (by.rate_limited ?? 0),
       total: rows.reduce((sum, r) => sum + r.n, 0),
     }
   }
-  lastSuccessfulSync() {
-    return this.q.lastOk.get() as { finished_at: string; bank: string } | undefined
+
+  lastSuccessfulSync(userId: string) {
+    return this.q.lastOk.get(userId) as { finished_at: string; bank: string } | undefined
   }
-  audit(actor: string, action: string, target?: string, detail?: unknown) {
+
+  /** `userId` is whose trail this belongs to. Entries with none (refused strangers) are nobody's. */
+  audit(actor: string, action: string, target?: string, detail?: unknown, userId?: string | null) {
     this.q.insertAudit.run(
       iso(),
       actor,
       action,
       target ?? null,
       detail === undefined ? null : JSON.stringify(detail).slice(0, 500),
+      userId ?? null,
     )
   }
-  auditLog(limit = 100) {
-    return this.q.audit.all(limit) as Array<Record<string, unknown>>
+
+  /** What happened to this person's connections. */
+  auditLog(userId: string, limit = 100) {
+    return this.q.audit.all(userId, limit) as Array<Record<string, unknown>>
   }
+
   prune() {
-    this.q.pruneSync.run(daysAgo(90))
-    this.q.pruneAudit.run(daysAgo(365))
+    this.q.pruneSync.run(isoDaysAgo(SYNC_LOG_RETENTION_DAYS))
+    this.q.pruneAudit.run(isoDaysAgo(AUDIT_LOG_RETENTION_DAYS))
     this.q.purgeStates.run(iso())
   }
 }

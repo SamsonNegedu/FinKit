@@ -17,6 +17,7 @@ export function validateTransactionsSearch(s: Record<string, unknown>): Transact
     : typeof s.cat === 'string'
       ? [s.cat]
       : []
+
   return {
     q: str(s.q),
     cat: cat.length ? cat : undefined,

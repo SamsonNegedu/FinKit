@@ -31,6 +31,7 @@ async function parseCSV(file: File): Promise<RawTransaction[]> {
         }
 
         const transactions = processRows(results.data as Record<string, string>[], results.meta.fields || [])
+
         resolve(transactions)
       },
       error: error => {
@@ -60,17 +61,21 @@ async function parseExcel(file: File): Promise<RawTransaction[]> {
 
         if (rows.length < 2) {
           resolve([])
+
           return
         }
 
         const headers = (rows[0] as string[]).map(h => String(h || '').trim())
 
         const dataRows: Record<string, string>[] = []
+
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i] as unknown[]
           const obj: Record<string, string> = {}
+
           headers.forEach((header, index) => {
             const value = row[index]
+
             obj[header] = value != null ? String(value) : ''
           })
           dataRows.push(obj)
@@ -108,6 +113,7 @@ async function parseOFX(file: File): Promise<RawTransaction[]> {
           const getField = (name: string): string => {
             const regex = new RegExp(`<${name}>([^<\\n]+)`, 'i')
             const fieldMatch = txContent.match(regex)
+
             return fieldMatch ? fieldMatch[1].trim() : ''
           }
 
@@ -118,6 +124,7 @@ async function parseOFX(file: File): Promise<RawTransaction[]> {
           const type = getField('TRNTYPE')
 
           let date = ''
+
           if (dateStr.length >= 8) {
             date = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`
           }

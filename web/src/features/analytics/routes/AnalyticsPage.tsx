@@ -11,6 +11,7 @@ export function AnalyticsPage() {
   const app = useApp()
   const navigate = useNavigate()
   const summary = summarize(inPeriod(app.displayTransactions, app.dateRange), app.dateRange, app.baseCurrency)
+
   return (
     <div>
       <PageHeader title="Analytics" description="Where the money went. Click anything to see its transactions." />
@@ -34,6 +35,7 @@ export function AnalyticsPage() {
 export function TrendsPage() {
   const app = useApp()
   const rows = inPeriod(app.displayTransactions, app.dateRange)
+
   return (
     <div>
       <PageHeader title="Trends" description="Daily and running spend over the period." />

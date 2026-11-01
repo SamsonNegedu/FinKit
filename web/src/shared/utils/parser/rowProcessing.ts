@@ -2,7 +2,9 @@ import type { RawTransaction } from '@/shared/types'
 import { normalizeColumnName } from './columnMaps'
 
 function parseNumber(value: string): number {
-  if (!value) return 0
+  if (!value) {
+    return 0
+  }
 
   let cleaned = value.replace(/["'\s]/g, '')
 
@@ -19,6 +21,7 @@ function parseNumber(value: string): number {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.')
   } else if (lastComma !== -1) {
     const afterComma = cleaned.slice(lastComma + 1)
+
     if (afterComma.length === 2 && /^\d+$/.test(afterComma)) {
       cleaned = cleaned.replace(',', '.')
     } else {
@@ -32,26 +35,34 @@ function parseNumber(value: string): number {
 }
 
 function parseDate(value: string): string {
-  if (!value) return ''
+  if (!value) {
+    return ''
+  }
 
   const germanMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
+
   if (germanMatch) {
     const [, day, month, year] = germanMatch
+
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
   }
 
   const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
+
   if (isoMatch) {
     return value.slice(0, 10)
   }
 
   const usMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+
   if (usMatch) {
     const [, month, day, year] = usMatch
+
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
   }
 
   const parsed = new Date(value)
+
   if (!isNaN(parsed.getTime())) {
     return parsed.toISOString().slice(0, 10)
   }
@@ -60,8 +71,11 @@ function parseDate(value: string): string {
 }
 
 function parseTransferFlag(value: string): boolean {
-  if (!value) return false
+  if (!value) {
+    return false
+  }
   const lower = value.toLowerCase()
+
   return lower === 'ja' || lower === 'yes' || lower === 'true' || lower === '1'
 }
 
@@ -69,6 +83,7 @@ export function processRows(rows: Record<string, string>[], headers: string[]): 
   const transactions: RawTransaction[] = []
 
   const columnMap = new Map<string, string>()
+
   for (const header of headers) {
     columnMap.set(header, normalizeColumnName(header))
   }

@@ -13,8 +13,12 @@ export interface SheetTab {
 export function extractSheetId(input: string): string {
   if (input.includes('docs.google.com/spreadsheets')) {
     const match = input.match(/\/d\/([a-zA-Z0-9_-]+)/)
-    if (match) return match[1]
+
+    if (match) {
+      return match[1]
+    }
   }
+
   return input.trim()
 }
 
@@ -28,7 +32,11 @@ export async function fetchSheetLayout(
     body: JSON.stringify({ sheetId, tabName }),
   })
   const result = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(result.error || 'Failed to read the sheet')
+
+  if (!response.ok) {
+    throw new Error(result.error || 'Failed to read the sheet')
+  }
+
   return result.data
 }
 
@@ -39,6 +47,10 @@ export async function fetchSheetMetadata(sheetId: string): Promise<SheetTab[]> {
     body: JSON.stringify({ sheetId }),
   })
   const result = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(result.error || 'Failed to fetch sheet info')
+
+  if (!response.ok) {
+    throw new Error(result.error || 'Failed to fetch sheet info')
+  }
+
   return result.data?.sheets || []
 }

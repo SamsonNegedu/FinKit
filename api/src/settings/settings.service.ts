@@ -7,27 +7,32 @@ import { SheetConfig, SheetConfigSchema, defaultSheetConfig } from './sheet-conf
 export class SettingsService {
   constructor(private readonly settings: SettingsRepository) {}
 
-  sheetConfig(): SheetConfig {
-    return SheetConfigSchema.parse(this.settings.read<Partial<SheetConfig>>('sheetConfig', {})) // fills in defaults
-  }
-  saveSheetConfig(config: SheetConfig) {
-    this.settings.write('sheetConfig', config)
-  }
-  resetSheetConfig() {
-    this.settings.write('sheetConfig', defaultSheetConfig())
+  sheetConfig(userId: string): SheetConfig {
+    return SheetConfigSchema.parse(this.settings.read<Partial<SheetConfig>>(userId, 'sheetConfig', {})) // fills in defaults
   }
 
-  everything() {
-    const stored = this.settings.readAll()
+  saveSheetConfig(userId: string, config: SheetConfig) {
+    this.settings.write(userId, 'sheetConfig', config)
+  }
+
+  resetSheetConfig(userId: string) {
+    this.settings.write(userId, 'sheetConfig', defaultSheetConfig())
+  }
+
+  everything(userId: string) {
+    const stored = this.settings.readAll(userId)
+
     return {
       ...stored,
       sheetConfig: stored.sheetConfig ? SheetConfigSchema.parse(stored.sheetConfig) : defaultSheetConfig(),
     }
   }
-  get<T>(key: string): T | null {
-    return this.settings.read<T | null>(key, null)
+
+  get<T>(userId: string, key: string): T | null {
+    return this.settings.read<T | null>(userId, key, null)
   }
-  set(key: string, value: unknown) {
-    this.settings.write(key, value)
+
+  set(userId: string, key: string, value: unknown) {
+    this.settings.write(userId, key, value)
   }
 }

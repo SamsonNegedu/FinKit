@@ -37,37 +37,56 @@ export function useWorkspaceImport({
         const old = manual.get(t.id)
         const keepExcluded = excluded.get(t.id)
         let out = t
-        if (old) out = { ...out, category: old.category, categorySource: 'manual' as const }
-        if (keepExcluded) out = { ...out, isExcluded: keepExcluded.isExcluded, excludedManually: true }
+
+        if (old) {
+          out = { ...out, category: old.category, categorySource: 'manual' as const }
+        }
+        if (keepExcluded) {
+          out = { ...out, isExcluded: keepExcluded.isExcluded, excludedManually: true }
+        }
+
         return out
       })
       const fresh: SplitMap = {}
+
       for (const [id, rec] of Object.entries(store.splitsRef.current)) {
         const parent = processed.find(t => t.id === id)
-        if (parent) fresh[id] = { ...rec, parent }
+
+        if (parent) {
+          fresh[id] = { ...rec, parent }
+        }
       }
-      store.splitsRef.current = fresh
+      store.replaceSplits(fresh)
+
       return applySplits(processed, fresh)
     },
     [store],
   )
 
   const finishAdd = useCallback(
-    (incoming: RawTransaction[], keepDuplicates: boolean, label?: string) => {
+    (incoming: RawTransaction[], keepDuplicates: boolean, label?: string, quiet = false) => {
       const existing = store.rawTransactionsRef.current
+
+      // Background loads say nothing and change nothing when there is nothing new
+      if (quiet && mergeWithoutDuplicates(existing, incoming).added === 0) {
+        return
+      }
       const { merged, added, skipped } = keepDuplicates
         ? { merged: [...existing, ...incoming], added: incoming.length, skipped: 0 }
         : mergeWithoutDuplicates(existing, incoming)
       const previous = store.transactionsRef.current
       const previousRaw = existing
       const previousSplits = store.splitsRef.current
-      store.rawTransactionsRef.current = merged
+
+      store.replaceRaw(merged)
       const next = reprocess(merged, anonymizationEnabled)
+
       store.commit(next)
       const times = next.map(t => parseLocalDate(t.date).getTime())
       const min = new Date(Math.min(...times))
       const max = new Date(Math.max(...times))
       const end = new Date(max.getFullYear(), max.getMonth() + 1, 0)
+
       end.setHours(23, 59, 59, 999)
       setDateRange({ startDate: new Date(min.getFullYear(), min.getMonth(), 1), endDate: end })
       dispatchPhase({ type: 'IMPORT_DONE' })
@@ -76,8 +95,8 @@ export function useWorkspaceImport({
         tone: 'success',
         actionLabel: 'Undo',
         onAction: () => {
-          store.rawTransactionsRef.current = previousRaw
-          store.splitsRef.current = previousSplits
+          store.replaceRaw(previousRaw)
+          store.replaceSplits(previousSplits)
           store.commit(previous)
         },
       })
@@ -90,23 +109,28 @@ export function useWorkspaceImport({
     dispatchPhase({ type: 'CLEAR_IMPORT_ERROR' })
     try {
       let rawTransactions = await parseFile(file)
+
       if (options.dateFilter !== 'all' && options.customStartDate) {
         const startTime = options.customStartDate.getTime()
         const endTime = options.customEndDate?.getTime() || Date.now()
+
         rawTransactions = rawTransactions.filter(tx => {
           const txTime = parseLocalDate(tx.date).getTime()
+
           return txTime >= startTime && txTime <= endTime
         })
       }
-      store.rawTransactionsRef.current = rawTransactions
-      store.splitsRef.current = {}
+      store.replaceRaw(rawTransactions)
+      store.replaceSplits({})
       const processed = processTransactions(rawTransactions, anonymizationEnabled)
+
       store.commit(processed)
       if (processed.length > 0) {
         const dates = processed.map(tx => parseLocalDate(tx.date).getTime())
         const minDate = new Date(Math.min(...dates))
         const maxDate = new Date(Math.max(...dates))
         const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0)
+
         endDate.setHours(23, 59, 59, 999)
         setDateRange({
           startDate: new Date(minDate.getFullYear(), minDate.getMonth(), 1),
@@ -126,8 +150,10 @@ export function useWorkspaceImport({
     try {
       const incoming = await parseFile(file)
       const { skipped } = mergeWithoutDuplicates(store.rawTransactionsRef.current, incoming)
+
       if (skipped > 0) {
         const pending: PendingImportPayload = { incoming, duplicates: skipped, fileName: file.name }
+
         dispatchPhase({ type: 'DUPLICATE_PROMPT', pending })
       } else {
         finishAdd(incoming, false)
@@ -137,12 +163,16 @@ export function useWorkspaceImport({
     }
   }
 
-  const importBankTransactions = (incoming: RawTransaction[], bankName: string) => finishAdd(incoming, false, bankName)
+  const importBankTransactions = (incoming: RawTransaction[], bankName: string, quiet = false) =>
+    finishAdd(incoming, false, bankName, quiet)
 
   const resolvePendingImport = (mode: 'skip' | 'keep' | 'cancel', pending: PendingImportPayload | null) => {
-    if (!pending) return
+    if (!pending) {
+      return
+    }
     if (mode === 'cancel') {
       dispatchPhase({ type: 'DUPLICATE_RESOLVED' })
+
       return
     }
     finishAdd(pending.incoming, mode === 'keep')

@@ -5,6 +5,7 @@ import { ConnectSearch } from '@/features/banking/constants/search.constants'
 
 export default function ConnectBankPage() {
   const { bank } = useSearch({ from: '/banks/connect' }) as ConnectSearch
+
   return (
     <div>
       <PageHeader

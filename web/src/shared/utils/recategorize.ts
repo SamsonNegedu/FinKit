@@ -20,27 +20,40 @@ export function recategorize(
 ): RecategorizeResult | null {
   const idSet = new Set(ids)
   const targets = current.filter(t => idSet.has(t.id))
-  if (targets.length === 0) return null
+
+  if (targets.length === 0) {
+    return null
+  }
 
   // Parts of a split are one-off allocations: they never teach or spread a merchant rule
   const merchants: string[] = []
+
   for (const t of targets) {
-    if (t.splitOf) continue
+    if (t.splitOf) {
+      continue
+    }
     const key = merchantKeyOf(t)
-    if (key && !merchants.some(m => sameMerchant(m, key))) merchants.push(key)
+
+    if (key && !merchants.some(m => sameMerchant(m, key))) {
+      merchants.push(key)
+    }
   }
 
   let siblingCount = 0
   const next = current.map(t => {
-    if (idSet.has(t.id)) return { ...t, ...extra, category, categorySource: 'manual' as const }
+    if (idSet.has(t.id)) {
+      return { ...t, ...extra, category, categorySource: 'manual' as const }
+    }
     if (
       t.categorySource !== 'manual' &&
       t.category !== category &&
       merchants.some(m => sameMerchant(m, merchantKeyOf(t)))
     ) {
       siblingCount++
+
       return { ...t, category, categorySource: 'learned' as const }
     }
+
     return t
   })
 

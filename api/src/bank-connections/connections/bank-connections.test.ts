@@ -1,18 +1,25 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import request from 'supertest'
 import { randomBytes } from 'node:crypto'
-import { SIGNED_IN_HEADERS as H, TEST_KEY, TestAppOptions, createTestApp } from '../testing/test-app'
-import { BankProvider, ProviderError } from './bank-provider'
+import { SIGNED_IN_HEADERS as H, TEST_KEY, TestAppOptions, createTestApp } from '../../testing/test-app'
+import { BankProvider, ProviderError } from '../providers/bank-provider'
+import { DEFAULT_CONSENT_DAYS } from '../constants'
+import { isoDaysFromNow } from '../../shared/constants/time'
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>
 const open: TestApp[] = []
+
 async function make(options?: TestAppOptions) {
   const t = await createTestApp(options)
+
   open.push(t)
+
   return t
 }
 afterEach(async () => {
-  while (open.length) await open.pop()!.close()
+  while (open.length) {
+    await open.pop()!.close()
+  }
 })
 
 const cookieOf = (res: request.Response) => String(res.headers['set-cookie']?.[0] ?? '').split(';')[0]
@@ -32,25 +39,37 @@ async function connectBank(t: TestApp, bank = 'N26', extra: Record<string, unkno
       `/api/banking/mock-bank/decide?state=${encodeURIComponent(stateOf(start.body.url))}&d=${approve ? 'approve' : 'deny'}`,
     )
     .expect(302)
+
   return request(t.server).get(loc(decide)).set('Cookie', cookieOf(start))
 }
 
 describe('access control (production-style)', () => {
   const verify = async (t: string) => {
-    if (t === 'me') return { email: 'me@x.com' }
-    if (t === 'other') return { email: 'other@x.com' }
+    if (t === 'me') {
+      return { email: 'me@x.com' }
+    }
+    if (t === 'other') {
+      return { email: 'other@x.com' }
+    }
     throw new Error('bad')
   }
-  const cloudflare = { CF_ACCESS_TEAM_DOMAIN: 't', CF_ACCESS_AUD: 'a', BANKING_ADMIN_EMAILS: 'me@x.com' }
+  const cloudflare = {
+    CF_ACCESS_TEAM_DOMAIN: 't',
+    CF_ACCESS_AUD: 'a',
+    ALLOWED_USER_EMAILS: 'me@x.com,other@x.com',
+  }
   const as = (token?: string) => (token ? { ...H, 'cf-access-jwt-assertion': token } : H)
 
   it('refuses every protected route without a valid token, and logs it', async () => {
     const t = await make({ env: cloudflare, verify })
+
     for (const [method, path] of [
       ['get', '/status'],
       ['get', '/banks'],
       ['post', '/connect'],
       ['get', '/connections'],
+      ['get', '/transactions'],
+      ['delete', '/transactions'],
       ['post', '/connections/x/sync'],
       ['delete', '/connections/x'],
       ['get', '/admin/overview'],
@@ -62,20 +81,30 @@ describe('access control (production-style)', () => {
         `${method} ${path} (bad token)`,
       ).toBe(401)
     }
-    expect(t.store!.auditLog().some(a => a.action === 'access.refused')).toBe(true)
+    const refused = t.db.prepare("SELECT COUNT(*) AS n FROM bank_audit_log WHERE action = 'access.refused'").get() as {
+      n: number
+    }
+
+    expect(refused.n).toBeGreaterThan(0)
   })
 
-  it('lets a signed-in user in, but only listed admins into the back office', async () => {
-    const t = await make({ env: cloudflare, verify })
-    const status = await request(t.server).get('/api/banking/status').set(as('other')).expect(200)
-    expect(status.body.canAdmin).toBe(false)
-    await request(t.server).get('/api/banking/admin/overview').set(as('other')).expect(403)
-    await request(t.server).get('/api/banking/admin/overview').set(as('me')).expect(200)
+  it('lets listed people in and refuses everyone else, however valid their sign-in', async () => {
+    const t = await make({
+      env: cloudflare,
+      verify: async x => ({
+        email: x === 'stranger' ? 'stranger@x.com' : `${x}@x.com`,
+      }),
+    })
+
+    await request(t.server).get('/api/banking/status').set(as('me')).expect(200)
+    await request(t.server).get('/api/banking/status').set(as('other')).expect(200)
+    await request(t.server).get('/api/banking/status').set(as('stranger')).expect(403)
   })
 
   it('keeps the bank return page public: it is guarded by its request, not by sign-in', async () => {
     const t = await make({ env: cloudflare, verify })
     const res = await request(t.server).get('/api/banking/callback?state=nope&code=x')
+
     expect(res.status).toBe(302)
     expect(loc(res)).toContain('bank=error')
   })
@@ -85,6 +114,7 @@ describe('access control (production-style)', () => {
       env: {
         ...cloudflare,
         NODE_ENV: 'production',
+        ALLOWED_ORIGIN: 'https://finkit.test',
         BANKING_PROVIDER: 'enablebanking',
         EB_APP_ID: 'x',
         EB_PRIVATE_KEY: 'k',
@@ -92,6 +122,7 @@ describe('access control (production-style)', () => {
       },
       verify,
     })
+
     await request(t.server).get('/api/banking/mock-bank?state=x').expect(404)
   })
 })
@@ -99,26 +130,43 @@ describe('access control (production-style)', () => {
 describe('banking fails closed', () => {
   it('is hidden when switched off', async () => {
     const t = await make({ env: { BANKING_PROVIDER: 'off' } })
+
     expect((await request(t.server).get('/api/banking/status').expect(200)).body).toEqual({ enabled: false })
     await request(t.server).post('/api/banking/connect').set(H).send({ bank: 'N26' }).expect(404)
     await request(t.server).get('/api/banking/connections').expect(404)
   })
   it('refuses the test bank in production', async () => {
-    const t = await make({ env: { NODE_ENV: 'production', BANKING_PROVIDER: 'mock' } })
-    expect((await request(t.server).get('/api/banking/status').expect(200)).body).toEqual({ enabled: false })
-    await request(t.server).get('/api/banking/connections').expect(503)
-  })
-  it('refuses to run in production without sign-in settings', async () => {
     const t = await make({
       env: {
         NODE_ENV: 'production',
-        BANKING_PROVIDER: 'enablebanking',
-        EB_APP_ID: 'x',
-        EB_PRIVATE_KEY: 'k',
-        BANKING_REDIRECT_URL: 'https://a.b/cb',
+        ALLOWED_ORIGIN: 'https://finkit.test',
+        BANKING_PROVIDER: 'mock',
+        CF_ACCESS_TEAM_DOMAIN: 't',
+        CF_ACCESS_AUD: 'a',
+        ALLOWED_USER_EMAILS: 'me@x.com',
       },
+      verify: async () => ({ email: 'me@x.com' }),
     })
-    await request(t.server).get('/api/banking/connections').expect(503)
+    const signedIn = { 'Cf-Access-Jwt-Assertion': 'tok' }
+
+    expect((await request(t.server).get('/api/banking/status').set(signedIn).expect(200)).body).toEqual({
+      enabled: false,
+    })
+    await request(t.server).get('/api/banking/connections').set(signedIn).expect(503)
+  })
+  it('refuses to run in production without sign-in settings', async () => {
+    await expect(
+      make({
+        env: {
+          NODE_ENV: 'production',
+          ALLOWED_ORIGIN: 'https://finkit.test',
+          BANKING_PROVIDER: 'enablebanking',
+          EB_APP_ID: 'x',
+          EB_PRIVATE_KEY: 'k',
+          BANKING_REDIRECT_URL: 'https://a.b/cb',
+        },
+      }),
+    ).rejects.toThrow(/CF_ACCESS/)
   })
 })
 
@@ -126,6 +174,7 @@ describe('changing requests', () => {
   it('need the custom header, and the right origin when one is set', async () => {
     const t = await make({ env: { ALLOWED_ORIGIN: 'https://finkit.example' } })
     const body = { bank: 'N26' }
+
     await request(t.server).post('/api/banking/connect').set('Content-Type', 'application/json').send(body).expect(403)
     await request(t.server)
       .post('/api/banking/connect')
@@ -146,27 +195,39 @@ describe('connect flow with the test bank', () => {
   it('connects, lists safely, syncs, throttles and disconnects', async () => {
     const t = await make()
     const cb = await connectBank(t)
+
     expect(cb.status).toBe(302)
     expect(loc(cb)).toMatch(/^\/app\/banks\?bank=connected&c=[0-9a-f-]{36}$/)
 
     const list = (await request(t.server).get('/api/banking/connections').expect(200)).body
+
     expect(list.connections).toHaveLength(1)
     const c = list.connections[0]
-    expect(c).toMatchObject({ bank: 'N26', status: 'active', accounts: [{ label: '…4821', currency: 'EUR' }] })
+
+    expect(c).toMatchObject({
+      bank: 'N26',
+      status: 'active',
+      accounts: [{ label: '…4821', currency: 'EUR' }],
+    })
     expect(JSON.stringify(list)).not.toMatch(/sessionId|secret|mock-/) // nothing credential-like reaches the browser
 
     const sync = (await request(t.server).post(`/api/banking/connections/${c.id}/sync`).set(H).send({}).expect(200))
       .body
+
     expect(sync.count).toBeGreaterThan(10)
     expect(sync.transactions[0]).toHaveProperty('externalId')
     // every transaction says where it came from, and the account id matches the one on the card
-    expect(sync.transactions[0]).toMatchObject({ bankName: 'N26', accountLabel: '…4821' })
+    expect(sync.transactions[0]).toMatchObject({
+      bankName: 'N26',
+      accountLabel: '…4821',
+    })
     expect(sync.transactions[0].accountRef).toBe(c.accounts[0].id)
     expect(c.accounts[0].id).toMatch(/^[0-9a-f]{16}$/)
     const again = await request(t.server)
       .post(`/api/banking/connections/${c.id}/sync`)
       .set(H)
       .send({ from: sync.from, to: sync.to })
+
     expect(again.status).toBe(429)
     expect(again.body.error).toMatch(/wait/i)
 
@@ -180,40 +241,50 @@ describe('connect flow with the test bank', () => {
     const t = await make({ clock })
     const id = idOf(await connectBank(t))
     const first = (await request(t.server).post(`/api/banking/connections/${id}/sync`).set(H).send({})).body
+
     current = new Date('2026-10-22T12:00:00Z')
     const second = (await request(t.server).post(`/api/banking/connections/${id}/sync`).set(H).send({})).body
     const firstAmounts = new Map(first.transactions.map((x: any) => [x.externalId, x.amount]))
     const overlap = second.transactions.filter((x: any) => firstAmounts.has(x.externalId))
+
     expect(overlap.length).toBeGreaterThan(0)
-    for (const x of overlap) expect(firstAmounts.get(x.externalId)).toBe(x.amount)
+    for (const x of overlap) {
+      expect(firstAmounts.get(x.externalId)).toBe(x.amount)
+    }
     expect(second.from > first.from).toBe(true) // continued, not restarted
   })
 
-  it('stores no transactions and no readable secrets', async () => {
+  it('keeps no readable secrets or transactions in the connection tables', async () => {
     const t = await make()
     const id = idOf(await connectBank(t))
+
     await request(t.server).post(`/api/banking/connections/${id}/sync`).set(H).send({})
     const dump = JSON.stringify(
       ['bank_connections', 'bank_sync_log', 'bank_audit_log', 'bank_auth_states'].map(n =>
         t.db.prepare(`SELECT * FROM ${n}`).all(),
       ),
     )
+
     expect(dump).not.toMatch(/REWE|Netflix|Salary|Acme|Amazon|Shell/)
     expect(dump).not.toMatch(/mock-[0-9a-f]{16}/) // the session id only exists encrypted
     expect(
       (
-        t.db.prepare('SELECT secret_blob FROM bank_connections').get() as { secret_blob: string }
+        t.db.prepare('SELECT secret_blob FROM bank_connections').get() as {
+          secret_blob: string
+        }
       ).secret_blob.startsWith('v1.'),
     ).toBe(true)
   })
 
   it('handles a denied approval without creating a connection', async () => {
     const t = await make()
+
     expect(loc(await connectBank(t, 'N26', {}, false))).toBe('/app/banks?bank=error&reason=denied')
     expect((await request(t.server).get('/api/banking/connections')).body.connections).toHaveLength(0)
   })
   it('rejects unknown banks and malformed requests', async () => {
     const t = await make()
+
     await request(t.server).post('/api/banking/connect').set(H).send({ bank: 'Nope Bank' }).expect(400)
     await request(t.server).post('/api/banking/connect').set(H).send({}).expect(400)
     await request(t.server).post('/api/banking/connections/x/sync').set(H).send({ from: 'tomorrow' }).expect(400)
@@ -222,9 +293,11 @@ describe('connect flow with the test bank', () => {
   it('reconnecting replaces the old link and keeps the sync position', async () => {
     const t = await make()
     const first = idOf(await connectBank(t))
+
     await request(t.server).post(`/api/banking/connections/${first}/sync`).set(H).send({})
     const lastTo = t.store!.getConnection(first)!.last_sync_to
     const second = idOf(await connectBank(t, 'N26', { reconnect: first }))
+
     expect(t.store!.getConnection(first)!.status).toBe('replaced')
     expect(t.store!.getConnection(first)!.secret_blob).toBe('')
     expect(t.store!.getConnection(second)!.last_sync_to).toBe(lastTo)
@@ -239,6 +312,7 @@ describe('connecting the same bank twice', () => {
     const t = await make()
     const first = idOf(await connectBank(t))
     const second = idOf(await connectBank(t)) // no reconnect flag: the server notices the bank is already connected
+
     expect(second).not.toBe(first)
     expect(t.store!.getConnection(first)!.status).toBe('replaced')
     expect((await request(t.server).get('/api/banking/connections')).body.connections.map((c: any) => c.id)).toEqual([
@@ -247,10 +321,13 @@ describe('connecting the same bank twice', () => {
   })
   it('keeps different banks side by side', async () => {
     const t = await make()
+
     await connectBank(t, 'N26')
     await connectBank(t, 'Wise')
     expect(
-      (await request(t.server).get('/api/banking/connections')).body.connections.map((c: any) => c.bank).sort(),
+      (await request(t.server).get('/api/banking/connections')).body.connections
+        .map((c: { bank: string }) => c.bank)
+        .toSorted(),
     ).toEqual(['N26', 'Wise'])
   })
 })
@@ -258,9 +335,15 @@ describe('connecting the same bank twice', () => {
 describe('the return page cannot be forged', () => {
   async function start(t: TestApp) {
     const r = await request(t.server).post('/api/banking/connect').set(H).send({ bank: 'N26' }).expect(200)
+
     return { state: stateOf(r.body.url), cookie: cookieOf(r), res: r }
   }
-  const count = (t: TestApp) => (t.db.prepare('SELECT COUNT(*) n FROM bank_connections').get() as { n: number }).n
+  const count = (t: TestApp) =>
+    (
+      t.db.prepare('SELECT COUNT(*) n FROM bank_connections').get() as {
+        n: number
+      }
+    ).n
 
   it('needs the cookie from the browser that started the connection', async () => {
     const t = await make()
@@ -269,6 +352,7 @@ describe('the return page cannot be forged', () => {
       loc(await request(t.server).get(`/api/banking/mock-bank/decide?state=${state}&d=approve`)),
       'http://x',
     ).searchParams.get('code')!
+
     expect(loc(await request(t.server).get(`/api/banking/callback?code=${code}&state=${state}`))).toContain(
       'reason=invalid',
     ) // no cookie
@@ -285,6 +369,7 @@ describe('the return page cannot be forged', () => {
     const t = await make()
     const { state, cookie } = await start(t)
     const decide = loc(await request(t.server).get(`/api/banking/mock-bank/decide?state=${state}&d=approve`))
+
     expect(loc(await request(t.server).get(decide).set('Cookie', cookie))).toContain('bank=connected')
     expect(loc(await request(t.server).get(decide).set('Cookie', cookie))).toMatch(/reason=(expired|invalid)/)
     expect(count(t)).toBe(1)
@@ -292,7 +377,14 @@ describe('the return page cannot be forged', () => {
   it('expires after ten minutes', async () => {
     const t = await make()
     const state = randomBytes(8).toString('hex')
-    t.store!.createState({ state, bankName: 'N26', country: 'DE', ttlMs: -1000 })
+
+    t.store!.createState({
+      state,
+      userId: 'u',
+      bankName: 'N26',
+      country: 'DE',
+      ttlMs: -1000,
+    })
     expect(
       loc(
         await request(t.server)
@@ -305,6 +397,7 @@ describe('the return page cannot be forged', () => {
     const t = await make()
     const { res } = await start(t)
     const c = String(res.headers['set-cookie'])
+
     expect(c).toMatch(/HttpOnly/i)
     expect(c).toMatch(/SameSite=Lax/i)
     expect(c).toMatch(/Path=\/api\/banking/)
@@ -325,6 +418,7 @@ describe('the return page cannot be forged', () => {
     const t = await make({
       env: {
         NODE_ENV: 'production',
+        ALLOWED_ORIGIN: 'https://finkit.test',
         BANKING_PROVIDER: 'enablebanking',
         EB_APP_ID: 'x',
         EB_PRIVATE_KEY: 'k',
@@ -340,8 +434,10 @@ describe('the return page cannot be forged', () => {
       .post('/api/banking/connect')
       .set(H)
       .set('cf-access-jwt-assertion', 't')
+      .set('Origin', 'https://finkit.test')
       .send({ bank: 'B' })
       .expect(200)
+
     expect(String(r.headers['set-cookie'])).toMatch(/Secure/i)
   })
 })
@@ -355,7 +451,7 @@ describe('sync failures', () => {
       completeAuth: async () => ({
         sessionId: 's',
         accounts: [{ uid: 'u', stableId: 's', label: '…1' }],
-        validUntil: new Date(Date.now() + 90 * 86400_000).toISOString(),
+        validUntil: isoDaysFromNow(DEFAULT_CONSENT_DAYS),
       }),
       fetchTransactions: async () => {
         throw new ProviderError('nope', kind)
@@ -369,23 +465,27 @@ describe('sync failures', () => {
     const cb = await request(t.server)
       .get(`/api/banking/callback?code=c&state=${stateOf(r.body.url)}`)
       .set('Cookie', cookieOf(r))
+
     return { t, id: idOf(cb) }
   }
   const sync = (t: TestApp, id: string) => request(t.server).post(`/api/banking/connections/${id}/sync`).set(H).send({})
 
   it('marks the connection expired when the bank says access ended', async () => {
     const { t, id } = await connected('consent_expired')
+
     expect((await sync(t, id)).status).toBe(409)
     expect((await request(t.server).get('/api/banking/connections')).body.connections[0].status).toBe('expired')
     expect((await sync(t, id)).status).toBe(409)
   })
   it('reports rate limiting as 429', async () => {
     const { t, id } = await connected('rate_limited')
+
     expect((await sync(t, id)).status).toBe(429)
   })
   it('reports outages without leaking detail, and logs them', async () => {
     const { t, id } = await connected('unavailable')
     const r = await sync(t, id)
+
     expect(r.status).toBe(502)
     expect(JSON.stringify(r.body)).not.toContain('nope')
     expect((await request(t.server).get('/api/banking/admin/sync-log')).body.entries[0]).toMatchObject({
@@ -399,17 +499,21 @@ describe('back office (development mode)', () => {
   it('reports setup checks, sync stats and an audit trail', async () => {
     const t = await make()
     const id = idOf(await connectBank(t))
+
     await request(t.server).post(`/api/banking/connections/${id}/sync`).set(H).send({})
     const o = (await request(t.server).get('/api/banking/admin/overview').expect(200)).body
+
     expect(o.connections).toMatchObject({ total: 1, active: 1 })
     expect(o.syncs30d.ok).toBe(1)
     expect(o.checks.find((c: any) => c.id === 'access').ok).toBe(false) // development mode is flagged
     const actions = (await request(t.server).get('/api/banking/admin/audit')).body.entries.map((e: any) => e.action)
+
     expect(actions).toEqual(expect.arrayContaining(['connect.start', 'connect.complete', 'sync']))
   })
   it('can age a test connection to show the expiring and expired states', async () => {
     const t = await make()
     const id = idOf(await connectBank(t))
+
     await request(t.server).post(`/api/banking/admin/connections/${id}/expire`).set(H).expect(200)
     expect((await request(t.server).get('/api/banking/connections')).body.connections[0].status).toBe('expiring')
     await request(t.server).post(`/api/banking/admin/connections/${id}/expire?mode=expired`).set(H).expect(200)

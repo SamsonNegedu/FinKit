@@ -6,6 +6,7 @@ export function anonymizeTransactions(rawTransactions: RawTransaction[]): Anonym
   anonymizationStore.clear()
 
   const personalNames = new Set<string>()
+
   for (const tx of rawTransactions) {
     if (tx.recipient && tx.recipient.length > 3 && !isLikelyBusiness(tx.recipient)) {
       personalNames.add(tx.recipient)

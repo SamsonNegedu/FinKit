@@ -16,12 +16,22 @@ export function useTransactionStore() {
     setTransactions(next)
   }, [])
 
+  const replaceRaw = useCallback((next: RawTransaction[]) => {
+    rawTransactionsRef.current = next
+  }, [])
+
+  const replaceSplits = useCallback((next: SplitMap) => {
+    splitsRef.current = next
+  }, [])
+
   return {
     transactions,
     transactionsRef,
     rawTransactionsRef,
     splitsRef,
     commit,
+    replaceRaw,
+    replaceSplits,
     setTransactions,
   }
 }

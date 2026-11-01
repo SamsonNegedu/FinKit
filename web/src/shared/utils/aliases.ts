@@ -18,19 +18,25 @@ function loadAliases(): AliasMap {
 export function saveAlias(merchantKey: string, name: string | null): AliasMap {
   const aliases = loadAliases()
   const k = normalizeMerchant(merchantKey)
-  if (name && name.trim()) aliases[k] = name.trim()
-  else delete aliases[k]
+
+  if (name && name.trim()) {
+    aliases[k] = name.trim()
+  } else {
+    delete aliases[k]
+  }
   try {
     localStorage.setItem(KEY, JSON.stringify(aliases))
   } catch {
     // preference just won't persist
   }
+
   return aliases
 }
 
 export function applyAliases(txs: Transaction[], aliases: AliasMap = loadAliases()): Transaction[] {
   return txs.map(t => {
     const name = aliases[normalizeMerchant(merchantKeyOf(t))]
+
     return name ? { ...t, displayName: name } : t.displayName ? { ...t, displayName: undefined } : t
   })
 }

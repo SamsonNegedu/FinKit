@@ -65,7 +65,9 @@ export default function CategoryPickerPortal({
             role="option"
             aria-selected={category === current}
             ref={el => {
-              if (el && i === activeIndex) el.scrollIntoView({ block: 'nearest' })
+              if (el && i === activeIndex) {
+                el.scrollIntoView({ block: 'nearest' })
+              }
             }}
             onClick={() => {
               onPick(category)

@@ -34,6 +34,7 @@ export function useConnectionActions() {
     async sync(connection: BankConnection, from?: string) {
       try {
         const result = await syncMutation.mutateAsync({ id: connection.id, from })
+
         app.importBankTransactions(result.transactions, connection.bank)
       } catch (e) {
         app.pushToast({ message: errorMessage(e, "Couldn't sync."), tone: 'error' })
@@ -51,9 +52,11 @@ export function useConnectionActions() {
       try {
         await disconnectMutation.mutateAsync(connection.id)
         app.pushToast({ message: `${connection.bank} disconnected`, tone: 'success' })
+
         return true
       } catch (e) {
         app.pushToast({ message: errorMessage(e, "Couldn't disconnect."), tone: 'error' })
+
         return false
       }
     },

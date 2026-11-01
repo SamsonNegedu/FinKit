@@ -25,11 +25,24 @@ export function useTransactionTableState(
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [categorySearch, setCategorySearch] = useState('')
-  const [limit, setLimit] = useState(PAGE)
-  const [activeIndex, setActiveIndex] = useState(0)
   const [internalViewMode, setInternalViewMode] = useState<'list' | 'merchant'>('list')
   const viewMode = controlledViewMode ?? internalViewMode
   const setViewMode = (mode: 'list' | 'merchant') => (onViewModeChange ?? setInternalViewMode)(mode)
+  const limitKey = `${transactions.length}:${sortField}:${sortDirection}:${viewMode}`
+  const [limitState, setLimitState] = useState({ key: limitKey, limit: PAGE })
+
+  if (limitState.key !== limitKey) {
+    setLimitState({ key: limitKey, limit: PAGE })
+  }
+
+  const limit = limitState.limit
+  const setLimit = (next: number | ((prev: number) => number)) => {
+    setLimitState(prev => ({
+      key: limitKey,
+      limit: typeof next === 'function' ? next(prev.limit) : next,
+    }))
+  }
+  const [activeIndex, setActiveIndex] = useState(0)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -49,28 +62,41 @@ export function useTransactionTableState(
     const left = Math.max(8, Math.min(r.left, window.innerWidth - 220 - 8))
     const flip = r.bottom + 310 > window.innerHeight && r.top > 310
     const position = flip ? { left, bottom: window.innerHeight - r.top + 4 } : { left, top: r.bottom + 4 }
+
     dispatchInteraction({ type: 'TOGGLE_PICKER', targetId: id, position })
     setActiveIndex(0)
   }
 
   const setSplitting = (tx: Transaction | null) => {
-    if (tx) dispatchInteraction({ type: 'START_SPLIT', transaction: tx })
-    else dispatchInteraction({ type: 'CLOSE' })
+    if (tx) {
+      dispatchInteraction({ type: 'START_SPLIT', transaction: tx })
+    } else {
+      dispatchInteraction({ type: 'CLOSE' })
+    }
   }
 
   const setRenamingKey = (key: string | null) => {
-    if (key) dispatchInteraction({ type: 'START_RENAME', merchantKey: key })
-    else dispatchInteraction({ type: 'CLOSE' })
+    if (key) {
+      dispatchInteraction({ type: 'START_RENAME', merchantKey: key })
+    } else {
+      dispatchInteraction({ type: 'CLOSE' })
+    }
   }
 
   useEffect(() => {
-    if (!editingId) return
+    if (!editingId) {
+      return
+    }
     const close = (e: Event) => {
-      if (e.type === 'scroll' && dropdownRef.current?.contains(e.target as Node)) return
+      if (e.type === 'scroll' && dropdownRef.current?.contains(e.target as Node)) {
+        return
+      }
       closePicker()
     }
+
     window.addEventListener('scroll', close, true)
     window.addEventListener('resize', close)
+
     return () => {
       window.removeEventListener('scroll', close, true)
       window.removeEventListener('resize', close)
@@ -84,17 +110,21 @@ export function useTransactionTableState(
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
+
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [closePicker])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        if (interaction.kind !== 'idle') dispatchInteraction({ type: 'CLOSE' })
+        if (interaction.kind !== 'idle') {
+          dispatchInteraction({ type: 'CLOSE' })
+        }
         closePicker()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
+
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [closePicker, interaction.kind])
 
@@ -102,6 +132,7 @@ export function useTransactionTableState(
     () =>
       [...transactions].sort((a, b) => {
         let comparison = 0
+
         switch (sortField) {
           case 'date':
             comparison = parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
@@ -116,14 +147,11 @@ export function useTransactionTableState(
             comparison = a.description.localeCompare(b.description)
             break
         }
+
         return sortDirection === 'asc' ? comparison : -comparison
       }),
     [transactions, sortField, sortDirection],
   )
-
-  useEffect(() => {
-    setLimit(PAGE)
-  }, [transactions.length, sortField, sortDirection, viewMode])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -136,8 +164,12 @@ export function useTransactionTableState(
 
   const handleToggleSelect = (id: string) => {
     const newSelected = new Set(selectedIds)
-    if (newSelected.has(id)) newSelected.delete(id)
-    else newSelected.add(id)
+
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
     onSelectionChange(newSelected)
   }
 
@@ -147,10 +179,12 @@ export function useTransactionTableState(
 
   const groups = useMemo(() => {
     const result: MerchantGroup[] = []
+
     for (const tx of sortedTransactions) {
       const key = merchantKeyOf(tx)
       const group = result.find(g => sameMerchant(g.key, key))
       const signed = tx.isExcluded ? 0 : tx.type === 'income' ? tx.amount : -tx.amount
+
       if (group) {
         group.items.push(tx)
         group.total += signed
@@ -159,17 +193,22 @@ export function useTransactionTableState(
         result.push({ key, items: [tx], total: signed, categories: new Set([tx.category || 'Other']) })
       }
     }
+
     return result.sort((a, b) => b.items.length - a.items.length || a.key.localeCompare(b.key))
   }, [sortedTransactions])
 
   const visibleGroups = useMemo(() => {
     let rows = 0
     const out: MerchantGroup[] = []
+
     for (const g of groups) {
-      if (rows >= limit) break
+      if (rows >= limit) {
+        break
+      }
       out.push(g)
       rows += g.items.length + 1
     }
+
     return out
   }, [groups, limit])
 

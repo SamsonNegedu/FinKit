@@ -26,7 +26,10 @@ export type WorkspacePhaseAction =
 export function workspacePhaseReducer(phase: WorkspacePhase, action: WorkspacePhaseAction): WorkspacePhase {
   switch (action.type) {
     case 'RESTORE_DONE':
-      if (phase.kind === 'importing' || phase.kind === 'duplicate_prompt') return phase
+      if (phase.kind === 'importing' || phase.kind === 'duplicate_prompt') {
+        return phase
+      }
+
       return phase.kind === 'import_error' ? phase : { kind: 'ready' }
     case 'IMPORT_START':
       return { kind: 'importing' }

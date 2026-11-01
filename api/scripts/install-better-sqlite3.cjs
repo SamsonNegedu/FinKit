@@ -57,6 +57,7 @@ function extractBinary() {
 
     // Handle nested build directory structure
     const extractedBuildDir = path.join(BUILD_DIR, 'build', 'Release', BINARY_NAME)
+
     if (fs.existsSync(extractedBuildDir)) {
       fs.renameSync(extractedBuildDir, BINARY_PATH)
       fs.rmSync(path.join(BUILD_DIR, 'build'), { recursive: true })

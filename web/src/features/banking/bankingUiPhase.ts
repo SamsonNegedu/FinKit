@@ -11,14 +11,18 @@ export type ConnectionCardOperation =
   | { kind: 'connect_redirect' }
 
 export function parseBankConnectReturn(search: { bank?: string; c?: string; reason?: string }): BankConnectReturnPhase {
-  if (!search.bank) return { kind: 'none' }
+  if (!search.bank) {
+    return { kind: 'none' }
+  }
   if (search.bank === 'connected') {
     return { kind: 'success', connectionId: search.c }
   }
   const reason = search.reason
+
   if (reason === 'denied' || reason === 'expired' || reason === 'invalid' || reason === 'failed') {
     return { kind: 'error', reason }
   }
+
   return { kind: 'error', reason: 'failed' }
 }
 
@@ -36,13 +40,23 @@ export function connectionOperationFromMutations(input: {
   disconnectId?: string
   connectPending: boolean
 }): ConnectionCardOperation {
-  if (input.connectPending) return { kind: 'connect_redirect' }
-  if (input.syncPending && input.syncId) return { kind: 'sync', connectionId: input.syncId }
-  if (input.disconnectPending && input.disconnectId) return { kind: 'disconnect', connectionId: input.disconnectId }
+  if (input.connectPending) {
+    return { kind: 'connect_redirect' }
+  }
+  if (input.syncPending && input.syncId) {
+    return { kind: 'sync', connectionId: input.syncId }
+  }
+  if (input.disconnectPending && input.disconnectId) {
+    return { kind: 'disconnect', connectionId: input.disconnectId }
+  }
+
   return { kind: 'idle' }
 }
 
 export function isConnectionBusy(op: ConnectionCardOperation, connectionId: string): boolean {
-  if (op.kind === 'idle' || op.kind === 'connect_redirect') return false
+  if (op.kind === 'idle' || op.kind === 'connect_redirect') {
+    return false
+  }
+
   return op.connectionId === connectionId
 }

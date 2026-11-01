@@ -12,6 +12,7 @@ describe('recategorize', () => {
 
   it('applies to every non-manual row of the same merchant', () => {
     const r = recategorize(list, ['1'], 'Subscriptions')!
+
     expect(r.siblingCount).toBe(1)
     expect(r.next.map(t => t.category)).toEqual(['Subscriptions', 'Subscriptions', 'Travel', 'Other'])
     expect(r.next[0].categorySource).toBe('manual')
@@ -20,6 +21,7 @@ describe('recategorize', () => {
 
   it('never touches rows the user set by hand or other merchants', () => {
     const r = recategorize(list, ['1'], 'Subscriptions')!
+
     expect(r.next[2].category).toBe('Travel')
     expect(r.next[3].category).toBe('Other')
   })

@@ -16,9 +16,12 @@ export function useMappingPersistence(
   return useCallback(
     (changes: MappingChange[]) => {
       async function save(batch: MappingChange[]): Promise<void> {
-        if (batch.length === 0) return
+        if (batch.length === 0) {
+          return
+        }
         setPendingSaves(n => n + 1)
         const ok = await saveBatchLearnedMappings(batch)
+
         setPendingSaves(n => n - 1)
         if (!ok) {
           pushToast({
@@ -29,6 +32,7 @@ export function useMappingPersistence(
           })
         }
       }
+
       return save(changes)
     },
     [pushToast, setPendingSaves],

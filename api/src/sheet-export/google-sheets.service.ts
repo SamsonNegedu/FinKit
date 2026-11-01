@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { google, sheets_v4 } from 'googleapis'
+import { quoteSheetTabName } from './a1'
 
 interface CategoryValue {
   column: string
@@ -57,7 +58,7 @@ async function findMonthRow(
   // Get column A (month column) data
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetId,
-    range: `${tabName}!A:A`,
+    range: `${quoteSheetTabName(tabName)}!A:A`,
   })
 
   const values = response.data.values || []
@@ -67,7 +68,10 @@ async function findMonthRow(
   // Matches: "July 2025", "Jul 2025", "07/2025", etc.
   for (let i = 0; i < values.length; i++) {
     const cellValue = values[i]?.[0]?.toString().toLowerCase()
-    if (!cellValue) continue
+
+    if (!cellValue) {
+      continue
+    }
 
     // Check for exact match or partial match
     if (cellValue === monthLower || cellValue.includes(monthLower)) {
@@ -76,9 +80,11 @@ async function findMonthRow(
 
     // Also try matching just the month name
     const monthName = month.split(' ')[0]?.toLowerCase()
+
     if (monthName && cellValue.includes(monthName)) {
       // Verify year matches if present
       const year = month.split(' ')[1]
+
       if (!year || cellValue.includes(year)) {
         return i + 1
       }
@@ -91,6 +97,8 @@ async function findMonthRow(
 async function writeRow(data: ExportData): Promise<ExportResult> {
   const authClient = await getAuthClient()
   const sheets = google.sheets({ version: 'v4', auth: authClient as any })
+
+  const tab = quoteSheetTabName(data.tabName)
 
   // Find the row for the specified month
   const rowNumber = await findMonthRow(sheets, data.sheetId, data.tabName, data.month)
@@ -107,7 +115,7 @@ async function writeRow(data: ExportData): Promise<ExportResult> {
     }
 
     updateData.push({
-      range: `${data.tabName}!${column}${rowNumber}`,
+      range: `${tab}!${column}${rowNumber}`,
       values: [[value]],
     })
   }
@@ -118,21 +126,21 @@ async function writeRow(data: ExportData): Promise<ExportResult> {
 
   if (!constantCols.has(incomeColumn)) {
     updateData.push({
-      range: `${data.tabName}!${incomeColumn}${rowNumber}`,
+      range: `${tab}!${incomeColumn}${rowNumber}`,
       values: [[data.income]],
     })
   }
 
   if (data.savings !== undefined && !constantCols.has(savingsColumn)) {
     updateData.push({
-      range: `${data.tabName}!${savingsColumn}${rowNumber}`,
+      range: `${tab}!${savingsColumn}${rowNumber}`,
       values: [[data.savings]],
     })
   }
 
   if (data.investment !== undefined && !constantCols.has(investmentColumn)) {
     updateData.push({
-      range: `${data.tabName}!${investmentColumn}${rowNumber}`,
+      range: `${tab}!${investmentColumn}${rowNumber}`,
       values: [[data.investment]],
     })
   }
@@ -181,11 +189,14 @@ async function readMetadata(sheetId: string) {
 function columnLetter(index: number): string {
   let n = index + 1
   let out = ''
+
   while (n > 0) {
     const rem = (n - 1) % 26
+
     out = String.fromCharCode(65 + rem) + out
     n = Math.floor((n - 1) / 26)
   }
+
   return out
 }
 
@@ -212,22 +223,25 @@ async function readLayout(sheetId: string, tabName: string): Promise<SheetLayout
   const authClient = await getAuthClient()
   const sheets = google.sheets({ version: 'v4', auth: authClient as any })
 
-  const quotedTab = `'${tabName.replace(/'/g, "''")}'`
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetId,
-    range: `${quotedTab}!A1:ZZ10`,
+    range: `${quoteSheetTabName(tabName)}!A1:ZZ10`,
   })
 
   const rows = (response.data.values || []).map(r => r.map((c: unknown) => (c ?? '').toString().trim()))
+
   if (rows.length === 0) {
     throw new Error(`Tab "${tabName}" is empty.`)
   }
 
   let headerIndex = rows.findIndex(r => r.some(c => normalizeHeader(c) === 'totalexpenditure'))
+
   if (headerIndex === -1) {
     let best = -1
+
     rows.forEach((r, i) => {
       const filled = r.filter(Boolean).length
+
       if (filled > best) {
         best = filled
         headerIndex = i
@@ -246,9 +260,11 @@ export class GoogleSheetsService {
   exportRow(data: ExportData): Promise<ExportResult> {
     return writeRow(data)
   }
+
   metadata(sheetId: string) {
     return readMetadata(sheetId)
   }
+
   layout(sheetId: string, tabName: string): Promise<SheetLayoutResult> {
     return readLayout(sheetId, tabName)
   }

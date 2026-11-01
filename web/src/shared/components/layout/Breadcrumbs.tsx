@@ -28,27 +28,36 @@ export default function Breadcrumbs() {
 
   const crumbs: Crumb[] = []
   const [first, second, third] = parts
-  if (!first) crumbs.push({ label: 'Overview' })
-  else if (first === 'banks') {
+
+  if (!first) {
+    crumbs.push({ label: 'Overview' })
+  } else if (first === 'banks') {
     crumbs.push({ label: 'Banks', to: '/banks' })
-    if (second === 'connect') crumbs.push({ label: 'Connect a bank' })
-    else if (second) {
+    if (second === 'connect') {
+      crumbs.push({ label: 'Connect a bank' })
+    } else if (second) {
       const c = connections.find(x => x.id === second)
+
       crumbs.push({ label: c?.bank ?? 'Bank' })
     }
   } else if (first === 'transactions') {
     crumbs.push({ label: 'Transactions', to: '/transactions' })
     if (second === 'merchants' && third) {
       const sample = displayTransactions.find(t => sameMerchant(merchantKeyOf(t), third))
+
       crumbs.push({ label: 'Merchants', to: '/transactions', search: { view: 'merchants' } })
       crumbs.push({ label: sample ? displayNameOf(sample) : third })
     }
   } else if (first === 'analytics') {
     crumbs.push({ label: 'Analytics', to: second ? '/analytics' : undefined })
-    if (second === 'trends') crumbs.push({ label: 'Trends' })
+    if (second === 'trends') {
+      crumbs.push({ label: 'Trends' })
+    }
   } else if (first === 'settings') {
     crumbs.push({ label: 'Settings', to: '/settings' })
-    if (second) crumbs.push({ label: SETTINGS_LABEL[second] ?? second })
+    if (second) {
+      crumbs.push({ label: SETTINGS_LABEL[second] ?? second })
+    }
   } else {
     crumbs.push({ label: { review: 'Review', income: 'Income', export: 'Export' }[first] ?? first })
   }
