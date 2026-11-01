@@ -627,6 +627,12 @@ function App() {
         />
       )}
 
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-xs text-midnight-500">
+        <a href="/privacy.html" className="hover:text-midnight-300 underline-offset-2 hover:underline">Privacy</a>
+        <span className="mx-2" aria-hidden="true">·</span>
+        <a href="/terms.html" className="hover:text-midnight-300 underline-offset-2 hover:underline">Terms</a>
+      </footer>
+
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
     </div>
   )

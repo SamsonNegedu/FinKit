@@ -69,3 +69,9 @@ data/
 *.xlsx
 *.xls
 *.ofx
+
+# Bank-provider secrets (never commit)
+*.key
+*.pem
+secrets/
+.finkit-secrets/

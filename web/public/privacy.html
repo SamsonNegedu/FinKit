@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>FinKit Privacy</title>
+  <style>
+    :root { --bg:#f6f8fb; --fg:#16212e; --muted:#586577; --line:#d8dfe8; --card:#fff; --link:#0a6b4d; color-scheme: light dark; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#0a1929; --fg:#e3eaf2; --muted:#9fb0c3; --line:#243b53; --card:#102a43; --link:#4ade9d; } }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif; padding:32px 16px 64px; }
+    main { max-width:680px; margin:0 auto; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:clamp(20px,4vw,40px); }
+    h1 { font-size:28px; line-height:1.2; margin:0 0 4px; }
+    h2 { font-size:18px; margin:28px 0 6px; }
+    p, li { color:var(--muted); }
+    ul { padding-left:20px; display:grid; gap:6px; }
+    a { color:var(--link); }
+    .meta { font-size:14px; }
+    nav { margin-top:28px; font-size:14px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>FinKit privacy</h1>
+  <p class="meta">Last updated: 1 November 2026</p>
+
+  <p>FinKit is a personal tool that one person uses to look at their own bank accounts. It is not offered to the public and has no other users.</p>
+
+  <h2>What FinKit reads</h2>
+  <ul>
+    <li>Account names (with only the last digits), balances and transactions of the owner's own accounts.</li>
+    <li>This happens only after the owner approves access at their bank, through the open-banking service Enable Banking.</li>
+    <li>FinKit never sees or stores the owner's bank login or password.</li>
+  </ul>
+
+  <h2>Where the data goes</h2>
+  <ul>
+    <li>Transactions are shown in the owner's browser. The FinKit server does not keep them.</li>
+    <li>The server keeps the bank connection itself, encrypted, so it can fetch new transactions later.</li>
+    <li>The owner's browser may keep a local copy of the transactions so the page can be reopened. It can be switched off and cleared in the app.</li>
+    <li>Nothing is sold, shared with other people, or used for advertising or profiling.</li>
+  </ul>
+
+  <h2>Control and deletion</h2>
+  <ul>
+    <li>A bank connection can be removed in FinKit or in the bank's own app at any time. Removing it in FinKit deletes the stored connection.</li>
+    <li>Access to each bank expires on its own, after at most 180 days, unless approved again.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>Questions about data protection: <a href="mailto:samson.negedu.a@gmail.com">samson.negedu.a@gmail.com</a></p>
+
+  <nav><a href="/terms.html">Terms of use</a></nav>
+</main>
+</body>
+</html>
