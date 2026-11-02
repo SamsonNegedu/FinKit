@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing'
 import { AccessModule } from '../access/access.module'
 import { ACCESS_VERIFIER, AccessVerifier } from '../access/access.settings'
 import { BankConnectionsModule } from '../bank-connections/bank-connections.module'
+import { bankingFeatureModules } from '../banking-features'
 import { BANK_PROVIDER, BankProvider } from '../bank-connections/providers/bank-provider'
 import { CLOCK, Clock } from '../bank-connections/config/bank-connections.tokens'
 import { configureApp } from '../app.setup'
@@ -50,6 +51,7 @@ export async function createTestApp(options: TestAppOptions = {}) {
       SettingsModule,
       SheetExportModule,
       BankConnectionsModule.forRoot(env),
+      ...bankingFeatureModules(env),
     ],
   })
 

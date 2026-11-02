@@ -135,15 +135,15 @@ describe('banking fails closed', () => {
     await request(t.server).post('/api/banking/connect').set(H).send({ bank: 'N26' }).expect(404)
     await request(t.server).get('/api/banking/connections').expect(404)
   })
-  it('takes balances with it, since they only exist for synced transactions', async () => {
+  it('takes trips and contracts with it, since they only exist for synced transactions', async () => {
     const off = await make({ env: { BANKING_PROVIDER: 'off' } })
 
-    for (const url of ['/api/banking/balances']) {
+    for (const url of ['/api/trips', '/api/contracts', '/api/banking/balances']) {
       expect([url, (await request(off.server).get(url)).status]).toEqual([url, 404])
     }
     const on = await make()
 
-    for (const url of ['/api/banking/balances']) {
+    for (const url of ['/api/trips', '/api/contracts', '/api/banking/balances']) {
       expect([url, (await request(on.server).get(url)).status]).toEqual([url, 200])
     }
   })
