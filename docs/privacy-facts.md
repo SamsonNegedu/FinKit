@@ -8,6 +8,17 @@ A factual list of what FinKit does with personal data, taken from the code. It i
 |------|-------|------------|----------|
 | Email address, first and last seen | `users` | Plain | Until the database is wiped (no account deletion yet) |
 | Learned merchant rules, sheet and display settings | `merchant_categories`, `settings` | Plain | Until the user deletes the rule or setting |
+| Budgets: category, currency, monthly limit, whether unspent money carries over, and the month it began | `budgets` | Plain (a limit is not a bank field; the categories are the user's own list) | Until the user deletes the budget |
+| An overall monthly spending cap per currency | `budget_caps` | Plain | Until the user removes it |
+| Contracts: payee names, amounts, dates, notes, mileage (what the bank showed and what the user added) | `contracts.detected`, `contracts.user_data` | Encrypted (same key), one value each | Until the user deletes a hand-made contract or erases the stored transactions (detected ones go with them) |
+| Contracts: owner, currency, state, timestamps, and a keyed fingerprint of the payee used to recognise it again | `contracts` | Plain (the fingerprint reveals nothing about the payee) | Same as above |
+| Trips: name, location, names of the other travelers | `trips.name`, `trips.location`, `trips.travelers` | Encrypted (same key), one value each | Until the user deletes the trip |
+| Trips: travel dates, budget and its currency, archived flag | `trips` | Plain, so trips can be sorted and the budget compared | Same as above |
+| Which transaction is in which trip: opaque ref, kind, category, subcategory, shared flag | `trip_items` | Plain (the ref reveals nothing about the transaction) | Until the transaction is removed from the trip or the trip is deleted |
+| Trip items: place (a city) and who paid (a traveler's name) | `trip_items.place`, `trip_items.paid_by` | Encrypted (same key) | Same as above |
+| Trip entries added by hand: amount, currency, note | `trip_entries.payload` | Encrypted (same key) | Until deleted with the trip or the entry |
+| Trip entries: date | `trip_entries.date` | Plain | Same as above |
+| Trip categories the user made | `trip_categories` | Plain | Until the user removes the category |
 | Bank connection: bank name, status, consent end date, masked account labels (last 4 of IBAN) | `bank_connections` | Plain | Until disconnected (the secret below is erased on disconnect) |
 | Bank session id and the accounts' full IBANs | `bank_connections.secret_blob` | Encrypted (AES-256-GCM, key from `BANKING_ENCRYPTION_KEY`) | Until disconnected or replaced, then erased |
 | Synced bank transactions: amount, currency, description, counterparty name and IBAN, own IBAN, bank and account details | `bank_transactions.payload` | Encrypted (same key), one value per transaction | Until the user deletes them or disconnects the bank |

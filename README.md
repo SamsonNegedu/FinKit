@@ -59,6 +59,8 @@ The API won't start in production without Cloudflare Access config. Details, inc
 - [Enable Banking setup](./docs/enable-banking-setup.md): bank sync
 - [Google Sheets](./docs/google-sheets.md): export setup
 - [Web architecture](./docs/web-architecture.md): frontend layout and conventions
+- [Budgets](./docs/budgets.md): monthly limits per category
+- [Trips](./docs/trips.md): getting transactions into a trip
 
 ## Stack
 

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FinKit">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#g)"/>
+  <!-- An F that is also a bar chart: the stem is the axis, the two arms are bars of different length -->
+  <rect x="16" y="14" width="9" height="36" rx="4.5" fill="#fff"/>
+  <rect x="16" y="14" width="32" height="9" rx="4.5" fill="#fff"/>
+  <rect x="16" y="29" width="22" height="9" rx="4.5" fill="#fff" fill-opacity=".72"/>
+</svg>

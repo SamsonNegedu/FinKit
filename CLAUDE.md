@@ -40,6 +40,20 @@ Self-hosted personal finance app. `api/` is NestJS + SQLite, `web/` is React + V
 - Validate Sheets tab names and column letters before any Google call.
 - Keep secrets out of git and out of error messages.
 
+## UI components
+
+- Never use native form controls (`<select>`, `<input type=date>`, `alert`/`confirm`) where a shared component exists. Check `web/src/shared/components/` first (forms: `Select`, `DatePicker`, `Modal`, `ConfirmDialog`, `Tabs`, `Checkbox`, `RadioGroup`). `Select` is for a value in a form. Pick a category as an action with `transactions/CategoryPopover` (or `CategoryList` inside your own popover) and show one with `CategoryIcon`. Switch between views of the same thing with `SegmentedControl`, tabs that are pages with `TabLinks`, tabs with content with `Tabs`. Anything that opens over the page is a Radix Popover, Dialog or DropdownMenu, never a hand-built absolute `div` with its own click-outside code. A hint on a button or icon is a `Tooltip`, not the `title` attribute (a `title` is fine only to reveal text that is cut off with an ellipsis).
+- If none fits, use the best-fitting shadcn/ui component (built on Radix, which the app already uses), restyled to the app's theme. Put it in `shared/components/` if a second feature could use it.
+
+## New pages
+
+A page isn't done until it matches its siblings. Open an existing page (e.g. Contracts) and mirror all of it:
+
+- Route in `app/router.tsx` and a sidebar entry in `app/shell.tsx`.
+- Breadcrumb label in `shared/components/layout/Breadcrumbs.tsx`. Its fallback prints the raw path segment, so a missing entry shows a lowercase title.
+- `PageHeader` for the title, sentence-case labels, and the same card, button and input classes as the other pages.
+- Look at the running page before finishing, not only the code.
+
 ## Tests
 
 - Colocate tests as `*.test.ts` (vitest). Any change to access, per-user scoping or encryption needs a test.
@@ -50,5 +64,7 @@ Self-hosted personal finance app. `api/` is NestJS + SQLite, `web/` is React + V
 - Auth, allowlist, per-user data, Sheets access: `docs/users-and-access.md`
 - Bank sync: `docs/enable-banking-setup.md`
 - Google Sheets export: `docs/google-sheets.md`
+- Budgets: `docs/budgets.md`
+- Trips (adding transactions, category guessing): `docs/trips.md`
 - Docker, secrets, production env: `docs/deployment.md`
 - Env vars: `.env.example` (production), `api/.env.example` (local)

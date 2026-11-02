@@ -6,30 +6,30 @@ a { color:var(--accent); }
 a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
 header, footer { width:100%; }
-header { border-bottom:1px solid var(--line); padding-block:20px; }
-footer { border-top:1px solid var(--line); padding-block:24px 32px; color:var(--muted); font-size:14px; }
-.bar, .foot { width:100%; max-width:960px; margin:0 auto; padding-inline:max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px)); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 18px; }
+header { border-bottom:1px solid var(--line); padding-block:12px; }
+footer { border-top:1px solid var(--line); padding-block:12px 16px; color:var(--muted); font-size:14px; }
+.bar, .foot { width:100%; max-width:1080px; margin:0 auto; padding-inline:max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px)); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 18px; }
 .foot { justify-content:flex-start; }
 .foot a { color:var(--muted); }
 .foot a:hover { color:var(--fg); }
 .brand { display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--fg); }
 .brand b { font-size:18px; }
-.logo { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#10b981,#059669); display:grid; place-items:center; font-weight:700; color:#fff; }
+.logo { width:36px; height:36px; display:block; }
 
 .btn { display:inline-block; padding:9px 16px; border-radius:9px; font-weight:500; font-size:15px; text-decoration:none; border:1px solid var(--line); color:var(--fg); background:var(--panel); }
 .btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:700; }
 .btn:hover { filter:brightness(1.1); }
 
-main { flex:1; width:100%; max-width:960px; margin:0 auto; padding:56px max(20px, env(safe-area-inset-left, 0px)) 40px max(20px, env(safe-area-inset-right, 0px)); }
+main { flex:1; width:100%; max-width:1080px; margin:0 auto; padding:clamp(20px,4vh,48px) max(20px, env(safe-area-inset-left, 0px)) clamp(16px,3vh,32px) max(20px, env(safe-area-inset-right, 0px)); }
 
 /* Landing */
-h1 { font-size:clamp(28px,5vw,44px); line-height:1.15; letter-spacing:-0.02em; margin:0 0 16px; max-width:18ch; text-wrap:balance; }
-.lead { color:var(--muted); font-size:18px; max-width:56ch; margin:0 0 28px; }
+h1 { font-size:clamp(28px,4.2vw,40px); line-height:1.15; letter-spacing:-0.02em; margin:0 0 12px; max-width:26ch; text-wrap:balance; }
+.lead { color:var(--muted); font-size:17px; line-height:1.55; max-width:72ch; margin:0 0 20px; }
 .actions { display:flex; flex-wrap:wrap; gap:12px; }
-.facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:56px; }
-.fact { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; }
+.facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:clamp(20px,4vh,36px); }
+.fact { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
 .fact h2 { font-size:16px; margin:0 0 6px; }
-.fact p { margin:0; color:var(--muted); font-size:15px; }
+.fact p { margin:0; color:var(--muted); font-size:14px; line-height:1.5; }
 
 /* Documents (privacy, terms) */
 .doc > * { max-width:680px; }  /* keep lines readable, left edge aligned with the header */

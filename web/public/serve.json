@@ -65,6 +65,22 @@
     {
       "source": "/app/settings/**",
       "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/budgets",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/contracts",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/trips",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/trips/**",
+      "destination": "/app/index.html"
     }
   ],
   "headers": [

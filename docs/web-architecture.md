@@ -39,9 +39,15 @@ web/src/
 │   ├── analytics/          # charts & trends routes
 │   ├── export/             # Google Sheets preview
 │   ├── settings/           # sheet config, rules, rates
-│   └── banking/            # open banking UI, API hooks, admin back-office
+│   ├── banking/            # open banking UI, API hooks, admin back-office
+│   ├── trips/              # trips: tag bank transactions, per-trip breakdown
+│   ├── budgets/            # monthly limit per category; spending is worked out in the browser
+│   └── contracts/          # recurring payments found in synced history, plus ones added by hand
 ├── shared/
-│   ├── components/         # layout (header, breadcrumbs), feedback (toast, errors)
+│   ├── components/         # layout (header, breadcrumbs), feedback (toast, errors), forms (Radix-based inputs, dialogs),
+│   │                       #   transactions (the one transaction table, used by Transactions and Trips),
+│   │                       #   CategoryIcon (a category's icon in its color) and Logo (the FinKit mark);
+│   │                       #   forms/ also has SegmentedControl, TabLinks and DatePicker; Tooltip wraps the app once (`TooltipProvider` in `main.tsx`)
 │   ├── contexts/           # AppState provider
 │   │   └── workspace/      # session store, import, mutations, bootstrap
 │   ├── services/           # HTTP helpers (`API_BASE`, headers)
@@ -86,7 +92,10 @@ Most features are UI over **`AppState`** and **`shared/utils`**; they need only 
 
 ## Known exceptions
 
+- `shared/components/layout/Breadcrumbs.tsx` reads connection and trip names from the banking and trips hooks.
 - `app/shell.tsx` imports banking (nav badges) and review helpers for counts.
+- `overview` reads the contracts hook and its insights to show contract lines under "Needs attention".
+- `transactions` imports the trips move dialog (the bulk bar's "Trip" action opens it), and `transactions` and `overview` show `TripsMovedNote`.
 - Settings back-office tab embeds a banking component when banking is enabled.
 - Settings sheet tab uses **`export/api`** for Google metadata (same backend routes as export).
 - **`shared/utils/sheetLayout`** calls **`export/api`** to sync header layout from Sheets.
@@ -103,6 +112,9 @@ Most features are UI over **`AppState`** and **`shared/utils`**; they need only 
 | `export` | `/export` | Sheet export preview |
 | `settings` | `/settings/*` | Sheet, columns, rules |
 | `banking` | `/banks/*` | Optional; gated when API banking is off |
+| `trips` | `/trips`, `/trips/$tripId` | Needs banking: only synced transactions have a server ref |
+| `budgets` | `/budgets` | Works without banking; limits are stored on the server, spending is computed in the browser. See [budgets](./budgets.md) |
+| `contracts` | `/contracts` | Needs banking: detection runs on the server over stored transactions; only the server holds the history |
 | `import` | (embedded) | File upload from overview / shell |
 
 Shared **transaction pipeline** (parser, categorizer, anonymizer, splits, …) lives under `shared/utils/` because every feature reads the same workspace. Implementation modules live in subfolders (`categorizer/`, etc.); one-line **`*.ts` shims** next to them (e.g. `categorizer.ts`) re-export the folder so Vite and `@/` imports keep working.
@@ -114,3 +126,17 @@ Use `@/` for absolute imports (see `web/tsconfig.json`), e.g. `@/shared/types`, 
 ## Entry
 
 The SPA entry is `web/app/index.html` → `/src/app/main.tsx`. The marketing landing page remains `web/index.html` at the repo root.
+
+## Trips
+
+Transactions in a trip are hidden from `displayTransactions` (`shared/contexts/workspace/useTripLinks.ts`), not removed from the workspace: it also holds copies saved from earlier syncs. `StoredBankTransactions` fills `tripLinks` from the server's list (each row has a `ref` and a `tripId`). Imported files have no ref and cannot join a trip.
+
+The transaction table lives in `shared/components/transactions/` because two features use it. A feature changes what it shows through the table's `behaviour` prop (categories and colors, row actions, bulk actions), never by copying it.
+
+## Sidebar groups and branding
+
+Nav items and their groups are set in `app/shell.tsx`: Collect, Balance the month, Insights, Setup. A new page also needs a breadcrumb label in `shared/components/layout/Breadcrumbs.tsx` (its fallback prints the raw path), and, for the production static server, a rewrite in `web/public/serve.json` or a reload on that address returns 404.
+
+The logo is drawn twice: `shared/components/Logo.tsx` (in the app) and `web/public/favicon.svg` (the tab icon and the public pages). Change both together. `favicon.ico` and `apple-touch-icon.png` are rendered from the SVG.
+
+Selecting transactions: shift-click selects the range between two rows in List view (`useTransactionTableState`). Shift is tracked on the window because a checkbox's change event doesn't say whether it was held.
