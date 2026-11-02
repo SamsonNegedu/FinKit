@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import DatePicker from '@/shared/components/forms/DatePicker'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { BankConnection } from '@/features/banking/api/banking.api'
 import { useConnectionActions } from './useConnectionActions'
@@ -22,7 +23,7 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-sm:[&>button]:flex-1">
         {c.status === 'expired' ? (
           <button onClick={() => actions.reconnect(c)} className="btn-primary text-sm">
             Reconnect
@@ -32,7 +33,7 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
             <button
               onClick={() => actions.sync(c)}
               disabled={working}
-              className="btn-primary text-sm flex items-center gap-2"
+              className="btn-primary text-sm flex items-center justify-center gap-2"
             >
               {actions.syncingId === c.id ? (
                 <>
@@ -63,7 +64,7 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
           </>
         )}
 
-        <span className="ml-auto flex items-center gap-3">
+        <span className="ml-auto flex items-center gap-3 max-sm:w-full max-sm:justify-end">
           {mock && (
             <>
               <button
@@ -114,14 +115,9 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
           <label className="text-sm text-midnight-300" htmlFor={`from-${c.id}`}>
             Fetch from
           </label>
-          <input
-            id={`from-${c.id}`}
-            type="date"
-            className="input py-1.5 text-sm"
-            value={from}
-            max={todayMax}
-            onChange={e => setFrom(e.target.value)}
-          />
+          <div className="w-40">
+            <DatePicker id={`from-${c.id}`} value={from} onChange={setFrom} max={todayMax} withYear />
+          </div>
           <button
             className="btn-secondary text-sm"
             disabled={!from || working}

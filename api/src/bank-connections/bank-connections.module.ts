@@ -1,19 +1,22 @@
 import { DynamicModule, Logger, Module } from '@nestjs/common'
 import { ACCESS_REFUSED } from '../access/access.guard'
-import { loadAccessSettings } from '../access/access.settings'
-import { loadBankingConfig } from './config/banking.config'
 import { BankAdminController } from './admin/bank-admin.controller'
 import { BankCallbackController } from './connections/bank-callback.controller'
 import { BankConnectionsController } from './connections/bank-connections.controller'
 import { BankConnectionsService } from './connections/bank-connections.service'
 import { BankAutoSync } from './sync/bank-auto-sync'
 import { BankSyncController } from './sync/bank-sync.controller'
+import { BankBalancesController } from './balances/bank-balances.controller'
+import { BankBalancesService } from './balances/bank-balances.service'
+import { BankBalancesStore } from './balances/bank-balances.store'
 import { BankSyncService } from './sync/bank-sync.service'
+import { BankBackfillService } from './sync/bank-backfill.service'
 import { StoredTransactionsController } from './transactions/stored-transactions.controller'
 import { StoredTransactionsService } from './transactions/stored-transactions.service'
 import { BankConnectionsStore } from './connections/bank-connections.store'
-import { BankTransactionsStore } from './transactions/bank-transactions.store'
-import { BANKING_CONFIG, BANKING_STATE, CLOCK } from './config/bank-connections.tokens'
+import { TransactionsModule } from '../transactions/transactions.module'
+import { resolveBanking } from './banking-gate'
+import { BANKING_STATE, CLOCK } from './config/bank-connections.tokens'
 import { BANK_PROVIDER } from './providers/bank-provider'
 import { BankingUnavailableController } from './banking-unavailable.controller'
 import { EnableBankingProvider } from './providers/enable-banking.provider'
@@ -28,14 +31,7 @@ export class BankConnectionsModule {
    */
   static forRoot(env: NodeJS.ProcessEnv = process.env): DynamicModule {
     const logger = new Logger('BankConnections')
-    const access = loadAccessSettings(env)
-    const { config, errors } = loadBankingConfig(env)
-    const problems = [
-      ...errors,
-      ...(config && access.isProd && access.mode !== 'cloudflare'
-        ? ['CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD are required in production']
-        : []),
-    ]
+    const { access, config, problems } = resolveBanking(env)
 
     if (!config || problems.length) {
       if (problems.length) {
@@ -59,16 +55,18 @@ export class BankConnectionsModule {
 
     return {
       module: BankConnectionsModule,
+      // The stored transactions (and the config they are encrypted with) are shared with trips and contracts
+      imports: [TransactionsModule.forConfig(config)],
       controllers: [
         BankConnectionsController,
         BankSyncController,
         StoredTransactionsController,
+        BankBalancesController,
         BankCallbackController,
         BankAdminController,
         ...(useTestBank && !config.isProd ? [TestBankController] : []),
       ],
       providers: [
-        { provide: BANKING_CONFIG, useValue: config },
         { provide: CLOCK, useValue: { now: () => new Date() } },
         {
           provide: BANK_PROVIDER,
@@ -80,9 +78,11 @@ export class BankConnectionsModule {
               }),
         },
         BankConnectionsStore,
-        BankTransactionsStore,
+        BankBalancesStore,
+        BankBalancesService,
         BankConnectionsService,
         BankSyncService,
+        BankBackfillService,
         StoredTransactionsService,
         BankAutoSync,
         // Refused sign-ins are recorded in the bank audit log

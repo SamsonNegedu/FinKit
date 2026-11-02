@@ -14,6 +14,8 @@ import { DatabaseModule } from '../shared/database/database.module'
 import { UsersModule } from '../users/users.module'
 import { DatabaseService } from '../shared/database/database.service'
 import { BankConnectionsStore } from '../bank-connections/connections/bank-connections.store'
+import { BankBackfillService } from '../bank-connections/sync/bank-backfill.service'
+import { BankSyncService } from '../bank-connections/sync/bank-sync.service'
 
 export const TEST_KEY = Buffer.alloc(32, 9)
 export const SIGNED_IN_HEADERS = {
@@ -73,6 +75,20 @@ export async function createTestApp(options: TestAppOptions = {}) {
     store: (() => {
       try {
         return moduleRef.get(BankConnectionsStore)
+      } catch {
+        return undefined
+      }
+    })(),
+    backfill: (() => {
+      try {
+        return moduleRef.get(BankBackfillService)
+      } catch {
+        return undefined
+      }
+    })(),
+    syncs: (() => {
+      try {
+        return moduleRef.get(BankSyncService)
       } catch {
         return undefined
       }

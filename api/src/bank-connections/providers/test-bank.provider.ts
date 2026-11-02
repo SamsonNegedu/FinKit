@@ -1,12 +1,17 @@
 import { Injectable } from '@nestjs/common'
 import { randomBytes } from 'node:crypto'
 import { MS_PER_DAY, isoDaysFromNow } from '../../shared/constants/time'
-import { TEST_BANK_DEFAULT_CONSENT_DAYS, TEST_BANK_MAX_MOCK_HISTORY_DAYS } from '../constants'
+import {
+  TEST_BANK_DEFAULT_CONSENT_DAYS,
+  TEST_BANK_HISTORY_LIMIT_DAYS,
+  TEST_BANK_MAX_MOCK_HISTORY_DAYS,
+} from '../constants'
 import {
   BankInfo,
   BankProvider,
   BankTransaction,
   ProviderAccount,
+  ProviderBalance,
   ProviderError,
   ProviderSession,
 } from './bank-provider'
@@ -158,13 +163,17 @@ export class TestBankProvider implements BankProvider {
     account: ProviderAccount
     from: string
     to: string
+    beforeRequest?: () => Promise<void>
   }): Promise<BankTransaction[]> {
+    await p.beforeRequest?.()
     if (p.session.sessionId.includes('fail')) {
       throw new ProviderError('Bank unavailable', 'unavailable', 503)
     }
     const out: BankTransaction[] = []
+    // Like a real bank, the test bank only remembers so far back
+    const oldest = new Date(Date.now() - TEST_BANK_HISTORY_LIMIT_DAYS * MS_PER_DAY).toISOString().slice(0, 10)
 
-    for (const day of dayList(p.from, p.to)) {
+    for (const day of dayList(p.from, p.to).filter(d => d >= oldest)) {
       const rnd = mulberry32(hash(p.account.stableId + day))
       const dom = Number(day.slice(8, 10))
       const add = (desc: string, who: string, amount: number, i: number) =>
@@ -193,6 +202,23 @@ export class TestBankProvider implements BankProvider {
     }
 
     return out
+  }
+
+  async fetchBalance(p: {
+    session: ProviderSession
+    account: ProviderAccount
+    beforeRequest?: () => Promise<void>
+  }): Promise<ProviderBalance | null> {
+    await p.beforeRequest?.()
+    if (p.session.sessionId.includes('fail')) {
+      throw new ProviderError('Bank unavailable', 'unavailable', 503)
+    }
+
+    return {
+      amount: Math.round((800 + (hash(p.account.stableId) % 400_000) / 100) * 100) / 100,
+      currency: p.account.currency || 'EUR',
+      type: 'ITBD',
+    }
   }
 
   async revoke(): Promise<void> {}

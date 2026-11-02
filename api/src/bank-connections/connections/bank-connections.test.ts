@@ -135,6 +135,18 @@ describe('banking fails closed', () => {
     await request(t.server).post('/api/banking/connect').set(H).send({ bank: 'N26' }).expect(404)
     await request(t.server).get('/api/banking/connections').expect(404)
   })
+  it('takes balances with it, since they only exist for synced transactions', async () => {
+    const off = await make({ env: { BANKING_PROVIDER: 'off' } })
+
+    for (const url of ['/api/banking/balances']) {
+      expect([url, (await request(off.server).get(url)).status]).toEqual([url, 404])
+    }
+    const on = await make()
+
+    for (const url of ['/api/banking/balances']) {
+      expect([url, (await request(on.server).get(url)).status]).toEqual([url, 200])
+    }
+  })
   it('refuses the test bank in production', async () => {
     const t = await make({
       env: {
@@ -413,6 +425,7 @@ describe('the return page cannot be forged', () => {
         throw new Error('x')
       },
       fetchTransactions: async () => [],
+      fetchBalance: async () => null,
       revoke: async () => {},
     }
     const t = await make({
@@ -456,6 +469,7 @@ describe('sync failures', () => {
       fetchTransactions: async () => {
         throw new ProviderError('nope', kind)
       },
+      fetchBalance: async () => null,
       revoke: async () => {},
     }
   }

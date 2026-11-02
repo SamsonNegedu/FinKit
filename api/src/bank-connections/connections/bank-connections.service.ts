@@ -13,7 +13,8 @@ import { accountRef, decrypt, encrypt, randomToken } from '../../shared/crypto/e
 import { BANK_PROVIDER, BankProvider, ProviderError, errorSummary } from '../providers/bank-provider'
 import { BANKING_CONFIG, BankingConfig, CLOCK, Clock } from '../config/bank-connections.tokens'
 import { BankConnectionsStore, ConnectionRow } from './bank-connections.store'
-import { BankTransactionsStore } from '../transactions/bank-transactions.store'
+import { BankBalancesStore } from '../balances/bank-balances.store'
+import { BankTransactionsStore } from '../../transactions/bank-transactions.store'
 import { ConnectInput } from './bank-connections.schemas'
 import { EXPIRING_DAYS, connectionStatus } from './connection-status'
 import { BANK_LIST_CACHE_TTL_MS, CONNECT_RATE_LIMIT_MAX_ATTEMPTS, CONNECT_RATE_LIMIT_WINDOW_MS } from '../constants'
@@ -36,6 +37,7 @@ export class BankConnectionsService implements OnModuleInit {
   constructor(
     private readonly store: BankConnectionsStore,
     private readonly txs: BankTransactionsStore,
+    private readonly balances: BankBalancesStore,
     @Inject(BANK_PROVIDER) readonly provider: BankProvider,
     @Inject(BANKING_CONFIG) readonly config: BankingConfig,
     @Inject(ACCESS_SETTINGS) private readonly access: AccessSettings,
@@ -74,6 +76,12 @@ export class BankConnectionsService implements OnModuleInit {
       reconnectSuggested: accounts.some(a => a.ownIban === undefined),
       lastSyncAt: row.last_sync_at,
       lastSyncTo: row.last_sync_to,
+      // How far back history has been fetched; the person sees it, never the bank's ids
+      history: {
+        status: row.backfill_status ?? 'pending',
+        reason: row.backfill_reason,
+        oldest: row.backfill_cursor,
+      },
       createdAt: row.created_at,
     }
   }
@@ -125,8 +133,8 @@ export class BankConnectionsService implements OnModuleInit {
       throw new BadRequestException({ error: 'Unknown bank' })
     }
 
-    // One login covers all of a bank's accounts, so connecting a bank you already have replaces
-    // the old link instead of adding a duplicate card.
+    // Connecting a bank you already have usually refreshes its link; whether the old one is replaced or kept
+    // for accounts the new login leaves out is decided when the bank sends the person back.
     const existing = this.store
       .listConnections(actor.userId)
       .find(c => c.aspsp_name === bank.name && c.aspsp_country === bank.country)
@@ -200,7 +208,26 @@ export class BankConnectionsService implements OnModuleInit {
       // What this bank needs to treat a Sync press as a person being present (see PSU headers)
       const bank = (await this.banks(pending.aspsp_country).catch(() => [])).find(b => b.name === pending.aspsp_name)
 
-      const old = pending.replace_connection_id ? this.store.getConnection(pending.replace_connection_id) : undefined
+      // A login can cover only some of a bank's accounts (you choose which to share). The new link replaces an old
+      // one only when it holds every account that one had, or the old one has run out; otherwise both stay, so an
+      // account is never dropped just because it was left out this time.
+      const newRefs = new Set(session.accounts.map(a => accountRef(a.stableId)))
+      const pinned = pending.replace_connection_id ? this.store.getConnection(pending.replace_connection_id) : undefined
+      const sameBank = this.store
+        .listConnections(pending.user_id!)
+        .filter(c => c.aspsp_name === pending.aspsp_name && c.aspsp_country === pending.aspsp_country)
+      const superseded = [
+        ...new Map(
+          [...sameBank, ...(pinned && pinned.user_id === pending.user_id ? [pinned] : [])].map(c => [c.id, c]),
+        ).values(),
+      ]
+        .filter(c => c.status !== 'revoked' && c.status !== 'replaced')
+        .filter(
+          c =>
+            connectionStatus(c, this.now()).status === 'expired' ||
+            (JSON.parse(c.account_labels) as Array<{ id: string }>).every(a => newRefs.has(a.id)),
+        )
+      const old = superseded.toSorted((a, b) => b.created_at.localeCompare(a.created_at))[0]
       const id = this.store.createConnection({
         // The bank sends the browser back without a sign-in, so the owner is whoever started this request
         userId: pending.user_id!,
@@ -225,11 +252,15 @@ export class BankConnectionsService implements OnModuleInit {
         lastSyncTo: old?.last_sync_to ?? null, // keep syncing from where the old connection stopped
       })
 
-      if (old && old.status !== 'revoked') {
-        await this.revokeAtBank(old)
-        this.store.retire(old.id, 'replaced')
-        // Same accounts, new consent: the history carries over
-        this.txs.moveConnection(pending.user_id!, old.id, id)
+      for (const c of superseded) {
+        await this.revokeAtBank(c)
+        this.store.retire(c.id, 'replaced')
+        this.balances.deleteForConnection(pending.user_id!, c.id)
+        // The same accounts under a new consent: the history carries over
+        this.txs.moveConnection(pending.user_id!, c.id, id)
+      }
+      if (old) {
+        this.store.carryBackfill(old, id)
       }
       this.store.audit(
         'callback',
@@ -273,6 +304,7 @@ export class BankConnectionsService implements OnModuleInit {
     }
     await this.revokeAtBank(row)
     this.store.retire(row.id, 'revoked')
+    this.balances.deleteForConnection(row.user_id!, row.id)
     // Disconnecting removes what was synced through it
     const deleted = this.txs.deleteForConnection(actor.userId, row.id)
 

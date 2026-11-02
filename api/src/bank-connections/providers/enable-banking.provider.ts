@@ -13,6 +13,7 @@ import {
   BankProvider,
   BankTransaction,
   ProviderAccount,
+  ProviderBalance,
   ProviderError,
   ProviderSession,
   PsuInfo,
@@ -175,7 +176,14 @@ export class EnableBankingProvider implements BankProvider {
             ? 'unavailable'
             : 'rejected'
 
-    throw new ProviderError(`Bank service returned ${res.status}`, kind, res.status)
+    const retryAfter = Number(res.headers.get('retry-after'))
+
+    throw new ProviderError(
+      `Bank service returned ${res.status}`,
+      kind,
+      res.status,
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+    )
   }
 
   async listBanks(country: string): Promise<BankInfo[]> {
@@ -244,19 +252,20 @@ export class EnableBankingProvider implements BankProvider {
     to: string
     psu?: PsuInfo
     longest?: boolean
+    beforeRequest?: () => Promise<void>
   }): Promise<BankTransaction[]> {
     const headers = psuHeaders(p.session.requiredPsuHeaders, p.psu)
     const window = () => new URLSearchParams({ date_from: p.from, date_to: p.to })
 
     if (!p.longest) {
-      return this.collect(p.account, window(), headers)
+      return this.collect(p.account, window(), headers, p.beforeRequest)
     }
     try {
-      return await this.collect(p.account, new URLSearchParams({ strategy: 'longest' }), headers)
+      return await this.collect(p.account, new URLSearchParams({ strategy: 'longest' }), headers, p.beforeRequest)
     } catch (e) {
       // Not every bank can do this: fall back to the normal window
       if (e instanceof ProviderError && e.kind === 'rejected') {
-        return this.collect(p.account, window(), headers)
+        return this.collect(p.account, window(), headers, p.beforeRequest)
       }
       throw e
     }
@@ -267,6 +276,7 @@ export class EnableBankingProvider implements BankProvider {
     account: ProviderAccount,
     base: URLSearchParams,
     headers: Record<string, string>,
+    beforeRequest?: () => Promise<void>,
   ): Promise<BankTransaction[]> {
     const out: BankTransaction[] = []
     let key: string | undefined
@@ -277,6 +287,7 @@ export class EnableBankingProvider implements BankProvider {
       if (key) {
         qs.set('continuation_key', key)
       }
+      await beforeRequest?.()
       const data = await this.api<{
         transactions?: EbTransaction[]
         continuation_key?: string | null
@@ -299,12 +310,63 @@ export class EnableBankingProvider implements BankProvider {
     throw new ProviderError('Too many transactions in this date range', 'too_large')
   }
 
+  async fetchBalance(p: {
+    session: ProviderSession
+    account: ProviderAccount
+    psu?: PsuInfo
+    beforeRequest?: () => Promise<void>
+  }): Promise<ProviderBalance | null> {
+    await p.beforeRequest?.()
+    const data = await this.api<{ balances?: EbBalance[] }>(
+      'GET',
+      `/accounts/${encodeURIComponent(p.account.uid)}/balances`,
+      undefined,
+      psuHeaders(p.session.requiredPsuHeaders, p.psu),
+    )
+
+    return pickBalance(data.balances ?? [])
+  }
+
   async revoke(sessionId: string): Promise<void> {
     try {
       await this.api('DELETE', `/sessions/${encodeURIComponent(sessionId)}`)
     } catch {
       /* best effort */
     }
+  }
+}
+
+export interface EbBalance {
+  balance_amount?: { amount?: string; currency?: string }
+  balance_type?: string
+  credit_debit_indicator?: 'CRDT' | 'DBIT'
+  reference_date?: string
+}
+
+// What "how much do I have" means, best first: the balance including today's booked movements, then the last closing
+// balance, then what is available to spend, then the expected one.
+const BALANCE_PREFERENCE = ['ITBD', 'CLBD', 'ITAV', 'CLAV', 'XPCD', 'OPBD']
+
+/** The one balance worth showing from everything a bank sends; null when none is usable. */
+export function pickBalance(balances: EbBalance[]): ProviderBalance | null {
+  const usable = balances.filter(b => b.balance_amount?.currency && Number.isFinite(Number(b.balance_amount.amount)))
+  const rank = (b: EbBalance) => {
+    const i = BALANCE_PREFERENCE.indexOf(b.balance_type ?? '')
+
+    return i === -1 ? BALANCE_PREFERENCE.length : i
+  }
+  const best = usable.toSorted((a, b) => rank(a) - rank(b))[0]
+
+  if (!best) {
+    return null
+  }
+  const amount = Number(best.balance_amount!.amount)
+
+  return {
+    amount: best.credit_debit_indicator === 'DBIT' ? -Math.abs(amount) : amount,
+    currency: best.balance_amount!.currency!,
+    type: best.balance_type,
+    asOf: best.reference_date,
   }
 }
 

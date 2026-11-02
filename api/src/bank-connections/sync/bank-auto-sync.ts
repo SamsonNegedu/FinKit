@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { AUTO_SYNC_CHECK_INTERVAL_MS, AUTO_SYNC_STARTUP_DELAY_MS } from '../constants'
 import { BankSyncService } from './bank-sync.service'
+import { BankBackfillService } from './bank-backfill.service'
 import { BANKING_CONFIG, BankingConfig } from '../config/bank-connections.tokens'
 
 /** Quietly catches up every active connection, so history builds without anyone pressing Sync. */
@@ -13,6 +14,7 @@ export class BankAutoSync implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly syncs: BankSyncService,
+    private readonly backfill: BankBackfillService,
     @Inject(BANKING_CONFIG) private readonly config: BankingConfig,
   ) {}
 
@@ -39,7 +41,12 @@ export class BankAutoSync implements OnModuleInit, OnModuleDestroy {
     }
     this.running = true
     try {
-      return await this.syncs.syncDue(this.config.autoSyncHours)
+      const synced = await this.syncs.syncDue(this.config.autoSyncHours)
+
+      // Older history only after the normal catch-up, so it never takes the requests that one needs
+      await this.backfill.backfillDue()
+
+      return synced
     } catch (e) {
       this.logger.error(e instanceof Error ? e.message : String(e))
 

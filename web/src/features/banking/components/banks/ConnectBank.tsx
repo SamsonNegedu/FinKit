@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Loader2, Search } from 'lucide-react'
 import { BankInfo } from '@/features/banking/api/banking.api'
-import { errorMessage, useBanks, useStartConnect } from '@/features/banking/hooks/banking-queries'
+import { errorMessage, useBanks, useConnections, useStartConnect } from '@/features/banking/hooks/banking-queries'
 import BankTile from './BankTile'
 
 const PINNED = ['Mock ASPSP', 'N26', 'Wise', 'Revolut']
@@ -10,6 +10,7 @@ const PINNED = ['Mock ASPSP', 'N26', 'Wise', 'Revolut']
 export default function ConnectBank({ initialBank }: { initialBank?: string }) {
   const banksQuery = useBanks()
   const connect = useStartConnect()
+  const { data: connections = [] } = useConnections()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string | null>(initialBank ?? null)
 
@@ -25,9 +26,14 @@ export default function ConnectBank({ initialBank }: { initialBank?: string }) {
       }
     }
 
-    return { pinned: [] as BankInfo[], results: all.filter(b => b.name.toLowerCase().includes(q)).slice(0, 30) }
+    return {
+      pinned: [] as BankInfo[],
+      results: all.filter(b => b.name.toLowerCase().includes(q)).slice(0, 30),
+    }
   }, [banks, query])
   const bank = banks?.find(b => b.name === selected)
+  const already = connections.filter(c => c.bank === bank?.name)
+  const have = already.flatMap(c => c.accounts.map(a => a.label))
 
   if (banksQuery.isLoading) {
     return (
@@ -98,6 +104,13 @@ export default function ConnectBank({ initialBank }: { initialBank?: string }) {
             bank's app. You'll log in on {bank.name}'s own page. FinKit never sees your password.
           </p>
         </div>
+      )}
+
+      {bank && have.length > 0 && (
+        <p className="rounded-lg border border-midnight-600 bg-midnight-800/60 p-3 text-sm text-midnight-200">
+          You already have {bank.name} connected ({have.join(', ')}). On {bank.name}'s page, tick every account you want
+          read: new ones are added, and an account you leave out keeps syncing through its current link.
+        </p>
       )}
 
       {connect.isError && (

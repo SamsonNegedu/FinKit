@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import TabLinks from '@/shared/components/forms/TabLinks'
 import { Loader2 } from 'lucide-react'
 import { timeAgo } from '@/features/banking/api/banking.api'
 import {
@@ -23,20 +23,14 @@ export default function BackOfficePanel({ section }: { section: BackOfficeSectio
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-1 border-b border-midnight-700" role="tablist">
-        {SECTIONS.map(s => (
-          <Link
-            key={s.id}
-            to="/settings/back-office"
-            search={{ section: s.id === 'overview' ? undefined : s.id }}
-            role="tab"
-            aria-selected={section === s.id}
-            className={`px-3 py-2 text-sm border-b-2 -mb-px ${section === s.id ? 'border-accent text-white' : 'border-transparent text-midnight-400 hover:text-midnight-200'}`}
-          >
-            {s.label}
-          </Link>
-        ))}
-      </div>
+      <TabLinks
+        ariaLabel="Back office sections"
+        links={SECTIONS.map(s => ({
+          label: s.label,
+          link: { to: '/settings/back-office', search: { section: s.id === 'overview' ? undefined : s.id } },
+          active: section === s.id,
+        }))}
+      />
       {section === 'overview' && <Overview mock={!!status?.mock} />}
       {section === 'sync-log' && <SyncLog />}
       {section === 'audit' && <Audit />}

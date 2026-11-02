@@ -38,7 +38,10 @@ export default function BanksPage() {
     if (phase.kind === 'success') {
       app.pushToast({ message: 'Bank connected', tone: 'success' })
     } else {
-      app.pushToast({ message: BANK_CONNECT_ERROR_COPY[phase.reason], tone: 'error' })
+      app.pushToast({
+        message: BANK_CONNECT_ERROR_COPY[phase.reason],
+        tone: 'error',
+      })
     }
     navigate({ to: '/banks', search: {}, replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,12 +62,12 @@ export default function BanksPage() {
                   }
                 }}
                 disabled={actions.operation.kind !== 'idle'}
-                className="btn-secondary flex items-center gap-2"
+                className="btn-secondary flex items-center gap-2 justify-center"
               >
                 <RefreshCw className={`w-4 h-4 ${actions.operation.kind === 'sync' ? 'animate-spin' : ''}`} /> Sync all
               </button>
             )}
-            <Link to="/banks/connect" className="btn-primary flex items-center gap-2">
+            <Link to="/banks/connect" className="btn-primary flex items-center gap-2 justify-center">
               <Plus className="w-4 h-4" /> Connect a bank
             </Link>
           </>

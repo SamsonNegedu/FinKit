@@ -6,7 +6,11 @@ import StatusPill from './StatusPill'
 import { useConnectionActions } from './useConnectionActions'
 
 const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 
 export default function ConnectionCard({
   connection: c,
@@ -23,7 +27,7 @@ export default function ConnectionCard({
   const left = Math.max(0, Math.min(consentDays, c.daysLeft))
 
   return (
-    <div className="border border-midnight-700 rounded-xl p-4 bg-midnight-900 space-y-3">
+    <div className="border border-midnight-700 rounded-xl p-4 sm:p-5 bg-midnight-900 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <Link
           to="/banks/$connectionId"
@@ -41,7 +45,7 @@ export default function ConnectionCard({
         <StatusPill connection={c} />
       </div>
 
-      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+      <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3 text-sm">
         <div>
           <dt className="text-xs text-midnight-400">In FinKit</dt>
           <dd className="text-midnight-100">{count.toLocaleString()} transactions</dd>
@@ -59,6 +63,10 @@ export default function ConnectionCard({
         <div>
           <dt className="text-xs text-midnight-400">Last sync</dt>
           <dd className="text-midnight-100">{timeAgo(c.lastSyncAt)}</dd>
+        </div>
+        <div className="col-span-2 lg:col-span-4">
+          <dt className="text-xs text-midnight-400">History</dt>
+          <dd className="text-midnight-100">{historyNote(c.history)}</dd>
         </div>
       </dl>
 
@@ -86,4 +94,18 @@ export default function ConnectionCard({
       <ConnectionActions connection={c} actions={actions} mock={mock} />
     </div>
   )
+}
+
+/** Older history is fetched a little each day, within what the bank allows. */
+function historyNote(h: BankConnection['history']) {
+  const from = h.oldest ? `from ${fmtDate(h.oldest)}` : 'checking soon'
+
+  if (h.status === 'blocked') {
+    return `${from} · reconnect to look further back`
+  }
+  if (h.status === 'done') {
+    return h.reason === 'bank_limit' ? `${from} · the bank's limit` : `${from} · complete`
+  }
+
+  return `${from} · looking further back`
 }

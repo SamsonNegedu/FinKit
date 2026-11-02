@@ -2,12 +2,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { BankingConfig } from '../config/bank-connections.tokens'
 import { BankAutoSync } from './bank-auto-sync'
 import type { BankSyncService } from './bank-sync.service'
+import type { BankBackfillService } from './bank-backfill.service'
 
 const make = (hours: number) => {
   const syncDue = vi.fn<(hours: number) => Promise<number>>(async () => 0)
-  const auto = new BankAutoSync({ syncDue } as unknown as BankSyncService, { autoSyncHours: hours } as BankingConfig)
+  const backfillDue = vi.fn<() => Promise<number>>(async () => 0)
+  const auto = new BankAutoSync(
+    { syncDue } as unknown as BankSyncService,
+    { backfillDue } as unknown as BankBackfillService,
+    { autoSyncHours: hours } as BankingConfig,
+  )
 
-  return { auto, syncDue }
+  return { auto, syncDue, backfillDue }
 }
 
 afterEach(() => vi.useRealTimers())

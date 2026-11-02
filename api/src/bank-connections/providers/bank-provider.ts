@@ -52,11 +52,24 @@ export interface BankTransaction {
   rawData: Record<string, string>
 }
 
+/** What an account holds right now, as the bank reports it. */
+export interface ProviderBalance {
+  /** Signed: negative when overdrawn */
+  amount: number
+  currency: string
+  /** The bank's own kind of balance (booked, available...) */
+  type?: string
+  /** The date the bank says it is valid for */
+  asOf?: string
+}
+
 export class ProviderError extends Error {
   constructor(
     message: string,
     public readonly kind: 'consent_expired' | 'rate_limited' | 'unavailable' | 'rejected' | 'too_large',
     public readonly status?: number,
+    /** From the bank's Retry-After on a 429: when it says we may come back */
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message)
   }
@@ -88,7 +101,19 @@ export interface BankProvider {
     psu?: PsuInfo
     /** Ask the bank for the longest history it allows (ignores from/to), for the very first fetch */
     longest?: boolean
+    /**
+     * Called before every request to the bank (each page counts). It counts the request against the
+     * daily budget, may wait to space requests out, and throws a ProviderError to stop the fetch.
+     */
+    beforeRequest?: () => Promise<void>
   }): Promise<BankTransaction[]>
+  /** The account's current balance, or null when the bank gives none */
+  fetchBalance(p: {
+    session: ProviderSession
+    account: ProviderAccount
+    psu?: PsuInfo
+    beforeRequest?: () => Promise<void>
+  }): Promise<ProviderBalance | null>
   revoke(sessionId: string): Promise<void>
 }
 

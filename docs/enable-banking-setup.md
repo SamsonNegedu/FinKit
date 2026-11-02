@@ -72,3 +72,23 @@ ALLOWED_USER_EMAILS=you@example.com   # who may use FinKit; without one nobody c
 ```
 
 Mount the private key into the API container read-only (for example `./secrets/enablebanking.pem:/run/secrets/enablebanking.pem:ro`). Never put it in the image or in git.
+
+## 6. How far back history goes
+
+The first sync of a connection asks the bank for the longest history it allows. Banks differ (often 90 days to two years), and what they refuse can't be fetched.
+
+To fill in what the first sync missed, the scheduled catch-up also walks back through older history, one window a day per connection:
+
+- It only spends requests the normal syncs leave over. Banks cap requests made without you present (typically 4 per account per day, [per Enable Banking's FAQ](https://enablebanking.com/docs/faq/)); set `BANKING_BACKGROUND_REQUEST_CAP` lower if your bank allows less. Every page of a fetch counts.
+- Windows start at 90 days and halve (down to a week) if one did not fit the day's requests. Pages are spaced a few seconds apart.
+- It stops when two windows in a row come back empty, the bank refuses older dates (`bank_limit`), or it needs you to sign in again (`needs_relink`). It never retries a refusal, and gives up at 2015.
+- If the bank answers "too many requests", all background requests for that connection wait until the time it names (or six hours, which is what Enable Banking recommends). Requests made while you are pressing Sync carry your browser's details, so banks don't count them against the background limit.
+- `POST /api/banking/connections/:id/backfill` starts it again, for example after reconnecting. A connection's `history` field shows the oldest date reached and why it stopped.
+- The sync log shows each window with its date range and how many transactions it returned.
+
+Contracts (`/contracts`) are found in this stored history, so a longer history finds yearly payments too.
+
+## 7. Account balances
+
+Pressing Sync also reads each account's balance (one more request per account), and Overview shows them under "Accounts". Scheduled syncs and the history backfill don't read balances, so they never spend the bank's few background requests on them. The amount is stored encrypted and removed when you disconnect the bank. A bank that gives no balance, or refuses the read, never makes the sync fail.
+

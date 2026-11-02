@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import { isoDaysAgo } from '../../shared/constants/time'
-import { AUDIT_LOG_RETENTION_DAYS, OAUTH_STATE_TTL_MS, SYNC_LOG_RETENTION_DAYS } from '../constants'
+import {
+  AUDIT_LOG_RETENTION_DAYS,
+  OAUTH_STATE_TTL_MS,
+  REQUEST_BUDGET_RETENTION_DAYS,
+  SYNC_LOG_RETENTION_DAYS,
+} from '../constants'
 import { DatabaseService } from '../../shared/database/database.service'
 import { ensureColumn } from '../../shared/database/migrate'
 import { UsersService } from '../../users/users.service'
@@ -22,7 +27,19 @@ export interface ConnectionRow {
   last_sync_at: string | null
   last_sync_started_at: string | null
   last_sync_to: string | null
+  /** Oldest date fetched so far while walking back through history; null until backfill starts */
+  backfill_cursor: string | null
+  backfill_status: BackfillStatus | null
+  backfill_reason: string | null
+  backfill_empty: number | null
+  backfill_window_days: number | null
+  /** The UTC day a backfill window was last attempted: at most one a day */
+  backfill_day: string | null
+  /** No background request may be made before this (a bank said "too many" and told us when to return) */
+  blocked_until: string | null
 }
+
+export type BackfillStatus = 'pending' | 'done' | 'blocked'
 
 interface AuthState {
   state: string
@@ -86,6 +103,13 @@ export class BankConnectionsStore {
         target TEXT,
         detail TEXT
       );
+      CREATE TABLE IF NOT EXISTS bank_request_budget (
+        connection_id TEXT NOT NULL,
+        account_ref TEXT NOT NULL,
+        day TEXT NOT NULL,
+        used INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (connection_id, account_ref, day)
+      );
       CREATE INDEX IF NOT EXISTS idx_bank_sync_log_started ON bank_sync_log(started_at);
       CREATE INDEX IF NOT EXISTS idx_bank_audit_ts ON bank_audit_log(ts);
     `)
@@ -93,6 +117,13 @@ export class BankConnectionsStore {
     ensureColumn(db, 'bank_connections', 'user_id', 'TEXT')
     ensureColumn(db, 'bank_auth_states', 'user_id', 'TEXT')
     ensureColumn(db, 'bank_audit_log', 'user_id', 'TEXT')
+    ensureColumn(db, 'bank_connections', 'backfill_cursor', 'TEXT')
+    ensureColumn(db, 'bank_connections', 'backfill_status', 'TEXT')
+    ensureColumn(db, 'bank_connections', 'backfill_reason', 'TEXT')
+    ensureColumn(db, 'bank_connections', 'backfill_empty', 'INTEGER NOT NULL DEFAULT 0')
+    ensureColumn(db, 'bank_connections', 'backfill_window_days', 'INTEGER')
+    ensureColumn(db, 'bank_connections', 'backfill_day', 'TEXT')
+    ensureColumn(db, 'bank_connections', 'blocked_until', 'TEXT')
     db.exec('CREATE INDEX IF NOT EXISTS idx_bank_connections_user ON bank_connections(user_id)')
     users.onLegacyOwnerCreated(userId => {
       db.prepare('UPDATE bank_connections SET user_id = ? WHERE user_id IS NULL').run(userId)
@@ -116,13 +147,35 @@ export class BankConnectionsStore {
       ),
       due: db.prepare(
         `SELECT * FROM bank_connections WHERE status = 'active' AND user_id IS NOT NULL AND secret_blob != ''
-         AND valid_until > ? AND (last_sync_started_at IS NULL OR last_sync_started_at < ?)`,
+         AND valid_until > ? AND (last_sync_started_at IS NULL OR last_sync_started_at < ?)
+         AND (blocked_until IS NULL OR blocked_until <= ?)`,
+      ),
+      backfillCandidates: db.prepare(
+        `SELECT * FROM bank_connections WHERE status = 'active' AND user_id IS NOT NULL AND secret_blob != ''
+         AND valid_until > ? AND last_sync_to IS NOT NULL AND (backfill_status IS NULL OR backfill_status = 'pending')`,
       ),
       setStatus: db.prepare('UPDATE bank_connections SET status = ? WHERE id = ?'),
       wipeSecret: db.prepare("UPDATE bank_connections SET status = ?, secret_blob = '' WHERE id = ?"),
       syncStarted: db.prepare('UPDATE bank_connections SET last_sync_started_at = ? WHERE id = ?'),
       syncDone: db.prepare('UPDATE bank_connections SET last_sync_at = ?, last_sync_to = ? WHERE id = ?'),
       setValidUntil: db.prepare('UPDATE bank_connections SET valid_until = ? WHERE id = ?'),
+      setBackfill: db.prepare(
+        `UPDATE bank_connections SET backfill_cursor = ?, backfill_status = ?, backfill_reason = ?,
+         backfill_empty = ?, backfill_window_days = ?, backfill_day = COALESCE(?, backfill_day) WHERE id = ? AND user_id = ?`,
+      ),
+      carryBackfill: db.prepare(
+        `UPDATE bank_connections SET backfill_cursor = ?, backfill_status = ?, backfill_reason = ?,
+         backfill_empty = ?, backfill_window_days = ?, backfill_day = ?, blocked_until = ? WHERE id = ?`,
+      ),
+      setBlocked: db.prepare('UPDATE bank_connections SET blocked_until = ? WHERE id = ?'),
+      budgetGet: db.prepare(
+        'SELECT used FROM bank_request_budget WHERE connection_id = ? AND account_ref = ? AND day = ?',
+      ),
+      budgetAdd: db.prepare(
+        `INSERT INTO bank_request_budget (connection_id, account_ref, day, used) VALUES (?,?,?,1)
+         ON CONFLICT(connection_id, account_ref, day) DO UPDATE SET used = used + 1`,
+      ),
+      pruneBudget: db.prepare('DELETE FROM bank_request_budget WHERE day < ?'),
       insertSync: db.prepare(
         'INSERT INTO bank_sync_log (connection_id, started_at, date_from, date_to, status) VALUES (?,?,?,?,?)',
       ),
@@ -229,9 +282,37 @@ export class BankConnectionsStore {
     return this.q.listConns.all(userId) as ConnectionRow[]
   }
 
+  /**
+   * Accounts that a newer link to the same bank also covers. When a bank is connected again with only some accounts
+   * approved, the older link is kept for the rest, and must not read these a second time.
+   */
+  newerAccountRefs(userId: string, row: ConnectionRow): Set<string> {
+    const refs = new Set<string>()
+
+    for (const c of this.listConnections(userId)) {
+      if (
+        c.id !== row.id &&
+        c.status === 'active' &&
+        c.aspsp_name === row.aspsp_name &&
+        c.created_at > row.created_at
+      ) {
+        for (const a of JSON.parse(c.account_labels) as Array<{ id: string }>) {
+          refs.add(a.id)
+        }
+      }
+    }
+
+    return refs
+  }
+
+  /** Active connections that still have older history to ask for. */
+  backfillCandidates(now: string) {
+    return this.q.backfillCandidates.all(now) as ConnectionRow[]
+  }
+
   /** Active connections not synced since `before`, for the scheduled catch-up. */
   dueForSync(now: string, before: string) {
-    return this.q.due.all(now, before) as ConnectionRow[]
+    return this.q.due.all(now, before, now) as ConnectionRow[]
   }
 
   setStatus(id: string, status: ConnectionStatus) {
@@ -252,6 +333,52 @@ export class BankConnectionsStore {
 
   setValidUntil(id: string, validUntil: string) {
     this.q.setValidUntil.run(validUntil, id)
+  }
+
+  // ---- backfill: walking back through older history, a window at a time ----
+  setBackfill(
+    id: string,
+    userId: string,
+    p: {
+      cursor: string | null
+      status: BackfillStatus
+      reason?: string | null
+      empty: number
+      windowDays: number | null
+      /** Set when a window was attempted today; leave out to keep the last one */
+      day?: string
+    },
+  ) {
+    this.q.setBackfill.run(p.cursor, p.status, p.reason ?? null, p.empty, p.windowDays, p.day ?? null, id, userId)
+  }
+
+  /** A reconnect keeps the old connection's place, so older history is not asked for twice. */
+  carryBackfill(from: ConnectionRow, toId: string) {
+    this.q.carryBackfill.run(
+      from.backfill_cursor,
+      from.backfill_status,
+      from.backfill_reason,
+      from.backfill_empty ?? 0,
+      from.backfill_window_days,
+      from.backfill_day,
+      from.blocked_until,
+      toId,
+    )
+  }
+
+  setBlockedUntil(id: string, until: string | null) {
+    this.q.setBlocked.run(until, id)
+  }
+
+  // ---- how many background requests an account has used today ----
+  requestsUsed(connectionId: string, accountRef: string, day: string) {
+    const row = this.q.budgetGet.get(connectionId, accountRef, day) as { used: number } | undefined
+
+    return row?.used ?? 0
+  }
+
+  countRequest(connectionId: string, accountRef: string, day: string) {
+    this.q.budgetAdd.run(connectionId, accountRef, day)
   }
 
   // ---- sync log and audit trail ----
@@ -305,6 +432,7 @@ export class BankConnectionsStore {
   prune() {
     this.q.pruneSync.run(isoDaysAgo(SYNC_LOG_RETENTION_DAYS))
     this.q.pruneAudit.run(isoDaysAgo(AUDIT_LOG_RETENTION_DAYS))
+    this.q.pruneBudget.run(isoDaysAgo(REQUEST_BUDGET_RETENTION_DAYS).slice(0, 10))
     this.q.purgeStates.run(iso())
   }
 }

@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { createHmac } from 'node:crypto'
-import { DatabaseService } from '../../shared/database/database.service'
-import { decrypt, encrypt } from '../../shared/crypto/encryption'
-import { ensureColumn, hasColumn } from '../../shared/database/migrate'
-import { BankTransaction } from '../providers/bank-provider'
-import { BANKING_CONFIG, BankingConfig } from '../config/bank-connections.tokens'
+import { DatabaseService } from '../shared/database/database.service'
+import { decrypt, encrypt } from '../shared/crypto/encryption'
+import { ensureColumn, hasColumn } from '../shared/database/migrate'
+import { BankTransaction } from '../bank-connections/providers/bank-provider'
+import { BANKING_CONFIG, BankingConfig } from '../bank-connections/config/bank-connections.tokens'
 
 /**
  * Synced transactions, kept per person. Every query filters by user_id; nothing here takes an
@@ -65,7 +65,15 @@ export class BankTransactionsStore {
          WHERE user_id = ? AND tx_date >= ? AND tx_date <= ?
          ORDER BY tx_date DESC, id DESC`,
       ),
+      listRows: db.prepare(
+        `SELECT ext_key, payload FROM bank_transactions
+         WHERE user_id = ? AND tx_date >= ? AND tx_date <= ?
+         ORDER BY tx_date DESC, id DESC`,
+      ),
+      byRef: db.prepare('SELECT ext_key, payload FROM bank_transactions WHERE user_id = ? AND ext_key = ?'),
       count: db.prepare('SELECT COUNT(*) AS n FROM bank_transactions WHERE user_id = ?'),
+      signature: db.prepare('SELECT COUNT(*) AS n, COALESCE(MAX(id), 0) AS m FROM bank_transactions WHERE user_id = ?'),
+      oldest: db.prepare('SELECT MIN(tx_date) AS d FROM bank_transactions WHERE user_id = ? AND connection_id = ?'),
       move: db.prepare('UPDATE bank_transactions SET connection_id = ? WHERE user_id = ? AND connection_id = ?'),
       deleteConn: db.prepare('DELETE FROM bank_transactions WHERE user_id = ? AND connection_id = ?'),
       deleteAll: db.prepare('DELETE FROM bank_transactions WHERE user_id = ?'),
@@ -154,8 +162,42 @@ export class BankTransactionsStore {
     return rows.map(r => JSON.parse(decrypt(r.payload, this.key)) as BankTransaction)
   }
 
+  /** Like list, with each row's opaque ref: how trips point at a transaction without copying it. */
+  listWithRefs(userId: string, from = '0000-01-01', to = '9999-12-31'): Array<{ ref: string; tx: BankTransaction }> {
+    const rows = this.q.listRows.all(userId, from, to) as Array<{ ext_key: string; payload: string }>
+
+    return rows.map(r => ({ ref: r.ext_key, tx: JSON.parse(decrypt(r.payload, this.key)) as BankTransaction }))
+  }
+
+  /** The given transactions of this person; refs that are unknown (or someone else's) are left out. */
+  findByRefs(userId: string, refs: string[]): Map<string, BankTransaction> {
+    const found = new Map<string, BankTransaction>()
+
+    for (const ref of refs) {
+      const row = this.q.byRef.get(userId, ref) as { ext_key: string; payload: string } | undefined
+
+      if (row) {
+        found.set(row.ext_key, JSON.parse(decrypt(row.payload, this.key)) as BankTransaction)
+      }
+    }
+
+    return found
+  }
+
   count(userId: string): number {
     return (this.q.count.get(userId) as { n: number }).n
+  }
+
+  /** Changes whenever this person's stored transactions do: lets derived results be reused until then. */
+  signature(userId: string): string {
+    const r = this.q.signature.get(userId) as { n: number; m: number }
+
+    return `${r.n}:${r.m}`
+  }
+
+  /** The booking date of the oldest stored transaction for this connection: where a backfill starts. */
+  oldestDate(userId: string, connectionId: string): string | null {
+    return (this.q.oldest.get(userId, connectionId) as { d: string | null }).d
   }
 
   /** A reconnect makes a new connection for the same accounts: keep the history under the new one. */

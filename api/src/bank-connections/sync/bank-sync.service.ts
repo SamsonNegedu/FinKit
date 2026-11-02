@@ -8,7 +8,8 @@ import {
   Logger,
 } from '@nestjs/common'
 import { Actor } from '../../access/access.settings'
-import { accountRef, decrypt } from '../../shared/crypto/encryption'
+import { accountRef } from '../../shared/crypto/encryption'
+import { openSession } from './session'
 import { addDays, addMilliseconds, MS_PER_DAY } from '../../shared/constants/time'
 import { BANKING_CONFIG, BankingConfig, CLOCK, Clock } from '../config/bank-connections.tokens'
 import { connectionStatus } from '../connections/connection-status'
@@ -19,6 +20,7 @@ import {
   DEFAULT_SYNC_HISTORY_DAYS,
   MAX_SYNC_RANGE_DAYS,
   MIN_SYNC_INTERVAL_MS,
+  RATE_LIMIT_BACKOFF_SECONDS,
   SYNC_OVERLAP_DAYS,
 } from '../constants'
 import {
@@ -30,7 +32,8 @@ import {
   ProviderSession,
   PsuInfo,
 } from '../providers/bank-provider'
-import { BankTransactionsStore } from '../transactions/bank-transactions.store'
+import { BankBalancesStore } from '../balances/bank-balances.store'
+import { BankTransactionsStore } from '../../transactions/bank-transactions.store'
 
 const day = (d: Date) => d.toISOString().slice(0, 10)
 
@@ -42,6 +45,7 @@ export class BankSyncService {
   constructor(
     private readonly store: BankConnectionsStore,
     private readonly txs: BankTransactionsStore,
+    private readonly balances: BankBalancesStore,
     @Inject(BANK_PROVIDER) private readonly provider: BankProvider,
     @Inject(BANKING_CONFIG) private readonly config: BankingConfig,
     @Inject(CLOCK) private readonly clock: Clock,
@@ -99,14 +103,10 @@ export class BankSyncService {
     const logId = this.store.startSyncLog(row.id, from, to)
 
     try {
-      const secret = JSON.parse(decrypt(row.secret_blob, this.config.encryptionKey)) as Pick<
-        ProviderSession,
-        'sessionId' | 'accounts' | 'requiredPsuHeaders'
-      >
-      const session: ProviderSession = {
-        ...secret,
-        validUntil: row.valid_until,
-      }
+      const opened = openSession(row, this.config.encryptionKey)
+      // An account a newer link to this bank also holds is read through that link only
+      const covered = this.store.newerAccountRefs(userId, row)
+      const session = { ...opened, accounts: opened.accounts.filter(a => !covered.has(accountRef(a.stableId))) }
       const all: BankTransaction[] = []
 
       for (const account of session.accounts) {
@@ -117,6 +117,8 @@ export class BankSyncService {
           to,
           psu: opts.psu,
           longest: opts.longest,
+          // Every page counts against the bank's daily cap, so backfill knows what is left
+          beforeRequest: async () => this.store.countRequest(row.id, accountRef(account.stableId), day(this.now())),
         })
 
         // Stamp where each one came from, so the app can browse bank → account → transactions
@@ -131,6 +133,11 @@ export class BankSyncService {
       const added = this.txs.save(userId, row.id, all)
 
       this.store.markSyncDone(row.id, to, this.now().toISOString())
+      // Balances are only read when a person pressed Sync: those requests carry their details, so the bank does not
+      // count them against the few background reads it allows, which the scheduled sync and backfill share
+      if (opts.psu) {
+        await this.refreshBalances(row, session, userId, opts.psu)
+      }
       this.store.finishSyncLog(logId, 'ok', all.length)
       this.store.audit(who, 'sync', row.aspsp_name, { fetched: all.length, added }, userId)
 
@@ -143,11 +150,42 @@ export class BankSyncService {
       if (kind === 'consent_expired') {
         this.store.setStatus(row.id, 'expired')
       }
+      if (kind === 'rate_limited') {
+        // The bank asked us to slow down: hold all background requests until it says we may return
+        const seconds = e instanceof ProviderError ? e.retryAfterSeconds : undefined
+
+        this.store.setBlockedUntil(
+          row.id,
+          addMilliseconds(this.now(), (seconds ?? RATE_LIMIT_BACKOFF_SECONDS) * 1_000).toISOString(),
+        )
+      }
       this.store.finishSyncLog(logId, kind === 'rate_limited' ? 'rate_limited' : 'failed', 0, kind)
       this.store.audit(who, 'sync.failed', row.aspsp_name, { kind }, userId)
       const status = kind === 'consent_expired' ? 409 : kind === 'rate_limited' ? 429 : kind === 'too_large' ? 422 : 502
 
       throw new HttpException({ error: kind === 'consent_expired' ? 'expired' : kind }, status)
+    }
+  }
+
+  /** Reads each account's balance. A failure here never fails the sync: the transactions are already kept. */
+  private async refreshBalances(row: ConnectionRow, session: ProviderSession, userId: string, psu: PsuInfo) {
+    for (const account of session.accounts) {
+      const ref = accountRef(account.stableId)
+
+      try {
+        const balance = await this.provider.fetchBalance({
+          session,
+          account,
+          psu,
+          beforeRequest: async () => this.store.countRequest(row.id, ref, day(this.now())),
+        })
+
+        if (balance) {
+          this.balances.save(userId, row.id, ref, balance, this.now())
+        }
+      } catch (e) {
+        this.logger.warn(`Balance fetch failed: ${errorSummary(e)}`)
+      }
     }
   }
 

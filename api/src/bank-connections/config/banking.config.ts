@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { BACKFILL_PAGE_PAUSE_MS, DEFAULT_BACKGROUND_REQUEST_CAP } from '../constants'
 
 export type ProviderMode = 'off' | 'mock' | 'enablebanking'
 
@@ -15,6 +16,10 @@ export interface BankingConfig {
   allowedOrigin?: string
   /** Hours between scheduled catch-up syncs; 0 turns them off */
   autoSyncHours: number
+  /** Background requests per account per day we allow ourselves (banks enforce their own cap; 4 is typical) */
+  backgroundRequestCap: number
+  /** Milliseconds between pages of a history backfill fetch (0 in tests) */
+  backfillPauseMs: number
   // Enable Banking
   ebAppId?: string
   ebPrivateKey?: string
@@ -114,6 +119,8 @@ export function loadBankingConfig(env: NodeJS.ProcessEnv = process.env): ConfigR
       cfAudience,
       allowedOrigin: env.ALLOWED_ORIGIN,
       autoSyncHours: parseHours(env.BANKING_AUTO_SYNC_HOURS),
+      backgroundRequestCap: parseCap(env.BANKING_BACKGROUND_REQUEST_CAP),
+      backfillPauseMs: parsePause(env.BANKING_BACKFILL_PAUSE_MS),
       ebAppId: env.EB_APP_ID,
       ebPrivateKey,
     },
@@ -125,4 +132,17 @@ function parseHours(value?: string): number {
   const n = value === undefined || value === '' ? 12 : Number(value)
 
   return Number.isFinite(n) && n >= 0 ? (n === 0 ? 0 : Math.max(6, n)) : 12
+}
+
+/** Lower it if a bank allows less; a bad value falls back to the default rather than risking the bank's limit. */
+function parseCap(value?: string): number {
+  const n = value === undefined || value === '' ? DEFAULT_BACKGROUND_REQUEST_CAP : Number(value)
+
+  return Number.isInteger(n) && n >= 1 && n <= 20 ? n : DEFAULT_BACKGROUND_REQUEST_CAP
+}
+
+function parsePause(value?: string): number {
+  const n = value === undefined || value === '' ? BACKFILL_PAGE_PAUSE_MS : Number(value)
+
+  return Number.isFinite(n) && n >= 0 ? n : BACKFILL_PAGE_PAUSE_MS
 }

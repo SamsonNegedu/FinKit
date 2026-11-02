@@ -20,3 +20,6 @@ export const ENABLE_BANKING_REQUEST_TIMEOUT_MS = 30_000
 export const TEST_BANK_DEFAULT_CONSENT_DAYS = 179
 
 export const TEST_BANK_MAX_MOCK_HISTORY_DAYS = 400
+
+/** The test bank forgets anything older than this, so backfill has an end to find. */
+export const TEST_BANK_HISTORY_LIMIT_DAYS = 800

@@ -1,4 +1,15 @@
-import { Body, Controller, HttpCode, Inject, Param, Post, Req, UseGuards, UseInterceptors } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  HttpCode,
+  NotFoundException,
+  Inject,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common'
 import type { Request } from 'express'
 import { AccessGuard, CurrentActor } from '../../access/access.guard'
 import { ACCESS_SETTINGS, AccessSettings, Actor } from '../../access/access.settings'
@@ -8,6 +19,7 @@ import { ZodValidationPipe } from '../../shared/http/zod-validation.pipe'
 import { SyncInput, SyncSchema } from '../connections/bank-connections.schemas'
 import { psuFromRequest } from './psu'
 import { BankSyncService } from './bank-sync.service'
+import { BankBackfillService } from './bank-backfill.service'
 
 /** Pressing Sync: fetch now, keep what is new, and return what the bank sent. */
 @Controller('api/banking')
@@ -16,6 +28,7 @@ import { BankSyncService } from './bank-sync.service'
 export class BankSyncController {
   constructor(
     private readonly syncs: BankSyncService,
+    private readonly backfill: BankBackfillService,
     @Inject(ACCESS_SETTINGS) private readonly access: AccessSettings,
   ) {}
 
@@ -29,5 +42,16 @@ export class BankSyncController {
     @Req() req: Request,
   ) {
     return this.syncs.sync(actor, id, body ?? {}, psuFromRequest(req, this.access.mode === 'cloudflare'))
+  }
+
+  /** Look for older history again, e.g. after reconnecting. It runs on the next scheduled catch-up. */
+  @Post('connections/:id/backfill')
+  @HttpCode(200)
+  restartBackfill(@CurrentActor() actor: Actor, @Param('id') id: string) {
+    if (!this.backfill.restart(id, actor.userId)) {
+      throw new NotFoundException({ error: 'Not found' })
+    }
+
+    return { ok: true }
   }
 }

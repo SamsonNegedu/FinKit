@@ -30,6 +30,12 @@ export interface BankConnection {
   reconnectSuggested: boolean
   lastSyncAt: string | null
   lastSyncTo: string | null
+  /** How far back older history has been fetched, and why it stopped (if it has) */
+  history: {
+    status: 'pending' | 'done' | 'blocked'
+    reason: string | null
+    oldest: string | null
+  }
   createdAt: string
 }
 interface SyncResult {
@@ -47,7 +53,12 @@ interface AdminCheck {
 }
 interface AdminOverview {
   provider: string
-  connections: { total: number; active: number; expiring: number; expired: number }
+  connections: {
+    total: number
+    active: number
+    expiring: number
+    expired: number
+  }
   syncs30d: { ok: number; failed: number; total: number }
   lastSuccessfulSync: { at: string; bank: string } | null
   checks: AdminCheck[]
@@ -114,7 +125,9 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
 // Off, unreachable or not signed in all look the same to the app: banking is simply not shown
 export async function getBankingStatus(): Promise<BankingStatus> {
   try {
-    const res = await fetch(`${API_BASE}/banking/status`, { credentials: 'same-origin' })
+    const res = await fetch(`${API_BASE}/banking/status`, {
+      credentials: 'same-origin',
+    })
 
     if (!res.ok) {
       return { enabled: false }
@@ -128,14 +141,35 @@ export async function getBankingStatus(): Promise<BankingStatus> {
 
 export const listBanks = (country = 'DE') => call<{ banks: BankInfo[] }>(`/banks?country=${country}`).then(r => r.banks)
 export const startConnect = (bank: string, country = 'DE', reconnect?: string) =>
-  call<{ url: string }>('/connect', { method: 'POST', body: JSON.stringify({ bank, country, reconnect }) }).then(
-    r => r.url,
-  )
+  call<{ url: string }>('/connect', {
+    method: 'POST',
+    body: JSON.stringify({ bank, country, reconnect }),
+  }).then(r => r.url)
 export const listConnections = () => call<{ connections: BankConnection[] }>('/connections').then(r => r.connections)
 export const syncConnection = (id: string, range: { from?: string; to?: string } = {}) =>
-  call<SyncResult>(`/connections/${id}/sync`, { method: 'POST', body: JSON.stringify(range) })
+  call<SyncResult>(`/connections/${id}/sync`, {
+    method: 'POST',
+    body: JSON.stringify(range),
+  })
 /** Everything the server has kept for the signed-in user (scheduled and manual syncs). */
-export const storedTransactions = () => call<{ transactions: RawTransaction[]; count: number }>('/transactions')
+export type StoredTransaction = RawTransaction & {
+  ref: string
+  tripId: string | null
+}
+export const storedTransactions = () => call<{ transactions: StoredTransaction[]; count: number }>('/transactions')
+export interface AccountBalance {
+  connectionId: string
+  bank: string
+  /** The account's derived id, never the bank's own */
+  account: string
+  label: string
+  currency: string
+  /** Negative when overdrawn */
+  amount: number
+  fetchedAt: string
+}
+/** What each connected account held when its bank was last asked (when you press Sync). */
+export const listBalances = () => call<{ balances: AccountBalance[] }>('/balances').then(r => r.balances)
 export const deleteStoredTransactions = () => call<{ deleted: number }>('/transactions', { method: 'DELETE' })
 export const disconnectBank = (id: string) => call<{ ok: true }>(`/connections/${id}`, { method: 'DELETE' })
 
@@ -145,7 +179,9 @@ export const adminSyncLog = () =>
 export const adminAudit = () =>
   call<{ entries: Array<Record<string, string | null>> }>('/admin/audit').then(r => r.entries)
 export const adminExpire = (id: string, mode: 'expiring' | 'expired') =>
-  call<{ ok: true }>(`/admin/connections/${id}/expire?mode=${mode}`, { method: 'POST' })
+  call<{ ok: true }>(`/admin/connections/${id}/expire?mode=${mode}`, {
+    method: 'POST',
+  })
 
 export function timeAgo(iso: string | null | undefined): string {
   if (!iso) {
@@ -160,7 +196,9 @@ export function timeAgo(iso: string | null | undefined): string {
     return `${Math.floor(s / SECONDS_PER_MINUTE)} min ago`
   }
   if (s < SECONDS_PER_DAY) {
-    return `${Math.floor(s / SECONDS_PER_HOUR)} hours ago`
+    const hours = Math.floor(s / SECONDS_PER_HOUR)
+
+    return hours === 1 ? '1 hour ago' : `${hours} hours ago`
   }
   if (s < TIME_AGO_YESTERDAY_SECONDS) {
     return 'Yesterday'

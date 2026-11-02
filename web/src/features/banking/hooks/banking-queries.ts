@@ -11,6 +11,7 @@ import {
   listConnections,
   startConnect,
   deleteStoredTransactions,
+  listBalances,
   storedTransactions,
   syncConnection,
 } from '../api/banking.api'
@@ -61,8 +62,18 @@ export function useBanks(country = 'DE') {
   return useQuery(banksQuery(country))
 }
 
-export const useAdminOverview = () => useQuery({ queryKey: bankingKeys.overview, queryFn: adminOverview, retry: false })
-export const useAdminSyncLog = () => useQuery({ queryKey: bankingKeys.syncLog, queryFn: adminSyncLog, retry: false })
+export const useAdminOverview = () =>
+  useQuery({
+    queryKey: bankingKeys.overview,
+    queryFn: adminOverview,
+    retry: false,
+  })
+export const useAdminSyncLog = () =>
+  useQuery({
+    queryKey: bankingKeys.syncLog,
+    queryFn: adminSyncLog,
+    retry: false,
+  })
 export const useAdminAudit = () => useQuery({ queryKey: bankingKeys.audit, queryFn: adminAudit, retry: false })
 
 export function useSyncConnection() {
@@ -106,6 +117,16 @@ export function useStartConnect() {
 
 export function errorMessage(error: unknown, fallback: string): string {
   return error instanceof BankingError || error instanceof Error ? error.message : fallback
+}
+
+export function useBalances(enabled: boolean) {
+  return useQuery({
+    queryKey: [...bankingKeys.all, 'balances'],
+    queryFn: listBalances,
+    enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
+  })
 }
 
 /** The server's copy of this person's synced transactions; refetched when the tab regains focus. */

@@ -33,29 +33,51 @@ export function useConnectionActions() {
 
     async sync(connection: BankConnection, from?: string) {
       try {
-        const result = await syncMutation.mutateAsync({ id: connection.id, from })
+        const result = await syncMutation.mutateAsync({
+          id: connection.id,
+          from,
+        })
 
         app.importBankTransactions(result.transactions, connection.bank)
       } catch (e) {
-        app.pushToast({ message: errorMessage(e, "Couldn't sync."), tone: 'error' })
+        app.pushToast({
+          message: errorMessage(e, "Couldn't sync."),
+          tone: 'error',
+        })
       }
     },
 
     reconnect(connection: BankConnection) {
       connectMutation.mutate(
-        { bank: connection.bank, country: connection.country, reconnect: connection.id },
-        { onError: e => app.pushToast({ message: errorMessage(e, "Couldn't start the connection."), tone: 'error' }) },
+        {
+          bank: connection.bank,
+          country: connection.country,
+          reconnect: connection.id,
+        },
+        {
+          onError: e =>
+            app.pushToast({
+              message: errorMessage(e, "Couldn't start the connection."),
+              tone: 'error',
+            }),
+        },
       )
     },
 
     async disconnect(connection: BankConnection): Promise<boolean> {
       try {
         await disconnectMutation.mutateAsync(connection.id)
-        app.pushToast({ message: `${connection.bank} disconnected`, tone: 'success' })
+        app.pushToast({
+          message: `${connection.bank} disconnected`,
+          tone: 'success',
+        })
 
         return true
       } catch (e) {
-        app.pushToast({ message: errorMessage(e, "Couldn't disconnect."), tone: 'error' })
+        app.pushToast({
+          message: errorMessage(e, "Couldn't disconnect."),
+          tone: 'error',
+        })
 
         return false
       }
