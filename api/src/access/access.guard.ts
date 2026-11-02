@@ -47,6 +47,9 @@ export class AccessGuard implements CanActivate {
     const token = req.header('cf-access-jwt-assertion')
 
     if (!token || !this.verify) {
+      // Usually means Cloudflare Access doesn't cover this path, so it never attached a token
+      this.logger.warn(`No Access token on ${req.method} ${req.path}`)
+
       return this.refuse(req, 'no token')
     }
     let email: string
@@ -70,6 +73,8 @@ export class AccessGuard implements CanActivate {
     const user = this.users.ensure(email)
 
     if (!user) {
+      // The email is left out on purpose; check ALLOWED_USER_EMAILS against the address you sign in with
+      this.logger.warn(`Signed-in user is not on ALLOWED_USER_EMAILS (${req.method} ${req.path})`)
       this.onRefused?.(req.path, 'user not allowed')
       throw new ForbiddenException({ error: 'Forbidden' })
     }

@@ -4,12 +4,13 @@ import {
   HttpException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common'
 import { ACCESS_SETTINGS, AccessSettings, Actor } from '../../access/access.settings'
 import { accountRef, decrypt, encrypt, randomToken } from '../../shared/crypto/encryption'
-import { BANK_PROVIDER, BankProvider, ProviderError } from '../providers/bank-provider'
+import { BANK_PROVIDER, BankProvider, ProviderError, errorSummary } from '../providers/bank-provider'
 import { BANKING_CONFIG, BankingConfig, CLOCK, Clock } from '../config/bank-connections.tokens'
 import { BankConnectionsStore, ConnectionRow } from './bank-connections.store'
 import { BankTransactionsStore } from '../transactions/bank-transactions.store'
@@ -28,6 +29,7 @@ type CallbackOutcome =
 
 @Injectable()
 export class BankConnectionsService implements OnModuleInit {
+  private readonly logger = new Logger(BankConnectionsService.name)
   private readonly limiter: RateLimiter
   private readonly bankCache = new Map<string, { at: number; banks: Awaited<ReturnType<BankProvider['listBanks']>> }>()
 
@@ -97,7 +99,9 @@ export class BankConnectionsService implements OnModuleInit {
       this.bankCache.set(country, { at: this.now().getTime(), banks })
 
       return banks
-    } catch {
+    } catch (err) {
+      // The client only sees a generic 502, so the cause has to be in the log. ProviderError messages carry no secrets.
+      this.logger.warn(`Could not load banks: ${errorSummary(err)}`)
       throw new BadGatewayException({ error: 'Could not load banks' })
     }
   }
@@ -149,7 +153,8 @@ export class BankConnectionsService implements OnModuleInit {
       this.store.audit(actor.email, 'connect.start', bank.name, replaces ? { replaces } : undefined, actor.userId)
 
       return { url, state }
-    } catch {
+    } catch (err) {
+      this.logger.warn(`Could not start the connection: ${errorSummary(err)}`)
       throw new BadGatewayException({
         error: 'Could not start the connection',
       })
@@ -239,6 +244,7 @@ export class BankConnectionsService implements OnModuleInit {
 
       return { ok: true, connectionId: id }
     } catch (e) {
+      this.logger.warn(`Bank connection callback failed: ${errorSummary(e)}`)
       this.store.audit(
         'callback',
         'connect.failed',

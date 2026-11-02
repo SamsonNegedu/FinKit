@@ -5,6 +5,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common'
 import { Actor } from '../../access/access.settings'
 import { accountRef, decrypt } from '../../shared/crypto/encryption'
@@ -25,6 +26,7 @@ import {
   BankProvider,
   BankTransaction,
   ProviderError,
+  errorSummary,
   ProviderSession,
   PsuInfo,
 } from '../providers/bank-provider'
@@ -35,6 +37,8 @@ const day = (d: Date) => d.toISOString().slice(0, 10)
 /** Fetches transactions from the bank and keeps them: on request, and as a scheduled catch-up. */
 @Injectable()
 export class BankSyncService {
+  private readonly logger = new Logger(BankSyncService.name)
+
   constructor(
     private readonly store: BankConnectionsStore,
     private readonly txs: BankTransactionsStore,
@@ -133,6 +137,8 @@ export class BankSyncService {
       return { transactions: all, from, to, count: all.length, added }
     } catch (e) {
       const kind = e instanceof ProviderError ? e.kind : 'unavailable'
+
+      this.logger.warn(`Sync failed (${who}): ${errorSummary(e)}`)
 
       if (kind === 'consent_expired') {
         this.store.setStatus(row.id, 'expired')

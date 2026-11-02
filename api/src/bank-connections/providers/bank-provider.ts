@@ -62,6 +62,18 @@ export class ProviderError extends Error {
   }
 }
 
+/**
+ * What is safe to log about a failure. ProviderError messages are written to carry no secrets; any
+ * other error might quote a token, IBAN or key in its message, so only its type is kept.
+ */
+export function errorSummary(err: unknown): string {
+  if (err instanceof ProviderError) {
+    return err.message
+  }
+
+  return err instanceof Error ? err.name : 'unknown error'
+}
+
 export interface BankProvider {
   readonly name: 'mock' | 'enablebanking'
   listBanks(country: string): Promise<BankInfo[]>

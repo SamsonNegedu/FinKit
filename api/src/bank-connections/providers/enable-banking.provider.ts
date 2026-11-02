@@ -139,13 +139,20 @@ export class EnableBankingProvider implements BankProvider {
     extraHeaders: Record<string, string> = {},
   ): Promise<T> {
     const doFetch = this.opts.fetchImpl ?? fetch
+    let token: string
     let res: Response
 
+    // Signing is separate from the request so a malformed private key isn't reported as a network failure
+    try {
+      token = this.jwt()
+    } catch {
+      throw new ProviderError('Could not sign the bank service token (check EB_PRIVATE_KEY)', 'unavailable')
+    }
     try {
       res = await doFetch(`${this.opts.baseUrl ?? BASE_URL}${path}`, {
         method,
         headers: {
-          Authorization: `Bearer ${this.jwt()}`,
+          Authorization: `Bearer ${token}`,
           ...extraHeaders,
           ...(body ? { 'Content-Type': 'application/json' } : {}),
         },

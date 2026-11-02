@@ -1,5 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common'
-import type { Response } from 'express'
+import type { Request, Response } from 'express'
 
 const TEXT: Record<number, string> = {
   400: 'Bad Request',
@@ -26,6 +26,13 @@ export class HttpErrorFilter implements ExceptionFilter {
       const body = exception.getResponse()
       // Nest's own errors look like { statusCode, message, error }; ours are already final
       const ours = typeof body === 'object' && body !== null && !('statusCode' in body)
+
+      // Deliberate 5xx (a 502 from the bank service, say) reach the client as a bare message, so log the route here
+      if (status >= 500) {
+        const req = host.switchToHttp().getRequest<Request>()
+
+        this.logger.warn(`${req.method} ${req.path} -> ${status} ${(ours && (body as { error?: string }).error) || ''}`)
+      }
 
       return res.status(status).json(ours ? body : { error: TEXT[status] ?? 'Error' })
     }
