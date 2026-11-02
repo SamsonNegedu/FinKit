@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { AccessModule } from './access/access.module'
+import { BudgetsModule } from './budgets/budgets.module'
 import { BankConnectionsModule } from './bank-connections/bank-connections.module'
 import { bankingFeatureModules } from './banking-features'
 import { HealthModule } from './health/health.module'
@@ -17,6 +18,7 @@ import { RequestLoggerMiddleware } from './shared/http/request-logger.middleware
     AccessModule.forRoot(),
     HealthModule,
     MerchantRulesModule,
+    BudgetsModule,
     SettingsModule,
     SheetExportModule,
     BankConnectionsModule.forRoot(),

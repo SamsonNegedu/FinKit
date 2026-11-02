@@ -8,6 +8,7 @@ import { BANK_PROVIDER, BankProvider } from '../bank-connections/providers/bank-
 import { CLOCK, Clock } from '../bank-connections/config/bank-connections.tokens'
 import { configureApp } from '../app.setup'
 import { HealthModule } from '../health/health.module'
+import { BudgetsModule } from '../budgets/budgets.module'
 import { MerchantRulesModule } from '../merchant-rules/merchant-rules.module'
 import { SettingsModule } from '../settings/settings.module'
 import { SheetExportModule } from '../sheet-export/sheet-export.module'
@@ -48,6 +49,7 @@ export async function createTestApp(options: TestAppOptions = {}) {
       AccessModule.forRoot(env),
       HealthModule,
       MerchantRulesModule,
+      BudgetsModule,
       SettingsModule,
       SheetExportModule,
       BankConnectionsModule.forRoot(env),
