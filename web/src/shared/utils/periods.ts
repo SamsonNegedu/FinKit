@@ -1,5 +1,5 @@
 import { DateRange, Transaction } from '@/shared/types'
-import { parseLocalDate } from './dates'
+import { formatDay, parseLocalDate } from './dates'
 
 // Set a date to the end of that day (23:59:59.999) so every transaction on it is included
 export function endOfDay(date: Date): Date {
@@ -38,4 +38,21 @@ export function yearsWithData(transactions: Transaction[]): Array<{ year: number
       year,
       months: [...months].sort((a, b) => b - a),
     }))
+}
+
+/** What to call a period: the year, the month, the two dates, or "All time". The picker and page subtitles share it. */
+export function periodLabel(range: DateRange | null): string {
+  if (!range) {
+    return 'All time'
+  }
+  const { startDate: s, endDate: e } = range
+
+  if (sameRange(range, yearRange(s.getFullYear()))) {
+    return String(s.getFullYear())
+  }
+  if (sameRange(range, monthRange(s.getFullYear(), s.getMonth()))) {
+    return s.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }
+
+  return `${formatDay(s)} ${s.getFullYear()} – ${formatDay(e)} ${e.getFullYear()}`
 }

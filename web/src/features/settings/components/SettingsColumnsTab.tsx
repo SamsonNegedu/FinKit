@@ -2,6 +2,7 @@ import { Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { CategoryMapping, SheetColumn } from '@/shared/types'
 import { getAvailableCategories } from '@/shared/utils/categorizer'
 import { layoutCategories } from '@/shared/utils/sheetLayout'
+import Select from '@/shared/components/forms/Select'
 
 export interface SettingsColumnsTabProps {
   pasteText: string
@@ -112,22 +113,17 @@ export default function SettingsColumnsTab({
 
           {mappings.map((mapping, index) => (
             <div key={index} className="grid grid-cols-[minmax(0,1fr),80px,40px] gap-2 items-center">
-              <select
+              <Select
                 value={mapping.appCategory}
-                onChange={e => onMappingChange(index, 'appCategory', e.target.value)}
-                className="input text-sm"
-              >
-                {[
+                onChange={category => onMappingChange(index, 'appCategory', category)}
+                className="text-sm"
+                options={[
                   ...new Set([
                     mapping.appCategory,
                     ...getAvailableCategories().filter(c => c !== 'Transfer' && c !== 'Income'),
                   ]),
-                ].map(cat => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                ].map(cat => ({ value: cat, label: cat }))}
+              />
 
               <input
                 type="text"

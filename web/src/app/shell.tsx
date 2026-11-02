@@ -1,4 +1,6 @@
+import Tooltip from '@/shared/components/Tooltip'
 import { useState } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { Link, Outlet } from '@tanstack/react-router'
 import {
   FilePlus,
@@ -10,6 +12,9 @@ import {
   Loader2,
   Menu,
   PieChart,
+  Plane,
+  Repeat,
+  Target,
   Settings,
   Shield,
   ShieldOff,
@@ -40,15 +45,47 @@ export default function AppShell() {
     t => t.category !== 'Transfer' && needsReview(t),
   ).length
 
+  // In the order a month's books get balanced: bring the data in, clear what doesn't belong or is unsorted, then report
+  const COLLECT = 'Collect'
+  const BALANCE = 'Balance the month'
+  const INSIGHTS = 'Insights'
   const nav: AppShellNavItem[] = [
     { to: '/', label: 'Overview', icon: LayoutDashboard, exact: true },
-    { to: '/banks', label: 'Banks', icon: Landmark, badge: attention, hidden: !banking?.enabled },
-    { to: '/transactions', label: 'Transactions', icon: List },
-    { to: '/review', label: 'Review', icon: Inbox, badge: reviewCount },
-    { to: '/income', label: 'Income', icon: Wallet },
-    { to: '/analytics', label: 'Analytics', icon: PieChart },
-    { to: '/export', label: 'Export', icon: FileSpreadsheet },
-    { to: '/settings', label: 'Settings', icon: Settings },
+    {
+      to: '/banks',
+      label: 'Banks',
+      icon: Landmark,
+      badge: attention,
+      hidden: !banking?.enabled,
+      group: COLLECT,
+    },
+    { to: '/transactions', label: 'Transactions', icon: List, group: COLLECT },
+    {
+      to: '/trips',
+      label: 'Trips',
+      icon: Plane,
+      hidden: !banking?.enabled,
+      group: BALANCE,
+    },
+    {
+      to: '/review',
+      label: 'Review',
+      icon: Inbox,
+      badge: reviewCount,
+      group: BALANCE,
+    },
+    { to: '/income', label: 'Income', icon: Wallet, group: BALANCE },
+    { to: '/export', label: 'Export', icon: FileSpreadsheet, group: BALANCE },
+    { to: '/analytics', label: 'Analytics', icon: PieChart, group: INSIGHTS },
+    { to: '/budgets', label: 'Budgets', icon: Target, group: INSIGHTS },
+    {
+      to: '/contracts',
+      label: 'Contracts',
+      icon: Repeat,
+      hidden: !banking?.enabled,
+      group: INSIGHTS,
+    },
+    { to: '/settings', label: 'Settings', icon: Settings, group: 'Setup' },
   ]
 
   const closeNav = () => setNavOpen(false)
@@ -59,24 +96,28 @@ export default function AppShell() {
       <aside className="hidden md:block w-60 shrink-0 border-r border-midnight-800 bg-midnight-900/60 sticky top-0 h-screen">
         <AppShellSidebar nav={nav} />
       </aside>
-      {navOpen && (
-        <div className="md:hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Navigation">
-          <button className="absolute inset-0 bg-black/60" aria-label="Close navigation" onClick={closeNav} />
-          <aside className="relative w-64 h-full bg-midnight-900 border-r border-midnight-800">
-            <button
-              className="absolute top-4 right-3 p-1.5 text-midnight-400"
+      {/* The phone menu: a Radix dialog slid in from the left, so focus stays inside it and Escape closes it */}
+      <Dialog.Root open={navOpen} onOpenChange={setNavOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="md:hidden fixed inset-0 z-50 bg-black/60" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            className="md:hidden fixed inset-y-0 left-0 z-50 w-64 border-r border-midnight-800 bg-midnight-900 outline-none"
+          >
+            <Dialog.Title className="sr-only">Navigation</Dialog.Title>
+            <Dialog.Close
+              className="absolute top-4 right-3 p-1.5 text-midnight-400 hover:text-white"
               aria-label="Close navigation"
-              onClick={closeNav}
             >
               <X className="w-5 h-5" />
-            </button>
+            </Dialog.Close>
             <AppShellSidebar nav={nav} onNavigate={closeNav} />
-          </aside>
-        </div>
-      )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-40 border-b border-midnight-800 bg-midnight-900/80 backdrop-blur-sm">
+        <header className="md:sticky top-0 z-40 border-b border-midnight-800 bg-midnight-900/80 backdrop-blur-sm">
           <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
             <button
               className="md:hidden p-2 -ml-2 text-midnight-300"
@@ -102,40 +143,40 @@ export default function AppShell() {
                 />
               )}
               {hasData && (
-                <button
-                  onClick={app.toggleAnonymization}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    app.anonymizationEnabled
-                      ? 'bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30'
-                      : 'bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30'
-                  }`}
-                  title={app.anonymizationEnabled ? 'Click to show original data' : 'Click to anonymize data'}
-                >
-                  {app.anonymizationEnabled ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
-                  <span className="hidden lg:inline">{app.anonymizationEnabled ? 'Anonymized' : 'Original'}</span>
-                </button>
+                <Tooltip label={app.anonymizationEnabled ? 'Click to show original data' : 'Click to anonymize data'}>
+                  <button
+                    onClick={app.toggleAnonymization}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      app.anonymizationEnabled
+                        ? 'bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30'
+                        : 'bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30'
+                    }`}
+                  >
+                    {app.anonymizationEnabled ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
+                    <span className="hidden lg:inline">{app.anonymizationEnabled ? 'Anonymized' : 'Original'}</span>
+                  </button>
+                </Tooltip>
               )}
               {hasData && (
-                <label
-                  className="btn-secondary text-sm flex items-center gap-2 cursor-pointer"
-                  title="Add another file"
-                >
-                  <FilePlus className="w-4 h-4" />
-                  <span className="hidden lg:inline">Add file</span>
-                  <input
-                    type="file"
-                    accept=".csv,.xlsx,.xls,.ofx,.qfx"
-                    className="hidden"
-                    onChange={e => {
-                      const file = e.target.files?.[0]
+                <Tooltip label="Add another file">
+                  <label className="btn-secondary text-sm flex items-center gap-2 cursor-pointer">
+                    <FilePlus className="w-4 h-4" />
+                    <span className="hidden lg:inline">Add file</span>
+                    <input
+                      type="file"
+                      accept=".csv,.xlsx,.xls,.ofx,.qfx"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0]
 
-                      if (file) {
-                        app.addFile(file)
-                      }
-                      e.target.value = ''
-                    }}
-                  />
-                </label>
+                        if (file) {
+                          app.addFile(file)
+                        }
+                        e.target.value = ''
+                      }}
+                    />
+                  </label>
+                </Tooltip>
               )}
               <HeaderMenu
                 hasData={hasData}
@@ -154,7 +195,13 @@ export default function AppShell() {
           {banking?.enabled && (
             <BankBanners
               connections={connections}
-              onReconnect={c => reconnect.mutate({ bank: c.bank, country: c.country, reconnect: c.id })}
+              onReconnect={c =>
+                reconnect.mutate({
+                  bank: c.bank,
+                  country: c.country,
+                  reconnect: c.id,
+                })
+              }
             />
           )}
           <Outlet />

@@ -18,7 +18,8 @@ export const EXPENSE_CATEGORIES = [
   'Gifts',
 ] as const
 
-const SYSTEM_CATEGORIES = ['Income', 'Savings', 'Investment', 'Transfer']
+// Cash is here so it is always available: withdrawals default to it until you say what each was for
+const SYSTEM_CATEGORIES = ['Income', 'Cash', 'Savings', 'Investment', 'Transfer']
 
 let activeExpenseCategories: string[] = [...EXPENSE_CATEGORIES]
 
@@ -55,6 +56,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Income: '#10b981',
   Savings: '#0ea5e9',
   Investment: '#0284c7',
+  Cash: '#a3a380',
   Transfer: '#94a3b8',
 }
 

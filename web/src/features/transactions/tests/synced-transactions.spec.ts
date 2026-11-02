@@ -87,4 +87,10 @@ describe('PayPal payments', () => {
     expect(findLearnedCategory(synced(tx))).toBe('Phone')
     setLearnedMappings([])
   })
+  it('do not fall back to a rule made for PayPal', () => {
+    setLearnedMappings([{ merchant: 'PayPal Europe S.a.r.l. et Cie S.C.A', category: 'Subscriptions' }])
+
+    expect(findLearnedCategory(synced(tx))).toBeNull()
+    setLearnedMappings([])
+  })
 })

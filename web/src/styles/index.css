@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 @layer base {
-  /* Reserve the scrollbar's space so pages don't change width when they get long enough to scroll */
+  /*
+   * Always show the scrollbar track so pages don't change width when they get long enough to scroll.
+   * scrollbar-gutter: stable is not enough here: with the custom scrollbar below, Chrome reserves no space
+   * on the page until it actually scrolls, and the centered content jumps left by half the bar's width.
+   */
   html {
+    overflow-y: scroll;
     scrollbar-gutter: stable;
   }
   body {
@@ -37,6 +42,16 @@
   .input {
     @apply bg-midnight-800 border border-midnight-600 rounded-lg px-4 py-2 text-midnight-100 placeholder-midnight-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-200;
   }
+}
+
+/*
+ * Open dropdowns and dialogs lock page scroll. Radix then adds a right margin the width of the scrollbar to
+ * make up for the bar it hides. The scrollbar-gutter above already keeps that space, so the margin would push
+ * the whole page left while one is open.
+ */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* Custom scrollbar */

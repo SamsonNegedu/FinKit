@@ -1,5 +1,7 @@
+import Tooltip from '@/shared/components/Tooltip'
 import { Loader2, RefreshCw } from 'lucide-react'
 import type { SheetTab } from '@/features/export/api/export.api'
+import Select from '@/shared/components/forms/Select'
 
 export interface SettingsSheetTabProps {
   sheetId: string
@@ -43,15 +45,16 @@ export default function SettingsSheetTab({
               placeholder="Paste Google Sheets URL or ID"
               className="input flex-1"
             />
-            <button
-              onClick={onFetchTabs}
-              disabled={loadingTabs || !sheetId}
-              className="btn-secondary flex items-center gap-2 shrink-0"
-              title="Fetch available tabs"
-            >
-              {loadingTabs ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              <span className="hidden sm:inline">Load Tabs</span>
-            </button>
+            <Tooltip label="Fetch available tabs">
+              <button
+                onClick={onFetchTabs}
+                disabled={loadingTabs || !sheetId}
+                className="btn-secondary flex items-center gap-2 shrink-0"
+              >
+                {loadingTabs ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                <span className="hidden sm:inline">Load Tabs</span>
+              </button>
+            </Tooltip>
           </div>
           {sheetError && <p className="text-xs text-red-400 mt-1">{sheetError}</p>}
           {!sheetError && sheetId && (
@@ -67,18 +70,13 @@ export default function SettingsSheetTab({
               Tab / Sheet Name
             </label>
             {availableTabs.length > 0 ? (
-              <select
+              <Select
                 id="sheet-tab"
                 value={tabName}
-                onChange={e => onTabNameChange(e.target.value)}
-                className="input w-full"
-              >
-                {availableTabs.map(sheetTab => (
-                  <option key={sheetTab.index} value={sheetTab.title}>
-                    {sheetTab.title}
-                  </option>
-                ))}
-              </select>
+                onChange={onTabNameChange}
+                className="w-full"
+                options={availableTabs.map(sheetTab => ({ value: sheetTab.title, label: sheetTab.title }))}
+              />
             ) : (
               <input
                 id="sheet-tab"
@@ -100,16 +98,17 @@ export default function SettingsSheetTab({
             <label htmlFor="month-format" className="block text-sm text-midnight-400 mb-1">
               Month Format
             </label>
-            <select
+            <Select
               id="month-format"
               value={monthFormat}
-              onChange={e => onMonthFormatChange(e.target.value as 'short' | 'long' | 'numeric')}
-              className="input w-full"
-            >
-              <option value="short">Short (Jan, Feb, ...)</option>
-              <option value="long">Long (January, February, ...)</option>
-              <option value="numeric">Numeric (01, 02, ...)</option>
-            </select>
+              onChange={v => onMonthFormatChange(v as 'short' | 'long' | 'numeric')}
+              className="w-full"
+              options={[
+                { value: 'short', label: 'Short (Jan, Feb, ...)' },
+                { value: 'long', label: 'Long (January, February, ...)' },
+                { value: 'numeric', label: 'Numeric (01, 02, ...)' },
+              ]}
+            />
           </div>
         </div>
       </div>

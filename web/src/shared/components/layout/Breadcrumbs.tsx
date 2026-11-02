@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react'
 import { merchantKeyOf, sameMerchant } from '@/shared/utils/categorizer'
 import { displayNameOf } from '@/shared/utils/aliases'
 import { useConnections } from '@/features/banking/hooks/banking-queries'
+import { useTrips } from '@/features/trips/hooks/trips-queries'
 import { useApp } from '@/shared/contexts/AppState'
 
 interface Crumb {
@@ -24,6 +25,7 @@ export default function Breadcrumbs() {
   const pathname = useRouterState({ select: s => s.location.pathname }).replace(/^\/app/, '') || '/'
   const { displayTransactions } = useApp()
   const { data: connections = [] } = useConnections()
+  const { data: trips = [] } = useTrips(pathname.startsWith('/trips'))
   const parts = pathname.split('/').filter(Boolean).map(decodeURIComponent)
 
   const crumbs: Crumb[] = []
@@ -48,6 +50,11 @@ export default function Breadcrumbs() {
       crumbs.push({ label: 'Merchants', to: '/transactions', search: { view: 'merchants' } })
       crumbs.push({ label: sample ? displayNameOf(sample) : third })
     }
+  } else if (first === 'trips') {
+    crumbs.push({ label: 'Trips', to: second ? '/trips' : undefined })
+    if (second) {
+      crumbs.push({ label: trips.find(t => t.id === second)?.name ?? 'Trip' })
+    }
   } else if (first === 'analytics') {
     crumbs.push({ label: 'Analytics', to: second ? '/analytics' : undefined })
     if (second === 'trends') {
@@ -59,7 +66,11 @@ export default function Breadcrumbs() {
       crumbs.push({ label: SETTINGS_LABEL[second] ?? second })
     }
   } else {
-    crumbs.push({ label: { review: 'Review', income: 'Income', export: 'Export' }[first] ?? first })
+    crumbs.push({
+      label:
+        { review: 'Review', income: 'Income', export: 'Export', contracts: 'Contracts', budgets: 'Budgets' }[first] ??
+        first,
+    })
   }
 
   return (

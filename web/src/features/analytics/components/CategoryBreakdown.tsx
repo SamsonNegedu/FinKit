@@ -1,0 +1,82 @@
+import CategoryIcon from '@/shared/components/CategoryIcon'
+import Tooltip from '@/shared/components/Tooltip'
+import { formatCurrency } from '@/shared/utils/format'
+import type { CategoryRow } from '@/shared/utils/analysis/analyze'
+
+/** Every category, biggest first, with its share and how it moved. Nothing is rolled up or hidden. */
+export default function CategoryBreakdown({
+  rows,
+  currency,
+  onSelect,
+}: {
+  rows: CategoryRow[]
+  currency: string
+  onSelect: (category: string) => void
+}) {
+  if (rows.length === 0) {
+    return (
+      <section className="card">
+        <h2 className="text-lg font-semibold text-white">Where it went</h2>
+        <p className="mt-3 text-midnight-400">No spending in this period.</p>
+      </section>
+    )
+  }
+  const max = rows[0].total
+
+  return (
+    <section className="card !p-4 sm:!p-6">
+      <h2 className="text-lg font-semibold text-white">Where it went</h2>
+      <div
+        className="mt-3 flex h-2.5 gap-0.5 overflow-hidden rounded-full"
+        role="img"
+        aria-label="Share of each category"
+      >
+        {rows.map(r => (
+          <div key={r.category} style={{ width: `${r.share}%`, backgroundColor: r.color }} />
+        ))}
+      </div>
+      <ul className="mt-3">
+        {rows.map(r => {
+          const delta = r.previous !== null ? r.total - r.previous : null
+
+          return (
+            <li key={r.category}>
+              <Tooltip label={`Show ${r.category} transactions`}>
+                <button
+                  onClick={() => onSelect(r.category)}
+                  className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-midnight-800/70"
+                >
+                  <CategoryIcon category={r.category} color={r.color} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2 text-sm">
+                      <span className="truncate font-medium text-white">{r.category}</span>
+                      <span className="whitespace-nowrap tabular-nums text-white">
+                        {formatCurrency(r.total, currency)}
+                      </span>
+                    </span>
+                    <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-midnight-800" aria-hidden>
+                      <span
+                        className="block h-full rounded-full"
+                        style={{ width: `${Math.max(2, (r.total / max) * 100)}%`, backgroundColor: r.color }}
+                      />
+                    </span>
+                  </span>
+                  <span className="w-24 shrink-0 text-right text-xs">
+                    <span className="block tabular-nums text-midnight-300">
+                      {Math.round(r.share)}% · {r.count}×
+                    </span>
+                    {delta !== null && Math.abs(delta) >= 1 && (
+                      <span className={`block tabular-nums ${delta > 0 ? 'text-amber-300' : 'text-accent'}`}>
+                        {delta > 0 ? '▲' : '▼'} {formatCurrency(Math.abs(delta), currency)}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </Tooltip>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}

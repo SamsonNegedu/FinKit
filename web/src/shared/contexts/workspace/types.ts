@@ -5,6 +5,7 @@ import type { NumberFormat } from '@/shared/utils/format'
 import type { RateMap } from '@/shared/utils/rates'
 import type { SplitPart } from '@/shared/utils/splits'
 import type { DateRange, RawTransaction, SheetConfig, Transaction } from '@/shared/types'
+import type { TripLinks } from './useTripLinks'
 import type { WorkspacePhase, SheetBootstrapPhase } from './workspacePhase'
 
 export interface MappingChange {
@@ -15,6 +16,8 @@ export interface MappingChange {
 export interface AppState {
   transactions: Transaction[]
   displayTransactions: Transaction[]
+  tripLinks: TripLinks
+  setTripLinks: (links: TripLinks) => void
   baseCurrency: string
   foreignCurrencies: string[]
   rates: RateMap

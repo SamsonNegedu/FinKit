@@ -1,3 +1,4 @@
+import Tooltip from '@/shared/components/Tooltip'
 import { ArrowLeftRight, Check, X, Eye, EyeOff } from 'lucide-react'
 import { Transaction } from '@/shared/types'
 import { formatCurrency } from '@/shared/utils/format'
@@ -21,9 +22,10 @@ export default function IncomeTransactionRow({ tx, currency, onToggleExclude }: 
                 }
               `}
     >
-      <button
-        onClick={() => onToggleExclude(tx.id, tx.isExcluded || false)}
-        className={`
+      <Tooltip label={tx.isExcluded ? 'Click to include in totals' : 'Click to exclude from totals'}>
+        <button
+          onClick={() => onToggleExclude(tx.id, tx.isExcluded || false)}
+          className={`
                   w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0
                   ${
                     tx.isExcluded
@@ -31,10 +33,10 @@ export default function IncomeTransactionRow({ tx, currency, onToggleExclude }: 
                       : 'bg-income/20 text-income hover:bg-income/30'
                   }
                 `}
-        title={tx.isExcluded ? 'Click to include in totals' : 'Click to exclude from totals'}
-      >
-        {tx.isExcluded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-      </button>
+        >
+          {tx.isExcluded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      </Tooltip>
 
       <div className="w-16 shrink-0">
         <span className="text-sm text-midnight-300">{formatDay(tx.date)}</span>

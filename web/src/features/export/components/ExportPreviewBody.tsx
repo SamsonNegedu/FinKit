@@ -1,6 +1,8 @@
 import { formatCurrency } from '@/shared/utils/format'
 import { buildSheetRow } from '@/shared/utils/sheetLayout'
 import { exportCellStyle } from './exportPreviewUtils'
+import Select from '@/shared/components/forms/Select'
+import SegmentedControl from '@/shared/components/forms/SegmentedControl'
 
 interface ExportPreviewBodyProps {
   month: string
@@ -38,37 +40,22 @@ export default function ExportPreviewBody({
       {(years.length > 1 || yearMonths.length > 1) && (
         <div className="flex flex-wrap items-center gap-2">
           {years.length > 1 && (
-            <select
-              aria-label="Year"
-              className="input py-1.5 text-sm"
-              value={activeYear}
-              onChange={e => onYearChange(Number(e.target.value))}
-            >
-              {years.map(y => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+            <Select
+              ariaLabel="Year"
+              className="py-1.5 text-sm"
+              value={String(activeYear)}
+              onChange={y => onYearChange(Number(y))}
+              options={years.map(y => ({ value: String(y), label: String(y) }))}
+            />
           )}
           {yearMonths.length > 1 && (
-            <div className="flex flex-wrap gap-2" role="tablist" aria-label="Month">
-              {yearMonths.map(m => (
-                <button
-                  key={m.key}
-                  role="tab"
-                  aria-selected={m.key === activeMonthKey}
-                  onClick={() => onMonthSelect(m.key)}
-                  className={`px-3 py-1.5 rounded-lg text-sm ${
-                    m.key === activeMonthKey
-                      ? 'bg-accent text-white'
-                      : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
-                  }`}
-                >
-                  {m.label.replace(/ \d{4}$/, '')}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              ariaLabel="Month"
+              className="flex-wrap"
+              value={activeMonthKey ?? ''}
+              onChange={onMonthSelect}
+              options={yearMonths.map(m => ({ value: m.key, label: m.label.replace(/ \d{4}$/, '') }))}
+            />
           )}
         </div>
       )}

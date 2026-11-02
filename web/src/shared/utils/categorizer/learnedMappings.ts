@@ -113,7 +113,9 @@ export function findLearnedCategory(tx: Transaction): string | null {
     }
   }
 
-  const textsToCheck = [tx.merchant, tx.recipient, tx.description].filter(Boolean) as string[]
+  // Same reason as above: skip the PayPal recipient here too, or an old "PayPal" rule still covers every shop
+  const recipient = shopBehindPayPal(tx) ? undefined : tx.recipient
+  const textsToCheck = [tx.merchant, recipient, tx.description].filter(Boolean) as string[]
 
   for (const text of textsToCheck) {
     for (const variation of getMerchantVariations(text)) {

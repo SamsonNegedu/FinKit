@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useReducer } from 'react'
+import { useApp } from '@/shared/contexts/AppState'
 import { SheetConfig, CategoryMapping, SheetColumn } from '@/shared/types'
 import { configPartsFromLayout, syncSheetLayout, layoutCategories, layoutFromPaste } from '@/shared/utils/sheetLayout'
 import { getSheetConfig } from '@/features/settings/api/settings.api'
@@ -16,6 +17,7 @@ import {
 } from './settingsAsyncPhase'
 
 export function useSettingsPanelState(config: SheetConfig | null, onSave: (config: SheetConfig) => void) {
+  const { pushToast } = useApp()
   const [asyncState, dispatchAsync] = useReducer(settingsAsyncReducer, initialSettingsAsyncState)
   const [sheetId, setSheetId] = useState(config?.sheetId || '')
   const [tabName, setTabName] = useState(config?.tabName || '2026')
@@ -150,7 +152,7 @@ export function useSettingsPanelState(config: SheetConfig | null, onSave: (confi
 
   const handleSave = async () => {
     if (!sheetId) {
-      alert('Please enter a Google Sheet ID')
+      pushToast({ message: 'Please enter a Google Sheet ID', tone: 'error' })
 
       return
     }

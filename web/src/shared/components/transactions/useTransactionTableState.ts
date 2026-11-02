@@ -4,7 +4,6 @@ import { getAvailableCategories, merchantKeyOf, sameMerchant } from '@/shared/ut
 import { parseLocalDate } from '@/shared/utils/dates'
 import type { MerchantGroup, SortDirection, SortField } from './transactionTableTypes'
 import {
-  pickerPosition,
   pickerTargetId,
   renamingMerchantKey,
   splittingTransaction,
@@ -20,11 +19,11 @@ export function useTransactionTableState(
   onSelectionChange: (ids: Set<string>) => void,
   controlledViewMode?: 'list' | 'merchant',
   onViewModeChange?: (mode: 'list' | 'merchant') => void,
+  categories: string[] = getAvailableCategories(),
 ) {
   const [interaction, dispatchInteraction] = useReducer(tableInteractionReducer, { kind: 'idle' })
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [categorySearch, setCategorySearch] = useState('')
   const [internalViewMode, setInternalViewMode] = useState<'list' | 'merchant'>('list')
   const viewMode = controlledViewMode ?? internalViewMode
   const setViewMode = (mode: 'list' | 'merchant') => (onViewModeChange ?? setInternalViewMode)(mode)
@@ -42,30 +41,17 @@ export function useTransactionTableState(
       limit: typeof next === 'function' ? next(prev.limit) : next,
     }))
   }
-  const [activeIndex, setActiveIndex] = useState(0)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const editingId = pickerTargetId(interaction)
-  const pickerPos = pickerPosition(interaction)
   const splitting = splittingTransaction(interaction)
   const renamingKey = renamingMerchantKey(interaction)
 
   const closePicker = useCallback(() => {
     dispatchInteraction({ type: 'CLOSE' })
-    setCategorySearch('')
-    setActiveIndex(0)
   }, [])
 
-  const openPicker = (id: string, trigger: HTMLElement) => {
-    const r = trigger.getBoundingClientRect()
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - 220 - 8))
-    const flip = r.bottom + 310 > window.innerHeight && r.top > 310
-    const position = flip ? { left, bottom: window.innerHeight - r.top + 4 } : { left, top: r.bottom + 4 }
-
-    dispatchInteraction({ type: 'TOGGLE_PICKER', targetId: id, position })
-    setActiveIndex(0)
-  }
+  const openPicker = (id: string) => dispatchInteraction({ type: 'TOGGLE_PICKER', targetId: id })
 
   const setSplitting = (tx: Transaction | null) => {
     if (tx) {
@@ -82,37 +68,6 @@ export function useTransactionTableState(
       dispatchInteraction({ type: 'CLOSE' })
     }
   }
-
-  useEffect(() => {
-    if (!editingId) {
-      return
-    }
-    const close = (e: Event) => {
-      if (e.type === 'scroll' && dropdownRef.current?.contains(e.target as Node)) {
-        return
-      }
-      closePicker()
-    }
-
-    window.addEventListener('scroll', close, true)
-    window.addEventListener('resize', close)
-
-    return () => {
-      window.removeEventListener('scroll', close, true)
-      window.removeEventListener('resize', close)
-    }
-  }, [editingId, closePicker])
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        closePicker()
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [closePicker])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -162,20 +117,52 @@ export function useTransactionTableState(
     }
   }
 
-  const handleToggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds)
+  // Shift-click picks everything between the last row you clicked and this one, in the order shown
+  const lastClicked = useRef<string | null>(null)
+  // Tracked on the window: a checkbox's change event does not say whether Shift was held
+  const shiftHeld = useRef(false)
+  // Touch screens have no Shift key: "Select range" in the bulk bar makes the next tap count as a Shift-click
+  const [rangeArmed, setRangeArmed] = useState(false)
 
-    if (newSelected.has(id)) {
-      newSelected.delete(id)
-    } else {
-      newSelected.add(id)
+  useEffect(() => {
+    const track = (e: KeyboardEvent) => {
+      shiftHeld.current = e.shiftKey
     }
+    const release = () => {
+      shiftHeld.current = false
+    }
+
+    window.addEventListener('keydown', track)
+    window.addEventListener('keyup', track)
+    window.addEventListener('blur', release)
+
+    return () => {
+      window.removeEventListener('keydown', track)
+      window.removeEventListener('keyup', track)
+      window.removeEventListener('blur', release)
+    }
+  }, [])
+  const handleToggleSelect = (id: string, shift = shiftHeld.current || rangeArmed) => {
+    setRangeArmed(false)
+    const newSelected = new Set(selectedIds)
+    const selecting = !newSelected.has(id)
+    const from = sortedTransactions.findIndex(t => t.id === lastClicked.current)
+    const to = sortedTransactions.findIndex(t => t.id === id)
+    const ids =
+      shift && viewMode === 'list' && from >= 0 && to >= 0
+        ? sortedTransactions.slice(Math.min(from, to), Math.max(from, to) + 1).map(t => t.id)
+        : [id]
+
+    for (const x of ids) {
+      if (selecting) {
+        newSelected.add(x)
+      } else {
+        newSelected.delete(x)
+      }
+    }
+    lastClicked.current = id
     onSelectionChange(newSelected)
   }
-
-  const filteredCategories = getAvailableCategories().filter(c =>
-    c.toLowerCase().includes(categorySearch.toLowerCase()),
-  )
 
   const groups = useMemo(() => {
     const result: MerchantGroup[] = []
@@ -226,18 +213,12 @@ export function useTransactionTableState(
     sortDirection,
     setSortField,
     setSortDirection,
-    categorySearch,
-    setCategorySearch,
     limit,
     setLimit,
-    activeIndex,
-    setActiveIndex,
     viewMode,
     setViewMode,
     collapsed,
     setCollapsed,
-    dropdownRef,
-    pickerPos,
     splitting,
     setSplitting,
     renamingKey,
@@ -247,7 +228,9 @@ export function useTransactionTableState(
     sortedTransactions,
     handleSort,
     handleToggleSelect,
-    filteredCategories,
+    rangeArmed,
+    armRange: () => setRangeArmed(true),
+    categories,
     groups,
     visibleGroups,
     shownRows,

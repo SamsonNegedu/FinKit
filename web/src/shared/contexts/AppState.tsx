@@ -18,6 +18,7 @@ import { useTransactionStore } from './workspace/useTransactionStore'
 import { syncExpenseCategoriesFromSheet, useWorkspaceBootstrap } from './workspace/useWorkspaceBootstrap'
 import { useWorkspaceImport } from './workspace/useWorkspaceImport'
 import { useWorkspaceMutations } from './workspace/useWorkspaceMutations'
+import { useTripLinks } from './workspace/useTripLinks'
 import { useRememberPreference } from './workspace/useRememberPreference'
 import { useWorkspacePhase } from './workspace/useWorkspacePhase'
 import {
@@ -86,6 +87,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     reprocess: importActions.reprocess,
   })
 
+  const { tripLinks, setTripLinks, withoutTrips } = useTripLinks(store.transactions)
   const baseCurrency = useMemo(() => baseCurrencyOf(store.transactions), [store.transactions])
   const foreignCurrencies = useMemo(
     () => foreignCurrenciesOf(store.transactions, baseCurrency),
@@ -93,8 +95,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   )
   const rates = useMemo<RateMap>(() => rateStore[baseCurrency] ?? {}, [rateStore, baseCurrency])
   const displayTransactions = useMemo(
-    () => applyRates(store.transactions, baseCurrency, rates),
-    [store.transactions, baseCurrency, rates],
+    () => applyRates(withoutTrips, baseCurrency, rates),
+    [withoutTrips, baseCurrency, rates],
   )
 
   const toggleNumberFormat = () => {
@@ -107,6 +109,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value: AppState = {
     transactions: store.transactions,
     displayTransactions,
+    tripLinks,
+    setTripLinks,
     baseCurrency,
     foreignCurrencies,
     rates,

@@ -21,6 +21,8 @@ export interface RawTransaction {
 
 export interface Transaction extends RawTransaction {
   id: string
+  /** A line of your own about what this was for, searchable; unrelated to the category and the sheet */
+  note?: string
   type: 'income' | 'expense'
   merchant?: string
   isRecurring?: boolean

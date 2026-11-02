@@ -1,8 +1,11 @@
+import TripsMovedNote from '@/features/trips/components/TripsMovedNote'
 import { useMemo } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { X } from 'lucide-react'
 import PeriodTabs from '@/shared/components/layout/PeriodTabs'
 import SavedViews from '../components/SavedViews'
+import ViewToggle from '../components/ViewToggle'
+import MoreFilters from '../components/MoreFilters'
 import SearchFilter from '../components/SearchFilter'
 import { useApp } from '@/shared/contexts/AppState'
 import PageHeader from '@/shared/components/layout/PageHeader'
@@ -58,7 +61,7 @@ export default function TransactionsPage() {
       }
       if (
         q &&
-        !`${tx.description} ${tx.displayName || ''} ${tx.merchant || ''} ${tx.category || ''} ${tx.recipient || ''}`
+        !`${tx.description} ${tx.displayName || ''} ${tx.merchant || ''} ${tx.category || ''} ${tx.recipient || ''} ${tx.note || ''}`
           .toLowerCase()
           .includes(q)
       ) {
@@ -105,23 +108,52 @@ export default function TransactionsPage() {
       <PageHeader
         title="Transactions"
         description={
-          <>
-            Showing <span className="text-white font-medium">{filtered.length}</span> of{' '}
-            <span className="text-white font-medium">{period.length}</span> in this period
-          </>
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>
+              <span className="text-white font-medium">{filtered.length}</span> of{' '}
+              <span className="text-white font-medium">{period.length}</span> in this period
+            </span>
+            <TripsMovedNote />
+          </span>
         }
       />
 
       <PeriodTabs />
 
-      <div className="card mb-4 space-y-4">
+      <div className="mb-4 space-y-3">
         <SearchFilter
           searchQuery={search.q ?? ''}
           onSearchChange={q => set({ q: q || undefined })}
           selectedCategories={search.cat ?? []}
           onCategoryChange={cat => set({ cat: cat.length ? cat : undefined })}
-          showTransfers={!!search.transfers}
-          onShowTransfersChange={transfers => set({ transfers: transfers || undefined })}
+          extra={
+            <>
+              <MoreFilters
+                sources={
+                  hasSources || search.bank
+                    ? [
+                        ...[...sources.banks.keys()].map(b => ({ value: b, label: b })),
+                        ...(sources.files || search.bank === FILES ? [{ value: FILES, label: 'Imported files' }] : []),
+                      ]
+                    : []
+                }
+                source={search.bank ?? ''}
+                onSourceChange={bank => set({ bank: bank || undefined, account: undefined })}
+                accounts={accounts.map(([ref, label]) => ({ value: ref, label }))}
+                account={search.account ?? ''}
+                onAccountChange={account => set({ account: account || undefined })}
+                transfers={!!search.transfers}
+                onTransfersChange={transfers => set({ transfers: transfers || undefined })}
+                onClear={() => set({ bank: undefined, account: undefined, transfers: undefined })}
+              />
+              <div className="ml-auto">
+                <ViewToggle
+                  value={search.view === 'merchants' ? 'merchant' : 'list'}
+                  onChange={mode => set({ view: mode === 'merchant' ? 'merchants' : undefined })}
+                />
+              </div>
+            </>
+          }
         />
 
         {chips.length > 0 && (
@@ -142,64 +174,17 @@ export default function TransactionsPage() {
             >
               Clear all
             </button>
-          </div>
-        )}
-        <SavedViews current={search} onApply={view => navigate({ to: '/transactions', search: view })} />
-
-        {(hasSources || search.bank) && (
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <label htmlFor="source-bank" className="text-midnight-400">
-              Source
-            </label>
-            <select
-              id="source-bank"
-              className="input py-1.5 text-sm"
-              value={search.bank ?? ''}
-              onChange={e => set({ bank: e.target.value || undefined, account: undefined })}
-            >
-              <option value="">All sources</option>
-              {[...sources.banks.keys()].map(b => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-              {(sources.files || search.bank === FILES) && <option value={FILES}>Imported files</option>}
-            </select>
-            {accounts.length > 0 && (
-              <>
-                <label htmlFor="source-account" className="text-midnight-400">
-                  Account
-                </label>
-                <select
-                  id="source-account"
-                  className="input py-1.5 text-sm"
-                  value={search.account ?? ''}
-                  onChange={e => set({ account: e.target.value || undefined })}
-                >
-                  <option value="">All accounts</option>
-                  {accounts.map(([ref, label]) => (
-                    <option key={ref} value={ref}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </>
-            )}
-            {(search.bank || search.account) && (
-              <button
-                onClick={() => set({ bank: undefined, account: undefined })}
-                className="inline-flex items-center gap-1 text-midnight-300 hover:text-white"
-              >
-                <X className="w-3.5 h-3.5" /> Clear
-              </button>
-            )}
             {search.bank && search.bank !== FILES && (
-              <Link to="/banks" className="text-midnight-400 hover:text-white underline underline-offset-2 ml-auto">
+              <Link
+                to="/banks"
+                className="ml-auto text-sm text-midnight-400 hover:text-white underline underline-offset-2"
+              >
                 Manage banks
               </Link>
             )}
           </div>
         )}
+        <SavedViews current={search} onApply={view => navigate({ to: '/transactions', search: view })} />
       </div>
 
       <TransactionList

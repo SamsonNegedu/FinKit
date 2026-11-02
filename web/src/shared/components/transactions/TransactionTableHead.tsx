@@ -1,5 +1,6 @@
 import SortButton from './SortButton'
 import type { SortField } from './transactionTableTypes'
+import Checkbox from '@/shared/components/forms/Checkbox'
 
 export interface TransactionTableHeadProps {
   allSelected: boolean
@@ -18,14 +19,11 @@ export default function TransactionTableHead({
     <thead className="max-md:hidden">
       <tr className="border-b border-midnight-700">
         <th className="md:sticky md:top-[63px] md:z-10 bg-midnight-900 md:first:rounded-tl-xl md:last:rounded-tr-xl relative p-0 w-14">
-          <label className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-midnight-700/40">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              aria-label="Select all"
-              onChange={onSelectAll}
-              className="w-5 h-5 cursor-pointer rounded border-midnight-500 bg-midnight-700 text-accent focus:ring-accent"
-            />
+          <label
+            aria-label="Select all"
+            className="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-midnight-700/40"
+          >
+            <Checkbox checked={allSelected} ariaLabel="Select all" onChange={onSelectAll} />
           </label>
         </th>
         <th className="md:sticky md:top-[63px] md:z-10 bg-midnight-900 md:first:rounded-tl-xl md:last:rounded-tr-xl py-3 px-4 w-28 text-left text-sm font-medium text-midnight-400">

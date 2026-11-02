@@ -1,4 +1,89 @@
 import { Transaction } from '@/shared/types'
+import { parseLocalDate } from './dates'
+
+/** Days a transfer can take between two of your accounts. */
+const MATCH_DAYS = 3
+const MS_PER_DAY = 86_400_000
+
+const sameAmount = (a: Transaction, b: Transaction) => Math.abs(a.amount - b.amount) <= 0.01
+const daysApart = (a: Transaction, b: Transaction) =>
+  Math.abs(parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()) / MS_PER_DAY
+
+const tokens = (name: string) =>
+  name
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+/** A name reduced to its letters and digits, so "SAMSON O. NEGE" and "Samson O Nege" read the same. */
+const nameKey = (name: string) => tokens(name).join('')
+const startsOneWayOrOther = (a: string, b: string) => a.startsWith(b) || b.startsWith(a)
+
+/**
+ * The same person: a middle name left out ("Samson Negedu" and "Samson Ojoagbadua Negedu") or a name cut short by the
+ * bank ("NEGE") do not make them different. First and last name must agree.
+ */
+function sameName(a: string, b: string): boolean {
+  const x = tokens(a)
+  const y = tokens(b)
+
+  if (x.length >= 2 && y.length >= 2) {
+    const [xf, xl, yf, yl] = [x[0], x[x.length - 1], y[0], y[y.length - 1]]
+    const firstAndLast =
+      xf.length >= 3 &&
+      yf.length >= 3 &&
+      xl.length >= 3 &&
+      yl.length >= 3 &&
+      startsOneWayOrOther(xf, yf) &&
+      startsOneWayOrOther(xl, yl)
+    // Cut short anywhere: all of the shorter name's words open the longer one ("SAMSON OJOAGBADUA" of "Samson Ojoagbadua Negedu")
+    const [short, long] = x.length <= y.length ? [x, y] : [y, x]
+    const opens = short.every((w, i) => (i === short.length - 1 ? long[i].startsWith(w) : long[i] === w))
+
+    return firstAndLast || opens
+  }
+  const [kx, ky] = [x.join(''), y.join('')]
+
+  return kx.length >= 6 && ky.length >= 6 && startsOneWayOrOther(kx, ky)
+}
+
+const cents = (amount: number) => Math.round(amount * 100)
+
+/** Credits not marked yet, by amount in cents: finding a transfer's other leg then looks at a handful, not every row. */
+function creditsByAmount(all: Transaction[], marked: Set<string>) {
+  const byCents = new Map<number, Transaction[]>()
+
+  for (const c of all) {
+    if (c.type === 'income' && !marked.has(c.id)) {
+      const key = cents(c.amount)
+
+      byCents.set(key, [...(byCents.get(key) ?? []), c])
+    }
+  }
+
+  return byCents
+}
+
+/** The credit on another account of yours that matches this internal debit, when one is not marked yet. */
+function counterLeg(
+  debit: Transaction,
+  byCents: Map<number, Transaction[]>,
+  marked: Set<string>,
+): Transaction | undefined {
+  const near = [-1, 0, 1].flatMap(d => byCents.get(cents(debit.amount) + d) ?? [])
+
+  return near
+    .filter(
+      c =>
+        !marked.has(c.id) &&
+        sameAmount(c, debit) &&
+        daysApart(c, debit) <= MATCH_DAYS &&
+        // another account of yours, not the one the money left
+        !!c.accountRef &&
+        !!debit.accountRef &&
+        c.accountRef !== debit.accountRef,
+    )
+    .sort((x, y) => daysApart(x, debit) - daysApart(y, debit))[0]
+}
 
 interface DoubleBookingPair {
   outgoing: Transaction
@@ -32,49 +117,48 @@ export function detectDoubleBookings(transactions: Transaction[]): Transaction[]
     }
   }
 
-  // Step 3: Find matching pairs (same amount, same date, one in/one out)
-  const pairs: DoubleBookingPair[] = []
-  const pairedIds = new Set<string>()
+  // Step 2b: a transfer has two legs, and only one may name an account of yours (the other can arrive from an IBAN or a
+  // name written differently). An unmarked credit that matches an internal debit from another account is its other leg.
+  const unmarkedCredits = creditsByAmount(transactions, markedAsInternal)
 
-  // Group by date for efficient matching
-  const byDate = new Map<string, Transaction[]>()
+  for (const expense of transactions.filter(tx => tx.type === 'expense' && markedAsInternal.has(tx.id))) {
+    const leg = counterLeg(expense, unmarkedCredits, markedAsInternal)
 
-  for (const tx of transactions) {
-    if (!byDate.has(tx.date)) {
-      byDate.set(tx.date, [])
+    if (leg) {
+      markedAsInternal.add(leg.id)
     }
-    byDate.get(tx.date)!.push(tx)
   }
 
-  for (const [date, dayTxs] of byDate) {
-    const expenses = dayTxs.filter(tx => tx.type === 'expense' && markedAsInternal.has(tx.id))
-    const incomes = dayTxs.filter(tx => tx.type === 'income' && markedAsInternal.has(tx.id))
+  // Step 2c: whoever sent or received those legs is you, so the same name elsewhere is you too (an account at a bank
+  // that is not connected, written as the bank wrote it: capitals, cut short)
+  const ownNames = new Set<string>()
 
-    for (const expense of expenses) {
-      if (pairedIds.has(expense.id)) {
-        continue
-      }
+  for (const tx of transactions) {
+    if (markedAsInternal.has(tx.id) && !tx.isTransfer && nameKey(tx.recipient || '').length >= 6) {
+      ownNames.add(tx.recipient || '')
+    }
+  }
+  for (const tx of transactions) {
+    if (!markedAsInternal.has(tx.id) && !!tx.recipient && [...ownNames].some(n => sameName(n, tx.recipient || ''))) {
+      markedAsInternal.add(tx.id)
+    }
+  }
 
-      for (const income of incomes) {
-        if (pairedIds.has(income.id)) {
-          continue
-        }
+  // Step 3: Pair each internal debit with the internal credit of the same amount closest in time (up to three days apart:
+  // banks settle at different speeds)
+  const pairs: DoubleBookingPair[] = []
+  const pairedIds = new Set<string>()
+  const credits = transactions.filter(tx => tx.type === 'income' && markedAsInternal.has(tx.id))
 
-        // Match by amount (within 1 cent)
-        if (Math.abs(expense.amount - income.amount) > 0.01) {
-          continue
-        }
+  for (const expense of transactions.filter(tx => tx.type === 'expense' && markedAsInternal.has(tx.id))) {
+    const income = credits
+      .filter(c => !pairedIds.has(c.id) && sameAmount(c, expense) && daysApart(c, expense) <= MATCH_DAYS)
+      .sort((x, y) => daysApart(x, expense) - daysApart(y, expense))[0]
 
-        pairs.push({
-          outgoing: expense,
-          incoming: income,
-          amount: expense.amount,
-          date,
-        })
-        pairedIds.add(expense.id)
-        pairedIds.add(income.id)
-        break
-      }
+    if (income) {
+      pairs.push({ outgoing: expense, incoming: income, amount: expense.amount, date: expense.date })
+      pairedIds.add(expense.id)
+      pairedIds.add(income.id)
     }
   }
 

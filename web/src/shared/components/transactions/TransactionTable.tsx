@@ -1,4 +1,3 @@
-import { List, Layers } from 'lucide-react'
 import BulkActionBar from './BulkActionBar'
 import SplitDialog from './SplitDialog'
 import TransactionTableHead from './TransactionTableHead'
@@ -6,6 +5,9 @@ import TransactionTableRow from './TransactionTableRow'
 import MerchantGroupRow from './MerchantGroupRow'
 import { useTransactionTableState } from './useTransactionTableState'
 import type { TransactionTableProps, SortField, SortDirection } from './transactionTableTypes'
+import Select from '@/shared/components/forms/Select'
+
+const noop = () => {}
 
 export default function TransactionTable({
   transactions,
@@ -17,13 +19,14 @@ export default function TransactionTable({
   onSetCategoryForIds,
   onBulkExclude,
   onBulkInclude,
-  onSplit,
-  onUnsplit,
-  onRenameMerchant,
+  onMoveToTrip,
+  onSplit = noop,
+  onUnsplit = noop,
+  onRenameMerchant = noop,
   currency,
   viewMode: controlledViewMode,
   onViewModeChange,
-  hideViewToggle,
+  behaviour = {},
 }: TransactionTableProps) {
   const state = useTransactionTableState(
     transactions,
@@ -31,25 +34,21 @@ export default function TransactionTable({
     onSelectionChange,
     controlledViewMode,
     onViewModeChange,
+    behaviour.categories,
   )
 
   const rowProps = {
     selectedIds,
     currency,
     editingId: state.editingId,
-    pickerPos: state.pickerPos,
-    dropdownRef: state.dropdownRef,
-    categorySearch: state.categorySearch,
-    setCategorySearch: state.setCategorySearch,
-    activeIndex: state.activeIndex,
-    setActiveIndex: state.setActiveIndex,
-    filteredCategories: state.filteredCategories,
+    categories: state.categories,
     onToggleSelect: state.handleToggleSelect,
     onOpenPicker: state.openPicker,
     onClosePicker: state.closePicker,
     onUpdateTransaction,
     onUnsplit,
     onStartSplit: state.setSplitting,
+    behaviour,
   }
 
   return (
@@ -57,10 +56,17 @@ export default function TransactionTable({
       {selectedIds.size > 0 && (
         <BulkActionBar
           selectedCount={selectedIds.size}
+          rangeHint={state.viewMode === 'list'}
+          rangeArmed={state.rangeArmed}
+          onArmRange={state.armRange}
           onClearSelection={() => onSelectionChange(new Set())}
           onCategoryChange={onBulkCategoryChange}
           onExclude={onBulkExclude}
           onInclude={onBulkInclude}
+          onMoveToTrip={onMoveToTrip}
+          categories={behaviour.categories}
+          colorOf={behaviour.colorOf}
+          extra={behaviour.bulkActions?.([...selectedIds])}
         />
       )}
 
@@ -79,46 +85,25 @@ export default function TransactionTable({
         <label htmlFor="sort-by" className="text-midnight-400">
           Sort
         </label>
-        <select
+        <Select
           id="sort-by"
-          className="input py-1.5 text-sm"
+          className="py-1.5 text-sm"
           value={`${state.sortField}:${state.sortDirection}`}
-          onChange={e => {
-            const [field, dir] = e.target.value.split(':')
+          onChange={value => {
+            const [field, dir] = value.split(':')
 
             state.setSortField(field as SortField)
             state.setSortDirection(dir as SortDirection)
           }}
-        >
-          <option value="date:desc">Newest first</option>
-          <option value="date:asc">Oldest first</option>
-          <option value="amount:desc">Largest first</option>
-          <option value="amount:asc">Smallest first</option>
-          <option value="description:asc">Name A–Z</option>
-          <option value="category:asc">Category</option>
-        </select>
-      </div>
-
-      <div className={`flex justify-end mb-2 ${hideViewToggle ? 'hidden' : ''}`}>
-        <div className="inline-flex rounded-lg bg-midnight-800 p-1 text-sm">
-          {(
-            [
-              ['list', 'List', List],
-              ['merchant', 'By merchant', Layers],
-            ] as const
-          ).map(([mode, label, Icon]) => (
-            <button
-              key={mode}
-              onClick={() => state.setViewMode(mode)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-colors ${
-                state.viewMode === mode ? 'bg-midnight-600 text-white' : 'text-midnight-300 hover:text-white'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
+          options={[
+            { value: 'date:desc', label: 'Newest first' },
+            { value: 'date:asc', label: 'Oldest first' },
+            { value: 'amount:desc', label: 'Largest first' },
+            { value: 'amount:asc', label: 'Smallest first' },
+            { value: 'description:asc', label: 'Name A–Z' },
+            { value: 'category:asc', label: 'Category' },
+          ]}
+        />
       </div>
 
       <div className="card overflow-hidden md:overflow-visible">
@@ -145,13 +130,7 @@ export default function TransactionTable({
                       renamingKey={state.renamingKey}
                       setRenamingKey={state.setRenamingKey}
                       editingId={state.editingId}
-                      pickerPos={state.pickerPos}
-                      dropdownRef={state.dropdownRef}
-                      categorySearch={state.categorySearch}
-                      setCategorySearch={state.setCategorySearch}
-                      activeIndex={state.activeIndex}
-                      setActiveIndex={state.setActiveIndex}
-                      filteredCategories={state.filteredCategories}
+                      categories={state.categories}
                       onOpenPicker={state.openPicker}
                       onClosePicker={state.closePicker}
                       onRenameMerchant={onRenameMerchant}

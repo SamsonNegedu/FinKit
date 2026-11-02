@@ -1,4 +1,5 @@
-import { Link, useSearch } from '@tanstack/react-router'
+import { useSearch } from '@tanstack/react-router'
+import TabLinks from '@/shared/components/forms/TabLinks'
 import BackOfficePanel from '@/features/banking/components/banks/BackOfficePanel'
 import SettingsPanel from '@/features/settings/components/SettingsPanel'
 import { useApp } from '@/shared/contexts/AppState'
@@ -21,23 +22,11 @@ export default function SettingsPage({ section }: { section: Section }) {
   return (
     <div>
       <PageHeader title="Settings" />
-      <div
-        className="flex gap-1 border-b border-midnight-700 mb-6 overflow-x-auto overflow-y-hidden"
-        role="tablist"
-        aria-label="Settings sections"
-      >
-        {tabs.map(([id, label]) => (
-          <Link
-            key={id}
-            to={`/settings/${id}`}
-            role="tab"
-            aria-selected={section === id}
-            className={`shrink-0 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${section === id ? 'border-accent text-white' : 'border-transparent text-midnight-400 hover:text-midnight-200'}`}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
+      <TabLinks
+        ariaLabel="Settings sections"
+        className="mb-6"
+        links={tabs.map(([id, label]) => ({ label, link: { to: `/settings/${id}` }, active: section === id }))}
+      />
       {section === 'back-office' ? (
         <BackOffice />
       ) : (

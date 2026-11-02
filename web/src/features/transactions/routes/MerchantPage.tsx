@@ -1,14 +1,17 @@
+import CategoryIcon from '@/shared/components/CategoryIcon'
+import Tooltip from '@/shared/components/Tooltip'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
 import { Check, Pencil, X } from 'lucide-react'
 import { useApp } from '@/shared/contexts/AppState'
 import PageHeader from '@/shared/components/layout/PageHeader'
 import { displayNameOf } from '@/shared/utils/aliases'
-import { getAvailableCategories, getCategoryColor, merchantKeyOf, sameMerchant } from '@/shared/utils/categorizer'
+import { getAvailableCategories, merchantKeyOf, sameMerchant } from '@/shared/utils/categorizer'
 import { formatDay } from '@/shared/utils/dates'
 import { formatCurrency } from '@/shared/utils/format'
 import { inPeriod } from '@/shared/utils/summary'
 import TransactionList from './TransactionList'
+import Select from '@/shared/components/forms/Select'
 
 /** Everything about one merchant: what you spent, where it came from, and its category rule. */
 export default function MerchantPage() {
@@ -70,13 +73,11 @@ export default function MerchantPage() {
               </button>
             </form>
           ) : (
-            <button
-              className="btn-secondary text-sm flex items-center gap-2"
-              onClick={() => setRenaming(true)}
-              title="Only changes how it's shown"
-            >
-              <Pencil className="w-4 h-4" /> Rename
-            </button>
+            <Tooltip label="Only changes how it's shown">
+              <button className="btn-secondary text-sm flex items-center gap-2" onClick={() => setRenaming(true)}>
+                <Pencil className="w-4 h-4" /> Rename
+              </button>
+            </Tooltip>
           )
         }
       />
@@ -90,37 +91,29 @@ export default function MerchantPage() {
             Category rule
           </label>
           <div className="flex items-center gap-2">
-            {category && (
-              <span
-                className="w-2.5 h-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: getCategoryColor(category) }}
-              />
-            )}
-            <select
+            {category && <CategoryIcon category={category} size="sm" />}
+            <Select
               id="merchant-category"
-              className="input py-1 text-sm w-full"
+              className="py-1 text-sm w-full"
               value={category ?? ''}
-              onChange={e =>
-                e.target.value &&
+              onChange={value =>
+                value &&
                 app.bulkUpdate(
                   rows.map(t => t.id),
-                  { category: e.target.value },
+                  { category: value },
                 )
               }
-            >
-              {!category && <option value="">Mixed</option>}
-              {getAvailableCategories().map(c => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              options={[
+                ...(category ? [] : [{ value: '', label: 'Mixed', disabled: true }]),
+                ...getAvailableCategories().map(c => ({ value: c, label: c })),
+              ]}
+            />
           </div>
           <p className="text-[11px] text-midnight-500 mt-1">Changing it also teaches FinKit for next time.</p>
         </div>
       </div>
 
-      <TransactionList transactions={rows} viewMode="list" hideViewToggle />
+      <TransactionList transactions={rows} viewMode="list" />
     </div>
   )
 }

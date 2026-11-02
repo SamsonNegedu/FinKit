@@ -1,10 +1,11 @@
+import Tooltip from '@/shared/components/Tooltip'
 import { Fragment } from 'react'
 import { ChevronDown, ChevronRight, ArrowUpRight, Pencil } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
-import { getCategoryColor } from '@/shared/utils/categorizer'
 import { formatCurrency } from '@/shared/utils/format'
 import type { MerchantGroup } from './transactionTableTypes'
-import CategoryPickerPortal from './CategoryPickerPortal'
+import CategoryPopover from './CategoryPopover'
+import CategoryIcon from '@/shared/components/CategoryIcon'
 import TransactionTableRow, { type TransactionTableRowProps } from './TransactionTableRow'
 
 export interface MerchantGroupRowProps {
@@ -15,14 +16,8 @@ export interface MerchantGroupRowProps {
   renamingKey: string | null
   setRenamingKey: (key: string | null) => void
   editingId: string | null
-  pickerPos: { left: number; top?: number; bottom?: number } | null
-  dropdownRef: React.RefObject<HTMLDivElement | null>
-  categorySearch: string
-  setCategorySearch: (value: string) => void
-  activeIndex: number
-  setActiveIndex: (updater: (i: number) => number) => void
-  filteredCategories: string[]
-  onOpenPicker: (id: string, trigger: HTMLElement) => void
+  categories: string[]
+  onOpenPicker: (id: string) => void
   onClosePicker: () => void
   onRenameMerchant: (merchantKey: string, name: string) => void
   onSetCategoryForIds: (ids: string[], category: string) => void
@@ -37,13 +32,7 @@ export default function MerchantGroupRow({
   renamingKey,
   setRenamingKey,
   editingId,
-  pickerPos,
-  dropdownRef,
-  categorySearch,
-  setCategorySearch,
-  activeIndex,
-  setActiveIndex,
-  filteredCategories,
+  categories,
   onOpenPicker,
   onClosePicker,
   onRenameMerchant,
@@ -105,55 +94,50 @@ export default function MerchantGroupRow({
                 <span className="text-sm font-medium text-white truncate">{shownName}</span>
                 <span className="text-xs text-midnight-400">{group.items.length}×</span>
               </button>
-              <button
-                onClick={() => setRenamingKey(group.key)}
-                className="p-1 text-midnight-500 hover:text-white"
-                aria-label={`Rename ${shownName}`}
-                title="Rename (only changes how it's shown)"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-              <Link
-                to="/transactions/merchants/$merchantKey"
-                params={{ merchantKey: group.key }}
-                className="p-1 text-midnight-500 hover:text-white"
-                aria-label={`Open ${shownName}`}
-                title="Open this merchant"
-              >
-                <ArrowUpRight className="w-3.5 h-3.5" />
-              </Link>
+              <Tooltip label="Rename (only changes how it's shown)">
+                <button
+                  onClick={() => setRenamingKey(group.key)}
+                  className="p-1 text-midnight-500 hover:text-white"
+                  aria-label={`Rename ${shownName}`}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </Tooltip>
+              <Tooltip label="Open this merchant">
+                <Link
+                  to="/transactions/merchants/$merchantKey"
+                  params={{ merchantKey: group.key }}
+                  className="p-1 text-midnight-500 hover:text-white"
+                  aria-label={`Open ${shownName}`}
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </Link>
+              </Tooltip>
             </div>
           )}
         </td>
         <td className="py-3 px-4 relative max-md:col-start-1 max-md:row-start-2 max-md:py-0 max-md:px-3 max-md:pb-2">
-          <button
-            onClick={e => onOpenPicker(pickerId, e.currentTarget)}
-            className="flex items-center gap-2 h-8 px-3 max-w-full rounded-lg text-sm whitespace-nowrap hover:bg-midnight-700 transition-colors"
-            title="Set category for all transactions from this merchant"
-          >
-            {single && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(single) }} />}
-            <span className="text-midnight-100">{mixed ? 'Mixed' : single}</span>
-            <ChevronDown className="w-3 h-3 text-midnight-400" />
-          </button>
-          {editingId === pickerId && pickerPos && (
-            <CategoryPickerPortal
-              dropdownRef={dropdownRef}
-              pickerPos={pickerPos}
-              categorySearch={categorySearch}
-              onCategorySearchChange={setCategorySearch}
-              activeIndex={activeIndex}
-              onActiveIndexChange={setActiveIndex}
-              filteredCategories={filteredCategories}
-              current={single}
-              onPick={category =>
-                onSetCategoryForIds(
-                  group.items.map(t => t.id),
-                  category,
-                )
-              }
-              onClose={onClosePicker}
-            />
-          )}
+          <CategoryPopover
+            open={editingId === pickerId}
+            onOpenChange={o => (o ? onOpenPicker(pickerId) : onClosePicker())}
+            categories={categories}
+            current={single}
+            onPick={category =>
+              onSetCategoryForIds(
+                group.items.map(t => t.id),
+                category,
+              )
+            }
+            trigger={
+              <Tooltip label="Set category for all transactions from this merchant">
+                <button className="flex items-center gap-2 h-8 px-3 max-w-full rounded-lg text-sm whitespace-nowrap hover:bg-midnight-700 transition-colors">
+                  {single && <CategoryIcon category={single} size="sm" />}
+                  <span className="text-midnight-100">{mixed ? 'Mixed' : single}</span>
+                  <ChevronDown className="w-3 h-3 text-midnight-400" />
+                </button>
+              </Tooltip>
+            }
+          />
         </td>
         <td className="py-3 px-4 text-right whitespace-nowrap max-md:col-start-2 max-md:row-start-1 max-md:py-2 max-md:px-3">
           <span className={`text-sm font-medium ${group.total >= 0 ? 'text-income' : 'text-expense'}`}>

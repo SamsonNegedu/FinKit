@@ -1,4 +1,5 @@
 import { Transaction } from '@/shared/types'
+import { isCashWithdrawal } from '@/shared/utils/cashWithdrawal'
 import { getExpenseCategories, merchantKeyOf, sameMerchant } from '@/shared/utils/categorizer'
 
 export function needsReview(tx: Transaction): boolean {
@@ -6,7 +7,7 @@ export function needsReview(tx: Transaction): boolean {
     tx.type === 'expense' &&
     !tx.isExcluded &&
     tx.categorySource !== 'manual' &&
-    (!tx.category || tx.category === 'Other')
+    (!tx.category || tx.category === 'Other' || (tx.category === 'Cash' && isCashWithdrawal(tx)))
   )
 }
 
@@ -20,7 +21,8 @@ export function buildReviewGroups(transactions: Transaction[]): ReviewGroup[] {
   const result: ReviewGroup[] = []
 
   for (const tx of transactions.filter(needsReview)) {
-    const key = merchantKeyOf(tx)
+    // Every withdrawal reads the same, but each was for something: they are reviewed one at a time
+    const key = isCashWithdrawal(tx) ? `${merchantKeyOf(tx)} · ${tx.date} · ${tx.amount}` : merchantKeyOf(tx)
     const group = result.find(g => sameMerchant(g.key, key))
 
     if (group) {

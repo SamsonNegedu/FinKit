@@ -6,6 +6,8 @@ import {
   validateBanksSearch,
   validateConnectSearch,
 } from '@/features/banking/constants/search.constants'
+import { validateTripSearch } from '@/features/trips/constants/search.constants'
+import { validateAnalyticsSearch } from '@/features/analytics/constants/search.constants'
 import { validateTransactionsSearch } from '@/features/transactions/constants/search.constants'
 import OverviewPage from '@/features/overview/routes'
 import ReviewPage from '@/features/review/routes'
@@ -16,6 +18,9 @@ import { AnalyticsPage, TrendsPage } from '@/features/analytics/routes'
 import { BanksPage, BankDetailPage, ConnectBankPage } from '@/features/banking/routes'
 import TransactionsPage from '@/features/transactions/routes'
 import MerchantPage from '@/features/transactions/routes/MerchantPage'
+import { TripPage, TripsPage } from '@/features/trips/routes'
+import { BudgetsPage } from '@/features/budgets/routes'
+import { ContractsPage } from '@/features/contracts/routes'
 import AppShell from '@/app/shell'
 
 const root = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -63,9 +68,34 @@ const merchant = createRoute({
   path: '/transactions/merchants/$merchantKey',
   component: MerchantPage,
 })
+const trips = createRoute({
+  getParentRoute: () => root,
+  path: '/trips',
+  beforeLoad: requireBanking,
+  component: TripsPage,
+})
+const trip = createRoute({
+  getParentRoute: () => root,
+  path: '/trips/$tripId',
+  beforeLoad: requireBanking,
+  component: TripPage,
+  validateSearch: validateTripSearch,
+})
+const contracts = createRoute({
+  getParentRoute: () => root,
+  path: '/contracts',
+  beforeLoad: requireBanking,
+  component: ContractsPage,
+})
+const budgets = createRoute({ getParentRoute: () => root, path: '/budgets', component: BudgetsPage })
 const review = createRoute({ getParentRoute: () => root, path: '/review', component: ReviewPage })
 const income = createRoute({ getParentRoute: () => root, path: '/income', component: IncomePage })
-const analytics = createRoute({ getParentRoute: () => root, path: '/analytics', component: AnalyticsPage })
+const analytics = createRoute({
+  getParentRoute: () => root,
+  path: '/analytics',
+  component: AnalyticsPage,
+  validateSearch: validateAnalyticsSearch,
+})
 const trends = createRoute({ getParentRoute: () => root, path: '/analytics/trends', component: TrendsPage })
 const exportRoute = createRoute({ getParentRoute: () => root, path: '/export', component: ExportPage })
 const settings = createRoute({
@@ -104,6 +134,10 @@ const routeTree = root.addChildren([
   bank,
   transactions,
   merchant,
+  trips,
+  trip,
+  contracts,
+  budgets,
   review,
   income,
   analytics,

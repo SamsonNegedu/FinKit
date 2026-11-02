@@ -1,8 +1,8 @@
 import { Calendar, ChevronDown, ChevronRight } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
+import * as Popover from '@radix-ui/react-popover'
 import { DateRange, Transaction } from '@/shared/types'
-import { formatDay } from '@/shared/utils/dates'
-import { endOfDay, monthRange, sameRange as same, yearRange, yearsWithData } from '@/shared/utils/periods'
+import { endOfDay, monthRange, periodLabel, sameRange as same, yearRange, yearsWithData } from '@/shared/utils/periods'
 
 const item = (active: boolean) =>
   `w-full px-4 py-2 text-left text-sm hover:bg-midnight-700 ${active ? 'bg-accent/20 text-accent' : ''}`
@@ -17,18 +17,6 @@ interface PeriodPickerProps {
 export default function PeriodPicker({ dateRange, onChange, transactions }: PeriodPickerProps) {
   const [open, setOpen] = useState(false)
   const [expanded, setExpanded] = useState<number | null>(null)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   const years = useMemo(() => yearsWithData(transactions), [transactions])
 
@@ -37,20 +25,13 @@ export default function PeriodPicker({ dateRange, onChange, transactions }: Peri
     setOpen(false)
   }
 
-  const label = () => {
-    if (!dateRange) {
-      return 'All time'
-    }
-    const { startDate: s, endDate: e } = dateRange
+  const label = () => periodLabel(dateRange)
 
-    if (same(dateRange, yearRange(s.getFullYear()))) {
-      return String(s.getFullYear())
-    }
-    if (same(dateRange, monthRange(s.getFullYear(), s.getMonth()))) {
-      return s.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    }
+  // A phone has no room for two full dates: shorten the years so the label stays on one line
+  const shortLabel = () => {
+    const full = label()
 
-    return `${formatDay(s)} ${s.getFullYear()} – ${formatDay(e)} ${e.getFullYear()}`
+    return full.includes(' – ') ? full.replace(/\b20(\d\d)\b/g, "'$1") : full
   }
 
   const [presets] = useState<Array<[string, DateRange]>>(() => {
@@ -77,19 +58,25 @@ export default function PeriodPicker({ dateRange, onChange, transactions }: Peri
   })
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="input flex items-center gap-2 min-w-[180px]"
-        aria-expanded={open}
-      >
-        <Calendar className="w-4 h-4 text-midnight-400" />
-        <span className="text-sm">{label()}</span>
-        <ChevronDown className="w-4 h-4 text-midnight-400 ml-auto" />
-      </button>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <div className="min-w-0 max-md:flex-1">
+        <Popover.Trigger asChild>
+          <button className="input flex w-full items-center gap-2 max-sm:px-3 sm:min-w-[180px]">
+            <Calendar className="hidden w-4 h-4 shrink-0 text-midnight-400 sm:block" />
+            <span className="min-w-0 truncate text-xs sm:hidden">{shortLabel()}</span>
+            <span className="hidden text-sm whitespace-nowrap sm:inline">{label()}</span>
+            <ChevronDown className="w-4 h-4 shrink-0 text-midnight-400 ml-auto" />
+          </button>
+        </Popover.Trigger>
+      </div>
 
-      {open && (
-        <div className="absolute top-full mt-2 right-0 bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-50 w-64 max-h-[70vh] overflow-y-auto">
+      <Popover.Portal>
+        <Popover.Content
+          align="end"
+          sideOffset={8}
+          collisionPadding={16}
+          className="z-[80] w-64 max-w-[calc(100vw-2rem)] max-h-[min(70vh,var(--radix-popover-content-available-height))] overflow-y-auto rounded-lg border border-midnight-600 bg-midnight-800 shadow-xl"
+        >
           <button onClick={() => choose(null)} className={`${item(!dateRange)} border-b border-midnight-700`}>
             All time
           </button>
@@ -146,8 +133,8 @@ export default function PeriodPicker({ dateRange, onChange, transactions }: Peri
               })}
             </>
           )}
-        </div>
-      )}
-    </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }

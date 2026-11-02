@@ -1,4 +1,5 @@
 import { Transaction } from '@/shared/types'
+import { isCashWithdrawal } from './cashWithdrawal'
 import { merchantKeyOf, sameMerchant } from './categorizer'
 
 interface RecategorizeResult {
@@ -11,6 +12,7 @@ interface RecategorizeResult {
 /**
  * Set a category on some transactions and carry it to every other transaction from the same
  * merchant that the user hasn't categorized by hand. Returns null if nothing matched.
+ * Splits and cash withdrawals are one-offs: what a withdrawal was for says nothing about the next one.
  */
 export function recategorize(
   current: Transaction[],
@@ -29,7 +31,7 @@ export function recategorize(
   const merchants: string[] = []
 
   for (const t of targets) {
-    if (t.splitOf) {
+    if (t.splitOf || isCashWithdrawal(t)) {
       continue
     }
     const key = merchantKeyOf(t)

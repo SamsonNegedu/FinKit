@@ -1,7 +1,8 @@
+import CategoryIcon from '@/shared/components/CategoryIcon'
 import { useState } from 'react'
 import { SkipForward, EyeOff, Search } from 'lucide-react'
 import { formatCurrency } from '@/shared/utils/format'
-import { getCategoryColor, getExpenseCategories } from '@/shared/utils/categorizer'
+import { getExpenseCategories } from '@/shared/utils/categorizer'
 import type { ReviewGroup } from './reviewQueueUtils'
 
 interface ReviewQueuePanelProps {
@@ -113,7 +114,7 @@ export default function ReviewQueuePanel({
               {!query && (
                 <kbd className="text-xs text-midnight-400 border border-midnight-600 rounded px-1.5">{i + 1}</kbd>
               )}
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(category) }} />
+              <CategoryIcon category={category} size="sm" />
               <span className="text-sm truncate">{category}</span>
             </button>
           ))}

@@ -1,3 +1,4 @@
+import Logo from '@/shared/components/Logo'
 import { Link } from '@tanstack/react-router'
 import type { LucideIcon } from 'lucide-react'
 
@@ -8,6 +9,8 @@ export interface AppShellNavItem {
   exact?: boolean
   badge?: number
   hidden?: boolean
+  /** Heading shown above the first item of a run: the steps of a month's books, in order */
+  group?: string
 }
 
 interface AppShellSidebarProps {
@@ -19,9 +22,7 @@ export default function AppShellSidebar({ nav, onNavigate }: AppShellSidebarProp
   return (
     <nav aria-label="Main" className="flex flex-col h-full">
       <div className="px-4 py-5 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center">
-          <span className="text-lg font-bold text-white">F</span>
-        </div>
+        <Logo />
         <div>
           <p className="font-bold text-white leading-tight">FinKit</p>
           <p className="text-[11px] text-midnight-400">Transaction insights</p>
@@ -30,8 +31,13 @@ export default function AppShellSidebar({ nav, onNavigate }: AppShellSidebarProp
       <ul className="px-2 space-y-0.5 flex-1">
         {nav
           .filter(n => !n.hidden)
-          .map(item => (
-            <li key={item.to}>
+          .map((item, i, shown) => (
+            <li key={item.to} className={item.group && item.group !== shown[i - 1]?.group ? 'pt-4' : ''}>
+              {item.group && item.group !== shown[i - 1]?.group && (
+                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-midnight-500">
+                  {item.group}
+                </p>
+              )}
               <Link
                 to={item.to}
                 activeOptions={{ exact: item.exact }}

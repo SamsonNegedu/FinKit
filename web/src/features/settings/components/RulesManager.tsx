@@ -7,6 +7,7 @@ import {
   LearnedMapping,
 } from '@/features/settings/api/settings.api'
 import { getAvailableCategories, setLocalLearnedMapping } from '@/shared/utils/categorizer'
+import Select from '@/shared/components/forms/Select'
 
 // Lists every merchant → category rule the app has learned so a wrong one can be fixed or removed
 export default function RulesManager() {
@@ -72,18 +73,16 @@ export default function RulesManager() {
                 <span className="text-sm text-white truncate" title={rule.merchantDisplay || rule.merchant}>
                   {rule.merchantDisplay || rule.merchant}
                 </span>
-                <select
+                <Select
                   value={rule.category}
-                  onChange={e => change(rule, e.target.value)}
-                  className="input text-sm py-1"
-                  aria-label={`Category for ${rule.merchantDisplay || rule.merchant}`}
-                >
-                  {[...new Set([rule.category, ...getAvailableCategories()])].map(c => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                  onChange={category => change(rule, category)}
+                  className="text-sm py-1"
+                  ariaLabel={`Category for ${rule.merchantDisplay || rule.merchant}`}
+                  options={[...new Set([rule.category, ...getAvailableCategories()])].map(c => ({
+                    value: c,
+                    label: c,
+                  }))}
+                />
                 <button
                   onClick={() => remove(rule)}
                   className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-red-400"
