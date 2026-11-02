@@ -1,6 +1,7 @@
 import { DynamicModule } from '@nestjs/common'
 import { readyConfig, resolveBanking } from './bank-connections/banking-gate'
 import { ContractsModule } from './contracts/contracts.module'
+import { TransactionRulesModule } from './transaction-rules/transaction-rules.module'
 import { TripsModule } from './trips/trips.module'
 
 /**
@@ -10,5 +11,7 @@ import { TripsModule } from './trips/trips.module'
 export function bankingFeatureModules(env: NodeJS.ProcessEnv = process.env): DynamicModule[] {
   const config = readyConfig(resolveBanking(env))
 
-  return config ? [ContractsModule.forConfig(config), TripsModule.forConfig(config)] : []
+  return config
+    ? [ContractsModule.forConfig(config), TripsModule.forConfig(config), TransactionRulesModule.forConfig(config)]
+    : []
 }

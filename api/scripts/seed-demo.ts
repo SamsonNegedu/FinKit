@@ -9,7 +9,7 @@
 // the app uses, so it is encrypted exactly like synced data.
 import { loadLocalEnv } from '../src/load-env'
 import { loadBankingConfig } from '../src/bank-connections/config/banking.config'
-import { BankTransactionsStore } from '../src/bank-connections/transactions/bank-transactions.store'
+import { BankTransactionsStore } from '../src/transactions/bank-transactions.store'
 import type { BankTransaction } from '../src/bank-connections/providers/bank-provider'
 import { ContractsRepository } from '../src/contracts/contracts.repository'
 import { accountRef } from '../src/shared/crypto/encryption'
@@ -204,6 +204,39 @@ for (let y = START.year, m = START.month; ym(y, m) <= ym(today.getFullYear(), to
     ])
 
     add(iso(y, m, day), who, `Kartenzahlung ${who} ${pad(day)}.${pad(m)}.`, -between(lo, hi))
+  }
+  m++
+  if (m > 12) {
+    m = 1
+    y++
+  }
+}
+
+// Payees that say little about what was bought: the shop or purpose is only in the text. Kept after the loop above
+// and free of random numbers, so the rows already seeded keep their ids and amounts. The same payee shows up with
+// different purposes on purpose (Aldi groceries next to an Aldi phone plan, several Back Market buys), to try
+// "Only this one" and "Make a rule…". The wording copies real PayPal and Klarna texts.
+const PAYPAL = 'PayPal Europe S.a.r.l. et Cie S.C.A'
+const KLARNA = 'Klarna Bank AB'
+const ppRef = (m: number, d: number) =>
+  `10519${pad(m)}${pad(d)}${String(m * 7919 + d * 104729).slice(0, 5)}/PP.5490.PP/.`
+const viaPayPal = (m: number, d: number, shop: string) => `${ppRef(m, d)} ${shop}, Ihr Einkauf bei ${shop}`
+
+for (let y = START.year, m = START.month; ym(y, m) <= ym(today.getFullYear(), today.getMonth() + 1);) {
+  const recent = ym(y, m) >= '2026-07'
+
+  add(iso(y, m, 12), 'Aldi Talk', 'Gebuehr fuer Kombi-Paket S (5G) fuer Ihr Prepaid-Konto 49157123456', -8.99)
+  add(iso(y, m, 3), PAYPAL, viaPayPal(m, 3, 'Rebtel Networks AB'), -5)
+  add(iso(y, m, 28), PAYPAL, viaPayPal(m, 28, 'Apple Services'), -2.99)
+  if (recent) {
+    add(iso(y, m, 29), PAYPAL, viaPayPal(m, 29, 'MILES Mobility GmbH'), -9)
+    add(iso(y, m, 30), PAYPAL, viaPayPal(m, 30, 'MILES Mobility GmbH'), -49.99)
+    add(iso(y, m, 9), KLARNA, 'Purchase at Back Market', -39.9)
+    add(iso(y, m, 17), KLARNA, 'Purchase at Back Market', -19.99)
+    add(iso(y, m, 21), KLARNA, 'Purchase at Back Market', -222.06)
+    add(iso(y, m, 25), KLARNA, 'Purchase at Zalando', -64.9)
+    // PayPal with no shop in the text: the title can only be PayPal
+    add(iso(y, m, 15), PAYPAL, `${ppRef(m, 15)} Ihre Zahlung`, -14.5)
   }
   m++
   if (m > 12) {

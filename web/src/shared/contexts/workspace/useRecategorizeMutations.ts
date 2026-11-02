@@ -18,9 +18,9 @@ export function createRecategorizeMutations(
   pushToast: ToastPush,
   persistMappings: (changes: MappingChange[]) => void,
 ) {
-  const recategorize = (ids: string[], category: string, extra: Partial<Transaction> = {}) => {
+  const recategorize = (ids: string[], category: string, extra: Partial<Transaction> = {}, onlyThese = false) => {
     const current = store.transactionsRef.current
-    const result = applyRecategorize(current, ids, category, extra)
+    const result = applyRecategorize(current, ids, category, extra, onlyThese)
 
     if (!result) {
       return
@@ -32,7 +32,10 @@ export function createRecategorizeMutations(
 
     persistMappings(result.merchants.map(m => ({ merchant: m, category })))
     store.commit(result.next)
-    const label = result.merchants.length === 1 ? result.merchants[0] : `${result.targetCount} transactions`
+    const label =
+      result.merchants.length === 1
+        ? result.merchants[0]
+        : `${result.targetCount} ${result.targetCount === 1 ? 'transaction' : 'transactions'}`
     const others = result.siblingCount > 0 ? ` · also updated ${result.siblingCount} similar` : ''
 
     pushToast({
@@ -56,7 +59,7 @@ export function createRecategorizeMutations(
     })
   }
 
-  const updateTransaction = (id: string, updates: Partial<Transaction>) => {
+  const updateTransaction = (id: string, updates: Partial<Transaction>, onlyThis = false) => {
     const { category, ...rest } = updates
     const current = store.transactionsRef.current
     const existing = current.find(t => t.id === id)
@@ -65,7 +68,7 @@ export function createRecategorizeMutations(
       return
     }
     if (category && category !== existing.category) {
-      recategorize([id], category, 'isExcluded' in rest ? { ...rest, excludedManually: true } : rest)
+      recategorize([id], category, 'isExcluded' in rest ? { ...rest, excludedManually: true } : rest, onlyThis)
 
       return
     }

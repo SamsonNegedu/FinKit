@@ -30,12 +30,22 @@ function descriptionKey(description: string): string {
   return (cleaned || description).slice(0, 30).trim()
 }
 
+const KLARNA_PURCHASE = /^purchase at\s+(.+)$/i
+
+function shopBehindProcessor(tx: { recipient?: string; description: string }): string | undefined {
+  if (tx.recipient && /^paypal\b/i.test(tx.recipient)) {
+    return merchantFromDescription(tx.description)
+  }
+  if (tx.recipient && /^klarna\b/i.test(tx.recipient)) {
+    return KLARNA_PURCHASE.exec(tx.description.trim())?.[1].trim().slice(0, MAX_LENGTH).trim() || undefined
+  }
+
+  return undefined
+}
+
 /** The merchant's name as shown to people. */
 export function merchantName(tx: { recipient?: string; description: string }): string {
-  const viaPayPal =
-    tx.recipient && /^paypal\b/i.test(tx.recipient) ? merchantFromDescription(tx.description) : undefined
-
-  return viaPayPal || tx.recipient || descriptionKey(tx.description)
+  return shopBehindProcessor(tx) || tx.recipient || descriptionKey(tx.description)
 }
 
 /** Same normalizer as merchant-rules and the web app. They MUST match. */

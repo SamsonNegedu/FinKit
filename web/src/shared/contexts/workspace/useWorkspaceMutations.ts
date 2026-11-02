@@ -1,5 +1,6 @@
 import type { DateRange, Transaction } from '@/shared/types'
-import { merchantKeyOf, sameMerchant } from '@/shared/utils/categorizer'
+import { addLocalRule, merchantKeyOf, removeLocalRule, sameMerchant, type RuleMatch } from '@/shared/utils/categorizer'
+import { createTransactionRule, deleteTransactionRule } from '@/features/settings/api/transactionRules.api'
 import { saveAlias } from '@/shared/utils/aliases'
 import { transactionsToCsv, downloadCsv } from '@/shared/utils/csv'
 import { clearSession } from '@/shared/utils/storage'
@@ -35,6 +36,30 @@ export function useWorkspaceMutations(deps: MutationDeps) {
 
   const persistMappings = useMappingPersistence(pushToast, setPendingSaves)
   const { updateTransaction, bulkUpdate } = createRecategorizeMutations(store, pushToast, persistMappings)
+
+  const makeRule = async (match: RuleMatch, category: string) => {
+    const rule = await createTransactionRule(match, category)
+
+    if (!rule) {
+      pushToast({ message: "Couldn't save the rule", tone: 'error' })
+
+      return
+    }
+    addLocalRule(rule)
+    const current = store.transactionsRef.current
+
+    store.commit(reprocess(store.rawTransactionsRef.current, anonymizationEnabled))
+    pushToast({
+      message: `Rule saved: rows like this are ${category}`,
+      tone: 'success',
+      actionLabel: 'Undo',
+      onAction: () => {
+        removeLocalRule(rule.id)
+        deleteTransactionRule(rule.id)
+        store.commit(current)
+      },
+    })
+  }
 
   const split = (id: string, parts: SplitPart[]) => {
     const current = store.transactionsRef.current
@@ -146,6 +171,7 @@ export function useWorkspaceMutations(deps: MutationDeps) {
   return {
     updateTransaction,
     bulkUpdate,
+    makeRule,
     split,
     unsplit,
     renameMerchant,

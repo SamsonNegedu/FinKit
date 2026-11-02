@@ -1,23 +1,27 @@
 # FinKit
 
-Self-hosted personal finance tooling. Import transactions (CSV/XLSX or bank sync), categorize them, explore your spending, and optionally push monthly totals to your own Google Sheet.
+Self-hosted personal finance for you and the people you share a server with. Sync your banks, categorize and review transactions, set budgets, track trips and recurring contracts, and optionally push monthly totals to your own Google Sheet.
 
 ## Privacy
 
 No FinKit cloud, no accounts, no telemetry. Everything runs on your machine or server.
 
-- **Browser**: file imports are parsed locally and never uploaded.
-- **Your API** (SQLite on your host): per-user rules, settings, encrypted bank tokens, and synced bank transactions (encrypted at rest). Disconnecting a bank removes its synced data.
+- **Browser**: analytics, budget progress and trip suggestions are computed locally from your transactions.
+- **Your API** (SQLite on your host): per-user rules, settings, budgets, trips, contracts, bank tokens and synced bank transactions. Bank and trip details are encrypted at rest. Disconnecting a bank removes its synced data.
 - **Optional outbound calls, only if you enable them**: Google Sheets, Enable Banking (`BANKING_PROVIDER=enablebanking`), and Cloudflare Access as the production login gate.
 
 Full copy: [privacy](./web/public/privacy.html) · [terms](./web/public/terms.html)
 
 ## Features
 
-- **Import**: FinanzGuru CSV/XLSX, or Open Banking sync
-- **Categorize**: rules, recurring detection, merchant rules learned from your edits
-- **Review**: inline edits, bulk actions, review queues
-- **Analytics**: trends, category breakdowns, top expenses, computed in the browser
+- **Bank sync**: connect banks through Open Banking (Enable Banking), with several accounts per person, balances and back-filled history
+- **Transactions**: one table with inline edits, bulk actions, merchant pages and categories picked from a popover
+- **Review**: queues for transactions that need a category or a second look
+- **Categorize**: rules, recurring detection and merchant rules learned from your edits
+- **Budgets**: monthly limit per category with rollover, an overall monthly cap and a month switcher
+- **Trips**: group flights, stays and other spending, split costs between travelers, and compare against a trip budget
+- **Contracts**: detects recurring payments and lets you add your own
+- **Income and analytics**: trends, category breakdowns and top expenses, computed in the browser
 - **Multi-user**: allowlist via `ALLOWED_USER_EMAILS`, each person sees only their own data
 - **Anonymize**: optionally mask names, IBANs and emails in the UI
 - **Export**: monthly totals to Google Sheets

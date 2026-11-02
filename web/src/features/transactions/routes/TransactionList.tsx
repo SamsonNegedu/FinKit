@@ -26,6 +26,7 @@ export default function TransactionList({ transactions, viewMode, onViewModeChan
         onSelectAll={selection.selectAll}
         onUpdateTransaction={app.updateTransaction}
         onBulkCategoryChange={selection.setCategory}
+        onMakeRule={app.makeRule}
         onSetCategoryForIds={(ids, category) => app.bulkUpdate(ids, { category })}
         onBulkExclude={selection.exclude}
         onBulkInclude={selection.include}

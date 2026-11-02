@@ -29,4 +29,13 @@ describe('recategorize', () => {
   it('returns null for unknown ids', () => {
     expect(recategorize(list, ['nope'], 'Car')).toBeNull()
   })
+
+  it('changes only the chosen row and learns nothing when it is a one-off', () => {
+    const r = recategorize(list, ['1'], 'Health', {}, true)!
+
+    expect(r.merchants).toEqual([])
+    expect(r.siblingCount).toBe(0)
+    expect(r.next.map(t => t.category)).toEqual(['Health', 'Other', 'Travel', 'Other'])
+    expect(r.next[0].categorySource).toBe('manual')
+  })
 })

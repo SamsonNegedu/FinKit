@@ -19,6 +19,8 @@ A factual list of what FinKit does with personal data, taken from the code. It i
 | Trip entries added by hand: amount, currency, note | `trip_entries.payload` | Encrypted (same key) | Until deleted with the trip or the entry |
 | Trip entries: date | `trip_entries.date` | Plain | Same as above |
 | Trip categories the user made | `trip_categories` | Plain | Until the user removes the category |
+| Transaction rules: the payee, words and amount a rule looks for | `transaction_rules.match` | Encrypted (same key), one value each | Until the user deletes the rule |
+| Transaction rules: owner, category, created time | `transaction_rules` | Plain (the category is the user's own word) | Same as above |
 | Bank connection: bank name, status, consent end date, masked account labels (last 4 of IBAN) | `bank_connections` | Plain | Until disconnected (the secret below is erased on disconnect) |
 | Bank session id and the accounts' full IBANs | `bank_connections.secret_blob` | Encrypted (AES-256-GCM, key from `BANKING_ENCRYPTION_KEY`) | Until disconnected or replaced, then erased |
 | Synced bank transactions: amount, currency, description, counterparty name and IBAN, own IBAN, bank and account details | `bank_transactions.payload` | Encrypted (same key), one value per transaction | Until the user deletes them or disconnects the bank |

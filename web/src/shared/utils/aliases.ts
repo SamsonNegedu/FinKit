@@ -1,6 +1,6 @@
 import { Transaction } from '@/shared/types'
 import { merchantKeyOf, normalizeMerchant } from './categorizer'
-import { merchantFromDescription, shopBehindPayPal } from './merchantFromDescription'
+import { merchantFromDescription, shopBehindProcessor } from './merchantFromDescription'
 
 // User-chosen display names for merchants, e.g. "AMZN Mktp DE*2K4" -> "Amazon".
 // Only the shown name changes: grouping and learned rules keep using the original merchant.
@@ -45,7 +45,7 @@ export function applyAliases(txs: Transaction[], aliases: AliasMap = loadAliases
 export function displayNameOf(t: Pick<Transaction, 'displayName' | 'merchant' | 'recipient' | 'description'>): string {
   const fromText = t.merchant
     ? undefined
-    : (shopBehindPayPal(t) ?? (t.recipient ? undefined : merchantFromDescription(t.description)))
+    : (shopBehindProcessor(t) ?? (t.recipient ? undefined : merchantFromDescription(t.description)))
 
   return t.displayName || fromText || t.merchant || t.recipient || t.description.slice(0, 40)
 }

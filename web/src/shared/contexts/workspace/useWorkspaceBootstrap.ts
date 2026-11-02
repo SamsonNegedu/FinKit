@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
-import { setLearnedMappings, setExpenseCategories } from '@/shared/utils/categorizer'
+import { setLearnedMappings, setExpenseCategories, setTransactionRules } from '@/shared/utils/categorizer'
 import { getLayout, layoutCategories, syncSheetLayout } from '@/shared/utils/sheetLayout'
 import { getLearnedMappings, getSheetConfig, saveSheetConfig } from '@/features/settings/api/settings.api'
+import { getTransactionRules } from '@/features/settings/api/transactionRules.api'
 import { getRememberPreference, loadSession, saveSession } from '@/shared/utils/storage'
 import { migrateOldIds } from '@/shared/utils/ids'
 import type { DateRange, SheetConfig, Transaction } from '@/shared/types'
@@ -42,7 +43,9 @@ export function useWorkspaceBootstrap({
 
   useEffect(() => {
     async function init() {
-      const mappings = await getLearnedMappings()
+      const [mappings, rules] = await Promise.all([getLearnedMappings(), getTransactionRules()])
+
+      setTransactionRules(rules)
 
       if (mappings.length > 0) {
         setLearnedMappings(mappings)

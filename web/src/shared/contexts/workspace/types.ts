@@ -3,6 +3,7 @@ import type { ImportOptions } from '@/features/import/components/FileUpload'
 import type { ToastItem } from '@/shared/components/feedback/Toast'
 import type { NumberFormat } from '@/shared/utils/format'
 import type { RateMap } from '@/shared/utils/rates'
+import type { RuleMatch } from '@/shared/utils/categorizer'
 import type { SplitPart } from '@/shared/utils/splits'
 import type { DateRange, RawTransaction, SheetConfig, Transaction } from '@/shared/types'
 import type { TripLinks } from './useTripLinks'
@@ -38,8 +39,11 @@ export interface AppState {
   importBankTransactions: (incoming: RawTransaction[], bankName: string, quiet?: boolean) => void
   clearData: () => void
   downloadCsv: () => void
-  updateTransaction: (id: string, updates: Partial<Transaction>) => void
+  /** `onlyThis` keeps a category change to that one transaction: no rule is learned, no sibling changes */
+  updateTransaction: (id: string, updates: Partial<Transaction>, onlyThis?: boolean) => void
   bulkUpdate: (ids: string[], updates: Partial<Transaction>) => void
+  /** A rule made from a transaction: rows that fit all its conditions get the category, now and on later syncs */
+  makeRule: (match: RuleMatch, category: string) => Promise<void>
   split: (id: string, parts: SplitPart[]) => void
   unsplit: (parentId: string) => void
   renameMerchant: (merchantKey: string, name: string) => void

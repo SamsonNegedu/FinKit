@@ -14,8 +14,12 @@ export function toISODate(d: Date): string {
 }
 
 // Day + short month in the same style as the number format (31 Oct / 31. Okt.)
-export function formatDay(value: string | Date): string {
+export function formatDay(value: string | Date, withYear = false): string {
   const d = typeof value === 'string' ? parseLocalDate(value) : value
 
-  return d.toLocaleDateString(getNumberFormat() === 'point' ? 'en-GB' : 'de-DE', { day: '2-digit', month: 'short' })
+  return d.toLocaleDateString(getNumberFormat() === 'point' ? 'en-GB' : 'de-DE', {
+    day: '2-digit',
+    month: 'short',
+    ...(withYear ? { year: 'numeric' } : {}),
+  })
 }

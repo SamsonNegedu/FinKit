@@ -3,6 +3,7 @@ import { MERCHANT_RULES, TRANSFER_PATTERNS } from './merchantRules'
 import { mapGermanCategory } from './germanCategoryMap'
 import { isCashWithdrawal } from '@/shared/utils/cashWithdrawal'
 import { findLearnedCategory } from './learnedMappings'
+import { findRuleCategory } from './transactionRules'
 
 function extractMerchant(text: string, pattern: RegExp): string | undefined {
   const match = text.match(pattern)
@@ -24,6 +25,13 @@ export function categorizeWithRules(transactions: Transaction[]): Transaction[] 
       if (pattern.test(tx.description)) {
         return { ...tx, category: 'Transfer', isTransfer: true, categorySource: 'rule' as const }
       }
+    }
+
+    // A rule the person made from a transaction is more specific than a merchant rule, so it goes first
+    const ruleCategory = findRuleCategory(tx)
+
+    if (ruleCategory) {
+      return { ...tx, category: ruleCategory, categorySource: 'learned' as const }
     }
 
     const learnedCategory = findLearnedCategory(tx)

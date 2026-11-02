@@ -2,13 +2,15 @@ import Tooltip from '@/shared/components/Tooltip'
 import { useState } from 'react'
 import { ChevronDown, ArrowLeftRight, MessageSquarePlus, Scissors, Undo2 } from 'lucide-react'
 import { Transaction } from '@/shared/types'
+import type { RuleMatch } from '@/shared/utils/categorizer'
 import { getCategoryColor } from '@/shared/utils/categorizer'
 import RecurringBadge from './RecurringBadge'
 import TransactionNote from './TransactionNote'
 import { displayNameOf } from '@/shared/utils/aliases'
 import { formatCurrency } from '@/shared/utils/format'
 import { formatTransactionDate } from './transactionTableTypes'
-import CategoryPopover from './CategoryPopover'
+import CategoryPopover, { type PickScope } from './CategoryPopover'
+import MakeRuleDialog from './MakeRuleDialog'
 import CategoryIcon from '@/shared/components/CategoryIcon'
 import type { TableBehaviour } from './transactionTableTypes'
 import Checkbox from '@/shared/components/forms/Checkbox'
@@ -22,7 +24,13 @@ export interface TransactionTableRowProps {
   onToggleSelect: (id: string) => void
   onOpenPicker: (id: string) => void
   onClosePicker: () => void
-  onUpdateTransaction: (id: string, updates: Partial<Transaction>) => void
+  onUpdateTransaction: (id: string, updates: Partial<Transaction>, onlyThis?: boolean) => void
+  /** True when other transactions share this one's merchant, so "Only this one" means something */
+  hasSiblings?: (tx: Transaction) => boolean
+  /** The list spans several years, so dates carry theirs */
+  showYear?: boolean
+  /** Makes a rule from a transaction. Without it the picker offers no rule */
+  onMakeRule?: (match: RuleMatch, category: string) => void
   onUnsplit: (parentId: string) => void
   onStartSplit: (tx: Transaction) => void
   behaviour?: TableBehaviour
@@ -38,12 +46,19 @@ export default function TransactionTableRow({
   onOpenPicker,
   onClosePicker,
   onUpdateTransaction,
+  hasSiblings,
+  showYear = false,
+  onMakeRule,
   onUnsplit,
   onStartSplit,
   behaviour = {},
 }: TransactionTableRowProps) {
   const colorOf = behaviour.colorOf ?? getCategoryColor
   const [noteOpen, setNoteOpen] = useState(false)
+  const [ruleFor, setRuleFor] = useState<string | null>(null)
+  const scopes: PickScope[] | undefined = hasSiblings?.(tx)
+    ? ['one', ...(onMakeRule ? (['rule'] as const) : [])]
+    : undefined
 
   return (
     <tr
@@ -67,7 +82,7 @@ export default function TransactionTableRow({
         </label>
       </td>
       <td className="py-3 px-4 whitespace-nowrap max-md:col-start-3 max-md:row-start-2 max-md:py-0 max-md:px-3 max-md:text-right">
-        <span className="text-sm text-midnight-300 max-md:text-xs">{formatTransactionDate(tx.date)}</span>
+        <span className="text-sm text-midnight-300 max-md:text-xs">{formatTransactionDate(tx.date, showYear)}</span>
       </td>
       {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label -- a table cell, not a control */}
       <td className="py-3 px-4 max-w-0 max-md:max-w-none max-md:col-start-2 max-md:row-start-1 max-md:py-1 max-md:px-3">
@@ -147,7 +162,13 @@ export default function TransactionTableRow({
           onOpenChange={o => (o ? onOpenPicker(tx.id) : onClosePicker())}
           categories={categories}
           current={tx.category}
-          onPick={category => onUpdateTransaction(tx.id, { category })}
+          onPick={(category, scope) => {
+            onUpdateTransaction(tx.id, { category }, scope !== 'all')
+            if (scope === 'rule') {
+              setRuleFor(category)
+            }
+          }}
+          scopes={scopes}
           colorOf={colorOf}
           trigger={
             <button
@@ -167,6 +188,15 @@ export default function TransactionTableRow({
           }
         />
         {behaviour.categoryNote?.(tx)}
+        {ruleFor && onMakeRule && (
+          <MakeRuleDialog
+            tx={tx}
+            category={ruleFor}
+            currency={currency}
+            onSave={match => onMakeRule(match, ruleFor)}
+            onClose={() => setRuleFor(null)}
+          />
+        )}
       </td>
       <td className="py-3 px-4 text-right whitespace-nowrap max-md:col-start-3 max-md:row-start-1 max-md:py-1 max-md:px-3">
         <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-income' : 'text-expense'}`}>

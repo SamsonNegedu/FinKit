@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import ImportConfirm from '@/features/import/components/ImportConfirm'
 import ToastHost from '@/shared/components/feedback/Toast'
 import type { DateRange, SheetConfig } from '@/shared/types'
@@ -75,6 +75,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setDateRange,
   })
 
+  // A saved session holds rows categorized and named by whatever rules existed when it was saved. Run the
+  // current rules over the raw rows once on restore, or a rule fix never reaches rows that were synced earlier.
+  const reprocessedOnRestore = useRef(false)
+  const { reprocess } = importActions
+
+  useEffect(() => {
+    if (isRestoring || reprocessedOnRestore.current) {
+      return
+    }
+    reprocessedOnRestore.current = true
+    if (store.rawTransactionsRef.current.length > 0) {
+      store.commit(reprocess(store.rawTransactionsRef.current, anonymizationEnabled))
+    }
+  }, [isRestoring, anonymizationEnabled, reprocess, store])
+
   const mutations = useWorkspaceMutations({
     store,
     pushToast,
@@ -138,6 +153,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     downloadCsv: mutations.downloadCsvExport,
     updateTransaction: mutations.updateTransaction,
     bulkUpdate: mutations.bulkUpdate,
+    makeRule: mutations.makeRule,
     split: mutations.split,
     unsplit: mutations.unsplit,
     renameMerchant: mutations.renameMerchant,

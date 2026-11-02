@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { merchantFromDescription } from './merchantFromDescription'
+import { merchantFromDescription, shopBehindProcessor } from './merchantFromDescription'
 
 describe('merchantFromDescription', () => {
   it.each([
@@ -17,5 +17,26 @@ describe('merchantFromDescription', () => {
 
   it('returns nothing without a marker', () => {
     expect(merchantFromDescription('FEE-CARD-4239332286 Wise Charges for: CA')).toBeUndefined()
+  })
+})
+
+describe('shopBehindProcessor', () => {
+  it('names the shop behind Klarna', () => {
+    expect(shopBehindProcessor({ recipient: 'Klarna Bank AB', description: 'Purchase at Back Market' })).toBe(
+      'Back Market',
+    )
+  })
+
+  it('names the shop behind PayPal', () => {
+    expect(
+      shopBehindProcessor({
+        recipient: 'PayPal Europe S.a.r.l. et Cie S.C.A',
+        description: 'x. Ihr Einkauf bei Apple Services',
+      }),
+    ).toBe('Apple Services')
+  })
+
+  it('leaves other payees alone', () => {
+    expect(shopBehindProcessor({ recipient: 'REWE', description: 'Purchase at Back Market' })).toBeUndefined()
   })
 })

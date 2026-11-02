@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Transaction } from '@/shared/types'
+import type { RuleMatch } from '@/shared/utils/categorizer'
 import { SplitPart } from '@/shared/utils/splits'
 import { formatDay } from '@/shared/utils/dates'
 
@@ -26,9 +27,10 @@ export interface TransactionTableProps {
   selectedIds: Set<string>
   onSelectionChange: (ids: Set<string>) => void
   onSelectAll: () => void
-  onUpdateTransaction: (id: string, updates: Partial<Transaction>) => void
+  onUpdateTransaction: (id: string, updates: Partial<Transaction>, onlyThis?: boolean) => void
   onBulkCategoryChange: (category: string) => void
   onSetCategoryForIds: (ids: string[], category: string) => void
+  onMakeRule?: (match: RuleMatch, category: string) => void
   onBulkExclude?: () => void
   onBulkInclude?: () => void
   onMoveToTrip?: () => void
@@ -51,6 +53,7 @@ export type MerchantGroup = {
   categories: Set<string>
 }
 
-export function formatTransactionDate(date: string): string {
-  return formatDay(date)
+/** The year is shown only when the list spans more than one, or "12 May" could be any of them */
+export function formatTransactionDate(date: string, withYear = false): string {
+  return formatDay(date, withYear)
 }

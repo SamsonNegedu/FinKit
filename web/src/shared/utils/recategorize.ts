@@ -13,12 +13,15 @@ interface RecategorizeResult {
  * Set a category on some transactions and carry it to every other transaction from the same
  * merchant that the user hasn't categorized by hand. Returns null if nothing matched.
  * Splits and cash withdrawals are one-offs: what a withdrawal was for says nothing about the next one.
+ * `onlyThese` makes the whole call a one-off: a shop that sells different things (Back Market, Amazon) can't
+ * have one category, so nothing is learned and no other transaction changes.
  */
 export function recategorize(
   current: Transaction[],
   ids: string[],
   category: string,
   extra: Partial<Transaction> = {},
+  onlyThese = false,
 ): RecategorizeResult | null {
   const idSet = new Set(ids)
   const targets = current.filter(t => idSet.has(t.id))
@@ -31,7 +34,7 @@ export function recategorize(
   const merchants: string[] = []
 
   for (const t of targets) {
-    if (t.splitOf || isCashWithdrawal(t)) {
+    if (onlyThese || t.splitOf || isCashWithdrawal(t)) {
       continue
     }
     const key = merchantKeyOf(t)

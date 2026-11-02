@@ -1,3 +1,6 @@
+import { useMemo } from 'react'
+import { merchantKeyOf, normalizeMerchant } from '@/shared/utils/categorizer'
+import type { Transaction } from '@/shared/types'
 import BulkActionBar from './BulkActionBar'
 import SplitDialog from './SplitDialog'
 import TransactionTableHead from './TransactionTableHead'
@@ -17,6 +20,7 @@ export default function TransactionTable({
   onUpdateTransaction,
   onBulkCategoryChange,
   onSetCategoryForIds,
+  onMakeRule,
   onBulkExclude,
   onBulkInclude,
   onMoveToTrip,
@@ -37,6 +41,20 @@ export default function TransactionTable({
     behaviour.categories,
   )
 
+  const merchantCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+
+    for (const t of transactions) {
+      const key = normalizeMerchant(merchantKeyOf(t))
+
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+
+    return counts
+  }, [transactions])
+  const hasSiblings = (tx: Transaction) => (merchantCounts.get(normalizeMerchant(merchantKeyOf(tx))) ?? 0) > 1
+
+  const showYear = useMemo(() => new Set(transactions.map(t => t.date.slice(0, 4))).size > 1, [transactions])
   const rowProps = {
     selectedIds,
     currency,
@@ -46,6 +64,9 @@ export default function TransactionTable({
     onOpenPicker: state.openPicker,
     onClosePicker: state.closePicker,
     onUpdateTransaction,
+    hasSiblings,
+    showYear,
+    onMakeRule,
     onUnsplit,
     onStartSplit: state.setSplitting,
     behaviour,

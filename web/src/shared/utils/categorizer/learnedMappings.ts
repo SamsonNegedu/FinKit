@@ -1,5 +1,5 @@
 import type { Transaction } from '@/shared/types'
-import { merchantFromDescription, shopBehindPayPal } from '../merchantFromDescription'
+import { merchantFromDescription, shopBehindProcessor } from '../merchantFromDescription'
 
 let learnedMappings: Map<string, string> = new Map()
 
@@ -9,7 +9,7 @@ export function setLearnedMappings(mappings: Array<{ merchant: string; category:
 }
 
 export function merchantKeyOf(tx: Pick<Transaction, 'merchant' | 'recipient' | 'description'>): string {
-  return tx.merchant || shopBehindPayPal(tx) || tx.recipient || descriptionKey(tx.description)
+  return tx.merchant || shopBehindProcessor(tx) || tx.recipient || descriptionKey(tx.description)
 }
 
 // Card payments often carry the merchant only in the text, wrapped in a bank prefix and a changing
@@ -97,7 +97,7 @@ export function findLearnedCategory(tx: Transaction): string | null {
   }
 
   // A PayPal recipient would apply one category to every shop; the shop name is matched through the description below
-  if (tx.recipient && !shopBehindPayPal(tx)) {
+  if (tx.recipient && !shopBehindProcessor(tx)) {
     const learned = learnedMappings.get(normalizeMerchant(tx.recipient))
 
     if (learned) {
@@ -114,7 +114,7 @@ export function findLearnedCategory(tx: Transaction): string | null {
   }
 
   // Same reason as above: skip the PayPal recipient here too, or an old "PayPal" rule still covers every shop
-  const recipient = shopBehindPayPal(tx) ? undefined : tx.recipient
+  const recipient = shopBehindProcessor(tx) ? undefined : tx.recipient
   const textsToCheck = [tx.merchant, recipient, tx.description].filter(Boolean) as string[]
 
   for (const text of textsToCheck) {
