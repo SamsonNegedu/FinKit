@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Inject,
   Injectable,
+  Logger,
   ForbiddenException,
   Optional,
   UnauthorizedException,
@@ -21,6 +22,8 @@ type AccessRefusedHandler = (path: string, reason: string) => void
 /** Only signed-in users get through. */
 @Injectable()
 export class AccessGuard implements CanActivate {
+  private readonly logger = new Logger(AccessGuard.name)
+
   constructor(
     @Inject(ACCESS_SETTINGS) private readonly settings: AccessSettings,
     @Optional()
@@ -50,7 +53,13 @@ export class AccessGuard implements CanActivate {
 
     try {
       email = (await this.verify(token)).email
-    } catch {
+    } catch (err) {
+      // Without this a wrong audience, wrong issuer or unreachable key set all look like the same 401.
+      // Only the error code and claim name are logged, never the token or the email in it.
+      const e = err as { code?: string; claim?: string; name?: string }
+
+      this.logger.warn(`Token rejected: ${e.code ?? e.name ?? 'unknown'}${e.claim ? ` (claim ${e.claim})` : ''}`)
+
       return this.refuse(req, 'invalid token')
     }
 
