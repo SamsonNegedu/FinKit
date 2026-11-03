@@ -110,6 +110,11 @@ const sheet = createRoute({
   path: '/settings/sheet',
   component: () => <SettingsPage section="sheet" />,
 })
+const categories = createRoute({
+  getParentRoute: () => root,
+  path: '/settings/categories',
+  component: () => <SettingsPage section="categories" />,
+})
 const columns = createRoute({
   getParentRoute: () => root,
   path: '/settings/columns',
@@ -145,6 +150,7 @@ const routeTree = root.addChildren([
   exportRoute,
   settings,
   sheet,
+  categories,
   columns,
   rules,
   backOffice,

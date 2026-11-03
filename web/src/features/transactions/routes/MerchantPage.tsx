@@ -105,7 +105,11 @@ export default function MerchantPage() {
               }
               options={[
                 ...(category ? [] : [{ value: '', label: 'Mixed', disabled: true }]),
-                ...getAvailableCategories().map(c => ({ value: c, label: c })),
+                // The one it has now stays listed even if it has been archived, so the box is never blank
+                ...[...new Set([...(category ? [category] : []), ...getAvailableCategories()])].map(c => ({
+                  value: c,
+                  label: c,
+                })),
               ]}
             />
           </div>

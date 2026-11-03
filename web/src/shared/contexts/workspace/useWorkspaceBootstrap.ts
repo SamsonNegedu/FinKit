@@ -1,5 +1,12 @@
 import { useEffect } from 'react'
-import { setLearnedMappings, setExpenseCategories, setTransactionRules } from '@/shared/utils/categorizer'
+import {
+  setLearnedMappings,
+  setExpenseCategories,
+  setArchivedCategories,
+  setCategoryStyles,
+  setTransactionRules,
+} from '@/shared/utils/categorizer'
+import { resolveCategories, type CategoryList } from '@/shared/utils/categorizer/categoryList'
 import { getLayout, layoutCategories, syncSheetLayout } from '@/shared/utils/sheetLayout'
 import { getLearnedMappings, getSheetConfig, saveSheetConfig } from '@/features/settings/api/settings.api'
 import { getTransactionRules } from '@/features/settings/api/transactionRules.api'
@@ -132,6 +139,13 @@ export function useWorkspaceBootstrap({
   }, [transactions, dateRange, anonymizationEnabled, isRestoring, remember, rawTransactionsRef, splitsRef])
 }
 
-export function syncExpenseCategoriesFromSheet(sheetConfig: SheetConfig | null) {
-  setExpenseCategories(layoutCategories(getLayout(sheetConfig)))
+/** Sets the categories in use: the person's own list, completed from their sheet. Returns the list it settled on. */
+export function syncExpenseCategories(sheetConfig: SheetConfig | null, stored: CategoryList | null): CategoryList {
+  const list = resolveCategories(layoutCategories(getLayout(sheetConfig)), stored)
+
+  setExpenseCategories(list.active)
+  setArchivedCategories(list.archived)
+  setCategoryStyles(list.style)
+
+  return list
 }

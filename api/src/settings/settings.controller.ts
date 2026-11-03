@@ -3,6 +3,7 @@ import { AccessGuard, CurrentActor } from '../access/access.guard'
 import { Actor } from '../access/access.settings'
 import { CsrfGuard } from '../access/csrf.guard'
 import { ZodValidationPipe } from '../shared/http/zod-validation.pipe'
+import { CategoryList, CategoryListSchema } from './categories.schema'
 import { SettingsService } from './settings.service'
 import { SheetConfig, SheetConfigSchema } from './sheet-config.schema'
 
@@ -33,6 +34,22 @@ export class SettingsController {
     this.service.resetSheetConfig(actor.userId)
 
     return { success: true, message: 'Reset to defaults' }
+  }
+
+  @Get('categories')
+  categories(@CurrentActor() actor: Actor) {
+    return { success: true, data: this.service.categories(actor.userId) }
+  }
+
+  @Post('categories')
+  @HttpCode(200) // like the other saves here
+  saveCategories(
+    @CurrentActor() actor: Actor,
+    @Body(new ZodValidationPipe(CategoryListSchema, { shape: 'success-false' })) list: CategoryList,
+  ) {
+    this.service.saveCategories(actor.userId, list)
+
+    return { success: true, data: list }
   }
 
   @Get()

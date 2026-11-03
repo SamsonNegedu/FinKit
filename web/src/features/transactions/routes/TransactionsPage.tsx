@@ -76,6 +76,7 @@ export default function TransactionsPage() {
     })
   }, [period, search])
 
+  const inData = useMemo(() => [...new Set(period.map(t => t.category || 'Other'))], [period])
   const accounts = search.bank && search.bank !== FILES ? [...(sources.banks.get(search.bank) ?? [])] : []
   const hasSources = sources.banks.size > 0
 
@@ -126,6 +127,7 @@ export default function TransactionsPage() {
           searchQuery={search.q ?? ''}
           onSearchChange={q => set({ q: q || undefined })}
           selectedCategories={search.cat ?? []}
+          inData={inData}
           onCategoryChange={cat => set({ cat: cat.length ? cat : undefined })}
           extra={
             <>

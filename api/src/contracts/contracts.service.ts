@@ -50,9 +50,15 @@ export class ContractsService implements OnModuleInit {
     })
   }
 
-  /** The categories this person can file a contract under: their sheet's, plus the ones that are money set aside. */
+  /**
+   * The categories this person can file a contract under: their own list (archived ones too, since an old contract
+   * may still sit in one) or else their sheet's, plus the ones that are money set aside.
+   */
   categories(userId: string): Set<string> {
-    const own = this.settings.sheetConfig(userId).categoryMappings.map(m => m.appCategory)
+    const stored = this.settings.categories(userId)
+    const own = stored
+      ? [...stored.active, ...stored.archived]
+      : this.settings.sheetConfig(userId).categoryMappings.map(m => m.appCategory)
 
     return new Set([...own, 'Savings', 'Investment'])
   }

@@ -1,3 +1,4 @@
+import type { CategoryList } from '@/shared/utils/categorizer/categoryList'
 import type { ReactNode } from 'react'
 import type { ImportOptions } from '@/features/import/components/FileUpload'
 import type { ToastItem } from '@/shared/components/feedback/Toast'
@@ -26,6 +27,8 @@ export interface AppState {
   dateRange: DateRange | null
   setDateRange: (range: DateRange | null) => void
   sheetConfig: SheetConfig | null
+  /** The categories in use: those to pick from, and those archived (still shown in filters and history) */
+  categoryList: CategoryList
   setSheetConfig: (config: SheetConfig | null) => void
   isLoading: boolean
   isRestoring: boolean

@@ -1,7 +1,7 @@
 import { Search, X, ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useState, type ReactNode } from 'react'
-import { getAvailableCategories } from '@/shared/utils/categorizer'
+import { getArchivedCategories, getFilterCategories } from '@/shared/utils/categorizer'
 import Checkbox from '@/shared/components/forms/Checkbox'
 import CategoryIcon from '@/shared/components/CategoryIcon'
 
@@ -9,6 +9,8 @@ interface SearchFilterProps {
   searchQuery: string
   onSearchChange: (query: string) => void
   selectedCategories: string[]
+  /** Categories found on the transactions being filtered, so one that is no longer in any list stays reachable */
+  inData?: string[]
   onCategoryChange: (categories: string[]) => void
   /** More controls for the same row (the other filters, the view toggle) */
   extra?: ReactNode
@@ -18,11 +20,13 @@ export default function SearchFilter({
   searchQuery,
   onSearchChange,
   selectedCategories,
+  inData,
   onCategoryChange,
   extra,
 }: SearchFilterProps) {
   const [categoryQuery, setCategoryQuery] = useState('')
-  const categories = getAvailableCategories()
+  const archived = new Set(getArchivedCategories())
+  const categories = getFilterCategories(inData)
     .filter(c => c !== 'Transfer' && c.toLowerCase().includes(categoryQuery.trim().toLowerCase()))
     .sort((a, b) => a.localeCompare(b))
   const handleCategoryToggle = (category: string) => {
@@ -98,6 +102,7 @@ export default function SearchFilter({
                 />
                 <CategoryIcon category={category} size="sm" />
                 <span className="text-sm">{category}</span>
+                {archived.has(category) && <span className="ml-auto text-xs text-midnight-500">archived</span>}
               </label>
             ))}
           </Popover.Content>

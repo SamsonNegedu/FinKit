@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { SettingsRepository } from './settings.repository'
+import { CategoryList } from './categories.schema'
 import { SheetConfig, SheetConfigSchema, defaultSheetConfig } from './sheet-config.schema'
 
 /** Preferences that need to follow you across browsers: mainly how your Google Sheet is laid out. */
@@ -17,6 +18,15 @@ export class SettingsService {
 
   resetSheetConfig(userId: string) {
     this.settings.write(userId, 'sheetConfig', defaultSheetConfig())
+  }
+
+  /** The person's own category list, or null until they have changed it (their sheet's categories apply until then). */
+  categories(userId: string): CategoryList | null {
+    return this.settings.read<CategoryList | null>(userId, 'categories', null)
+  }
+
+  saveCategories(userId: string, list: CategoryList) {
+    this.settings.write(userId, 'categories', list)
   }
 
   everything(userId: string) {

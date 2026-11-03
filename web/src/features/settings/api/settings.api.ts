@@ -108,3 +108,35 @@ export async function saveSheetConfig(config: SheetConfig): Promise<boolean> {
     return false
   }
 }
+
+export type { CategoryList } from '@/shared/utils/categorizer/categoryList'
+import type { CategoryList } from '@/shared/utils/categorizer/categoryList'
+
+/** The person's own categories, or null until they have saved a list. */
+export async function getCategoryList(): Promise<CategoryList | null> {
+  try {
+    const response = await fetch(`${API_BASE}/settings/categories`, { headers: getHeaders(false) })
+
+    if (!response.ok) {
+      return null
+    }
+
+    return (await response.json()).data ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function saveCategoryList(list: CategoryList): Promise<CategoryList> {
+  const response = await fetch(`${API_BASE}/settings/categories`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(list),
+  })
+
+  if (!response.ok) {
+    throw new Error("Couldn't save the categories.")
+  }
+
+  return (await response.json()).data
+}

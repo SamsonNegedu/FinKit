@@ -1,19 +1,21 @@
 import { useSearch } from '@tanstack/react-router'
 import TabLinks from '@/shared/components/forms/TabLinks'
 import BackOfficePanel from '@/features/banking/components/banks/BackOfficePanel'
+import CategoriesPanel from '@/features/settings/components/CategoriesPanel'
 import SettingsPanel from '@/features/settings/components/SettingsPanel'
 import { useApp } from '@/shared/contexts/AppState'
 import PageHeader from '@/shared/components/layout/PageHeader'
 import { BackOfficeSearch } from '@/features/banking/constants/search.constants'
 import { useBankingStatus } from '@/features/banking/hooks/banking-queries'
 
-type Section = 'sheet' | 'columns' | 'rules' | 'back-office'
+type Section = 'sheet' | 'categories' | 'columns' | 'rules' | 'back-office'
 
 export default function SettingsPage({ section }: { section: Section }) {
   const app = useApp()
   const { data: banking } = useBankingStatus()
   const tabs: Array<[Section, string]> = [
     ['sheet', 'Google Sheet'],
+    ['categories', 'Categories'],
     ['columns', 'Columns'],
     ['rules', 'Learned rules'],
     ...(banking?.enabled ? ([['back-office', 'Back office']] as Array<[Section, string]>) : []),
@@ -29,6 +31,8 @@ export default function SettingsPage({ section }: { section: Section }) {
       />
       {section === 'back-office' ? (
         <BackOffice />
+      ) : section === 'categories' ? (
+        <CategoriesPanel />
       ) : (
         <SettingsPanel config={app.sheetConfig} onSave={app.setSheetConfig} section={section} />
       )}

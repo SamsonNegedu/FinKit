@@ -12,10 +12,11 @@ import {
   type RateStore,
 } from '@/shared/utils/rates'
 import { getNumberFormat, setNumberFormat, type NumberFormat } from '@/shared/utils/format'
+import { useStoredCategories } from '@/features/settings/hooks/category-queries'
 import type { AppState } from './workspace/types'
 import { useToastStack } from './workspace/useToastStack'
 import { useTransactionStore } from './workspace/useTransactionStore'
-import { syncExpenseCategoriesFromSheet, useWorkspaceBootstrap } from './workspace/useWorkspaceBootstrap'
+import { syncExpenseCategories, useWorkspaceBootstrap } from './workspace/useWorkspaceBootstrap'
 import { useWorkspaceImport } from './workspace/useWorkspaceImport'
 import { useWorkspaceMutations } from './workspace/useWorkspaceMutations'
 import { useTripLinks } from './workspace/useTripLinks'
@@ -63,7 +64,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     transactions: store.transactions,
   })
 
-  syncExpenseCategoriesFromSheet(sheetConfig)
+  const { data: storedCategories = null } = useStoredCategories()
+  const categoryList = syncExpenseCategories(sheetConfig, storedCategories)
 
   const clearImportError = () => dispatchPhase({ type: 'CLEAR_IMPORT_ERROR' })
 
@@ -139,6 +141,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setDateRange,
     sheetConfig,
     setSheetConfig,
+    categoryList,
     isLoading,
     isRestoring,
     error,

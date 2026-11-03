@@ -7,8 +7,9 @@ import { useContractPayments } from '../hooks/contracts-queries'
 import ContractHistory from './ContractHistory'
 
 // Payments go out; income and transfers between your own accounts are not contracts
-const categoryOptions = () =>
-  getAvailableCategories()
+const categoryOptions = (current?: string) =>
+  // The contract's own group stays listed even if it has been archived, so the box is never blank
+  [...new Set([...(current ? [current] : []), ...getAvailableCategories()])]
     .filter(c => c !== 'Income' && c !== 'Transfer')
     .map(c => ({ value: c, label: c }))
 
@@ -127,7 +128,7 @@ export default function ContractDialog({ contract, currency, busy, error, onSave
             ariaLabel="Category"
             value={d.group}
             onChange={v => set('group', v)}
-            options={categoryOptions()}
+            options={categoryOptions(contract?.group)}
             className="mt-1"
           />
         </div>

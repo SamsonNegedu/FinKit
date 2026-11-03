@@ -1,3 +1,5 @@
+import { getCategoryStyle } from './categoryStyle'
+
 export const EXPENSE_CATEGORIES = [
   'Rent',
   'Eating Out',
@@ -21,10 +23,30 @@ export const EXPENSE_CATEGORIES = [
 // Cash is here so it is always available: withdrawals default to it until you say what each was for
 const SYSTEM_CATEGORIES = ['Income', 'Cash', 'Savings', 'Investment', 'Transfer']
 
+export const RESERVED_CATEGORIES = SYSTEM_CATEGORIES
+
 let activeExpenseCategories: string[] = [...EXPENSE_CATEGORIES]
+let archivedCategories: string[] = []
 
 export function setExpenseCategories(names: string[]): void {
   activeExpenseCategories = names.length > 0 ? [...names] : [...EXPENSE_CATEGORIES]
+}
+
+/** Categories put away: not offered when categorising, but still part of filters, charts and history. */
+export function setArchivedCategories(names: string[]): void {
+  archivedCategories = [...names]
+}
+
+export function getArchivedCategories(): string[] {
+  return archivedCategories
+}
+
+/**
+ * Everything a category filter should offer: what can be picked, what is archived, and anything still found on
+ * transactions (one removed before archiving existed), so no year's categories become unreachable.
+ */
+export function getFilterCategories(inData: string[] = []): string[] {
+  return [...new Set([...getAvailableCategories(), ...archivedCategories, ...inData])]
 }
 
 export function getExpenseCategories(): string[] {
@@ -62,6 +84,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export function getCategoryColor(category: string | undefined): string {
   const name = category || 'Other'
+  const chosen = getCategoryStyle(name)?.color
+
+  if (chosen) {
+    return chosen
+  }
 
   if (CATEGORY_COLORS[name]) {
     return CATEGORY_COLORS[name]
