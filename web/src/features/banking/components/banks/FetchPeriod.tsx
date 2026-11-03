@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download } from 'lucide-react'
 import DateRangePicker from '@/shared/components/forms/DateRangePicker'
 import { formatDay, toISODate } from '@/shared/utils/dates'
@@ -40,16 +40,28 @@ export default function FetchPeriod({ disabled, onFetch, onCancel }: Props) {
   const days = complete ? daysBetween(range.start, range.end) : 0
   const tooWide = days > MAX_DAYS
 
+  // Escape closes the form, like the dialogs elsewhere in the app
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel()
+      }
+    }
+
+    document.addEventListener('keydown', onKey)
+
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
   return (
-    <div className="space-y-4 rounded-xl border border-midnight-700 bg-midnight-900/40 p-4">
-      <div>
-        <h3 className="text-sm font-medium text-white">Fetch a period</h3>
-        <p className="mt-0.5 text-xs text-midnight-400">
-          Up to a year at a time. It counts as you being here, so it does not use the bank's daily allowance for
-          background syncs. Banks differ in how far back they will go.
+    <div role="group" aria-label="Fetch a period" className="space-y-3 border-t border-line-strong pt-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h3 className="text-sm font-medium text-ink">Fetch a period</h3>
+        <p className="text-xs text-midnight-400">
+          Up to a year at a time. Doesn't use the bank's daily sync allowance. Banks differ in how far back they go.
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {chips.map(p => {
           const active = range.start === p.from && range.end === p.to
 
@@ -62,16 +74,14 @@ export default function FetchPeriod({ disabled, onFetch, onCancel }: Props) {
               className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 active
                   ? 'border-accent bg-accent/15 text-accent'
-                  : 'border-midnight-600 text-midnight-300 hover:border-midnight-500 hover:text-white'
+                  : 'border-line-strong text-midnight-300 hover:border-midnight-500 hover:text-ink'
               }`}
             >
               {p.label}
             </button>
           )
         })}
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="w-full sm:w-64">
+        <div className="w-full sm:ml-2 sm:w-64">
           <DateRangePicker
             start={range.start}
             end={range.end}
@@ -79,13 +89,8 @@ export default function FetchPeriod({ disabled, onFetch, onCancel }: Props) {
             onChange={(start, end) => setRange({ start, end })}
           />
         </div>
-        {complete && (
-          <span className={`text-xs ${tooWide ? 'text-expense' : 'text-midnight-400'}`}>
-            {tooWide ? `${days} days is more than a year. Pick a shorter stretch.` : `${days} days`}
-          </span>
-        )}
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <button
           type="button"
           className="btn-primary flex items-center gap-2 text-sm"
@@ -97,9 +102,14 @@ export default function FetchPeriod({ disabled, onFetch, onCancel }: Props) {
             ? `Fetch ${formatDay(range.start, true)} – ${formatDay(range.end, true)}`
             : 'Fetch transactions'}
         </button>
-        <button type="button" className="text-sm text-midnight-400 hover:text-white" onClick={onCancel}>
+        <button type="button" className="text-sm text-midnight-400 hover:text-ink" onClick={onCancel}>
           Cancel
         </button>
+        {complete && (
+          <span className={`text-xs ${tooWide ? 'text-expense' : 'text-midnight-400'}`}>
+            {tooWide ? `${days} days is more than a year. Pick a shorter stretch.` : `${days} days`}
+          </span>
+        )}
       </div>
     </div>
   )
