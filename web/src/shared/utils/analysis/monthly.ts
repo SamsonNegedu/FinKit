@@ -9,13 +9,17 @@ export interface MonthRow {
   income: number
   spent: number
   setAside: number
-  /** Income minus spent: what was kept, including what was put aside */
-  kept: number
-  /** Kept as a share of income; null when nothing came in */
-  rate: number | null
+  /** Paid into the Investment category: recorded payments, put away for good */
+  invested: number
+  /** Paid into the Savings category */
+  saved: number
+  /** What is left of income after spending, investing and saving. Worked out, not recorded: it may be in an account or spent where nothing was tracked. */
+  leftOver: number
+  /** Invested as a share of income; null when nothing came in */
+  investedRate: number | null
 }
 
-/** The months you have data for, newest first, each with what came in, went out and was put aside. */
+/** The months you have data for, newest first, each with what came in, went out, was invested and saved. */
 export function monthlySeries(transactions: Transaction[], limit = 12): MonthRow[] {
   const byMonth = new Map<string, Transaction[]>()
 
@@ -37,8 +41,10 @@ export function monthlySeries(transactions: Transaction[], limit = 12): MonthRow
         income: a.income,
         spent: a.spent,
         setAside: a.setAside,
-        kept: a.income - a.spent,
-        rate: a.income > 0 ? ((a.income - a.spent) / a.income) * 100 : null,
+        invested: a.invested,
+        saved: a.saved,
+        leftOver: a.income - a.spent - a.invested - a.saved,
+        investedRate: a.income > 0 ? (a.invested / a.income) * 100 : null,
       }
     })
     .sort((a, b) => b.year - a.year || b.month - a.month)

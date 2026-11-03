@@ -13,11 +13,53 @@ export default function CategoryByMonth({
   currency: string
   onSelect: (category: string, month: MonthKey) => void
 }) {
-  if (data.months.length < 2 || data.rows.length === 0) {
+  if (data.months.length < 2 || (data.rows.length === 0 && data.putAway.length === 0)) {
     return null
   }
   const money = (n: number) => formatCurrency(n, currency)
   const last = data.months.length - 1
+  const row = (r: CategoryMonths['rows'][number]) => {
+    const peak = Math.max(...r.cells, 1)
+    const delta = r.usual !== null && r.usual > 0 ? r.cells[last] - r.usual : null
+
+    return (
+      <tr key={r.category} className="border-t border-midnight-800">
+        <th scope="row" className="sticky left-0 bg-midnight-900 py-1.5 pr-3 text-left font-normal text-white">
+          <span
+            className="mr-2 inline-block h-2 w-2 rounded-full"
+            style={{ backgroundColor: r.color }}
+            aria-hidden="true"
+          />
+          {r.category}
+        </th>
+        {r.cells.map((n, i) => (
+          <td key={i} className="p-0.5 text-right tabular-nums">
+            {n > 0 ? (
+              <button
+                onClick={() => onSelect(r.category, data.months[i])}
+                aria-label={`${r.category}, ${label(data.months[i])}: ${money(n)}`}
+                className="w-full rounded px-1.5 py-1 text-white hover:ring-1 hover:ring-midnight-500"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${r.color} ${Math.round((n / peak) * 45)}%, transparent)`,
+                }}
+              >
+                {money(n)}
+              </button>
+            ) : (
+              <span className="block px-1.5 py-1 text-midnight-600">–</span>
+            )}
+          </td>
+        ))}
+        <td
+          className={`py-1.5 pl-3 text-right text-xs tabular-nums ${
+            delta === null || Math.abs(delta) < 1 ? 'text-midnight-500' : delta > 0 ? 'text-amber-300' : 'text-accent'
+          }`}
+        >
+          {delta === null || Math.abs(delta) < 1 ? '–' : `${delta > 0 ? '▲' : '▼'} ${money(Math.abs(delta))}`}
+        </td>
+      </tr>
+    )
+  }
 
   return (
     <section className="card !p-4 sm:!p-6">
@@ -39,55 +81,21 @@ export default function CategoryByMonth({
             </tr>
           </thead>
           <tbody>
-            {data.rows.map(r => {
-              const peak = Math.max(...r.cells, 1)
-              const delta = r.usual !== null && r.usual > 0 ? r.cells[last] - r.usual : null
-
-              return (
-                <tr key={r.category} className="border-t border-midnight-800">
+            {data.rows.map(row)}
+            {data.putAway.length > 0 && (
+              <>
+                <tr>
                   <th
-                    scope="row"
-                    className="sticky left-0 bg-midnight-900 py-1.5 pr-3 text-left font-normal text-white"
+                    colSpan={data.months.length + 2}
+                    scope="colgroup"
+                    className="pb-1 pt-4 text-left text-xs font-normal uppercase tracking-wide text-midnight-500"
                   >
-                    <span
-                      className="mr-2 inline-block h-2 w-2 rounded-full"
-                      style={{ backgroundColor: r.color }}
-                      aria-hidden="true"
-                    />
-                    {r.category}
+                    Put away, not counted as spent
                   </th>
-                  {r.cells.map((n, i) => (
-                    <td key={i} className="p-0.5 text-right tabular-nums">
-                      {n > 0 ? (
-                        <button
-                          onClick={() => onSelect(r.category, data.months[i])}
-                          aria-label={`${r.category}, ${label(data.months[i])}: ${money(n)}`}
-                          className="w-full rounded px-1.5 py-1 text-white hover:ring-1 hover:ring-midnight-500"
-                          style={{
-                            backgroundColor: `color-mix(in srgb, ${r.color} ${Math.round((n / peak) * 45)}%, transparent)`,
-                          }}
-                        >
-                          {money(n)}
-                        </button>
-                      ) : (
-                        <span className="block px-1.5 py-1 text-midnight-600">–</span>
-                      )}
-                    </td>
-                  ))}
-                  <td
-                    className={`py-1.5 pl-3 text-right text-xs tabular-nums ${
-                      delta === null || Math.abs(delta) < 1
-                        ? 'text-midnight-500'
-                        : delta > 0
-                          ? 'text-amber-300'
-                          : 'text-accent'
-                    }`}
-                  >
-                    {delta === null || Math.abs(delta) < 1 ? '–' : `${delta > 0 ? '▲' : '▼'} ${money(Math.abs(delta))}`}
-                  </td>
                 </tr>
-              )
-            })}
+                {data.putAway.map(row)}
+              </>
+            )}
           </tbody>
         </table>
       </div>

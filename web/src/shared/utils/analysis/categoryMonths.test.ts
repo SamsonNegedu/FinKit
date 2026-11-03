@@ -48,6 +48,21 @@ describe('categoryByMonth', () => {
   })
 
   it('is empty without transactions', () => {
-    expect(categoryByMonth([])).toEqual({ months: [], rows: [] })
+    expect(categoryByMonth([])).toEqual({ months: [], rows: [], putAway: [] })
+  })
+
+  it('lists investments and savings apart from spending, month by month', () => {
+    const { rows, putAway } = categoryByMonth([
+      tx('2026-02-03', 40, 'Groceries'),
+      tx('2026-02-05', 200, 'Investment', { recipient: 'Trade Republic' }),
+      tx('2026-03-05', 250, 'Investment', { recipient: 'Trade Republic' }),
+      tx('2026-03-06', 50, 'Savings'),
+    ])
+
+    expect(rows.map(r => r.category)).toEqual(['Groceries'])
+    expect(putAway.map(r => [r.category, r.cells.slice(-2)])).toEqual([
+      ['Investment', [200, 250]],
+      ['Savings', [0, 50]],
+    ])
   })
 })

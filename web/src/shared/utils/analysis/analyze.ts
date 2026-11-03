@@ -24,13 +24,30 @@ export interface MerchantRow {
   total: number
   count: number
 }
+/** Money put away in one of the set-aside categories, and who it went to. */
+export interface PutAwayRow {
+  category: string
+  total: number
+  count: number
+  color: string
+  merchants: MerchantRow[]
+}
 export interface Analysis {
   income: number
   spent: number
   setAside: number
+  /** Money put into investments: put away for good, unlike savings, which can be moved back */
+  invested: number
+  /** Money put into savings */
+  saved: number
+  /** Investments and savings, each with where it went; kept apart from spending */
+  putAway: PutAwayRow[]
   /** Spending that repeats (flagged recurring), and its share of all spending */
   repeating: number
-  avgDaily: number
+  /** Spending that is not paid on a schedule: groceries, eating out, the things that vary with how you live */
+  everyday: number
+  /** Everyday spending per day of the period. Rent and bills are left out: they do not depend on the day. */
+  everydayPerDay: number
   categories: CategoryRow[]
   merchants: MerchantRow[]
   largest: { tx: Transaction; name: string } | null
@@ -92,6 +109,33 @@ export function analyze(rows: Transaction[], earlier: Transaction[] | null, days
 
     merchants.set(key, { ...m, total: m.total + t.amount, count: m.count + 1 })
   }
+  const putAway = [...SET_ASIDE].flatMap(category => {
+    const rowsOf = all.filter(t => t.category === category)
+
+    if (rowsOf.length === 0) {
+      return []
+    }
+    const byName = new Map<string, MerchantRow>()
+
+    for (const t of rowsOf) {
+      const name = displayNameOf(t)
+      const key = normalizeMerchant(name) || name
+      const m = byName.get(key) ?? { merchant: name, total: 0, count: 0 }
+
+      byName.set(key, { ...m, total: m.total + t.amount, count: m.count + 1 })
+    }
+
+    return [
+      {
+        category,
+        total: rowsOf.reduce((sum, t) => sum + t.amount, 0),
+        count: rowsOf.length,
+        color: getCategoryColor(category),
+        merchants: [...byName.values()].sort((a, b) => b.total - a.total),
+      },
+    ]
+  })
+  const repeatingTotal = spending.filter(t => t.isRecurring).reduce((sum, t) => sum + t.amount, 0)
   const biggest = spending.reduce<Transaction | null>((best, t) => (!best || t.amount > best.amount ? t : best), null)
 
   const income = rows
@@ -101,9 +145,13 @@ export function analyze(rows: Transaction[], earlier: Transaction[] | null, days
   return {
     income,
     spent,
+    putAway,
     setAside: all.filter(t => SET_ASIDE.has(t.category || '')).reduce((sum, t) => sum + t.amount, 0),
-    repeating: spending.filter(t => t.isRecurring).reduce((sum, t) => sum + t.amount, 0),
-    avgDaily: days > 0 ? spent / days : 0,
+    invested: all.filter(t => t.category === 'Investment').reduce((sum, t) => sum + t.amount, 0),
+    saved: all.filter(t => t.category === 'Savings').reduce((sum, t) => sum + t.amount, 0),
+    repeating: repeatingTotal,
+    everyday: spent - repeatingTotal,
+    everydayPerDay: days > 0 ? (spent - repeatingTotal) / days : 0,
     categories,
     merchants: [...merchants.values()].sort((a, b) => b.total - a.total),
     largest: biggest ? { tx: biggest, name: displayNameOf(biggest) } : null,

@@ -17,14 +17,14 @@ function Tile({ label, value, note, tone }: { label: string; value: string; note
   )
 }
 
-/** The four numbers to know first: spent (with how it compares), set aside, per day, and how much repeats. */
+/** The numbers to know first: spent (with how it compares), what is fixed, what is not scheduled, invested and saved. */
 export default function AnalyticsHeadline({ a, currency }: { a: Analysis; currency: string }) {
   const money = (n: number) => formatCurrency(n, currency)
   const delta =
     a.previousSpent !== null && a.previousSpent > 0 ? ((a.spent - a.previousSpent) / a.previousSpent) * 100 : null
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
       <Tile
         label="Spent"
         value={money(a.spent)}
@@ -35,13 +35,18 @@ export default function AnalyticsHeadline({ a, currency }: { a: Analysis; curren
         }
         tone={delta === null ? undefined : delta > 0 ? 'up' : 'down'}
       />
-      <Tile label="Set aside" value={money(a.setAside)} note="Savings and investments, not counted as spent" />
-      <Tile label="Per day" value={money(a.avgDaily)} note="Average spent each day" />
       <Tile
-        label="Repeats"
-        value={a.spent > 0 ? `${Math.round((a.repeating / a.spent) * 100)}%` : '0%'}
-        note={`${money(a.repeating)} paid on a schedule`}
+        label="Fixed"
+        value={money(a.repeating)}
+        note={`${a.spent > 0 ? Math.round((a.repeating / a.spent) * 100) : 0}% of spent: rent, bills and the like, paid on a schedule`}
       />
+      <Tile
+        label="Not scheduled"
+        value={money(a.everyday)}
+        note={`Groceries, going out, one-offs: about ${money(a.everydayPerDay)} a day`}
+      />
+      <Tile label="Invested" value={money(a.invested)} note="Put away for good, not counted as spent" />
+      <Tile label="Saved" value={money(a.saved)} note="Not counted as spent, still yours to move" />
     </div>
   )
 }

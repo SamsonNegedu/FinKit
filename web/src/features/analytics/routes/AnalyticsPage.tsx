@@ -58,7 +58,13 @@ export function AnalyticsPage() {
                   }
                 />
                 <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-2">
-                  <CategoryBreakdown rows={analysis.categories} currency={currency} onSelect={toCategory} />
+                  <CategoryBreakdown
+                    rows={analysis.categories}
+                    putAway={analysis.putAway}
+                    currency={currency}
+                    onSelect={toCategory}
+                    onSelectMerchant={toMerchant}
+                  />
                   <MerchantList rows={analysis.merchants} currency={currency} onSelect={toMerchant} />
                 </div>
               </>

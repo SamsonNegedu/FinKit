@@ -4,7 +4,7 @@ import type { MonthRow } from '@/shared/utils/analysis/monthly'
 const name = (m: MonthRow) =>
   new Date(m.year, m.month, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 
-/** Twelve months side by side: is what you keep getting better or worse? Opening a row makes that month the period. */
+/** Twelve months side by side: how much goes out, into investments and into savings, month by month. Opening a row makes that month the period. */
 export default function MonthByMonth({
   rows,
   currency,
@@ -24,14 +24,20 @@ export default function MonthByMonth({
     <section className="card !p-4 sm:!p-6">
       <h2 className="text-lg font-semibold text-white">Month by month</h2>
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[34rem] text-sm">
+        <table className="w-full min-w-[40rem] text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-midnight-500">
               <th className="py-1.5 pr-3 font-normal">Month</th>
               <th className="py-1.5 pr-3 text-right font-normal">Income</th>
               <th className="w-1/3 py-1.5 pr-3 font-normal">Spent</th>
-              <th className="py-1.5 pr-3 text-right font-normal">Set aside</th>
-              <th className="py-1.5 text-right font-normal">Kept</th>
+              <th className="py-1.5 pr-3 text-right font-normal">Invested</th>
+              <th className="py-1.5 pr-3 text-right font-normal">Saved</th>
+              <th
+                className="py-1.5 text-right font-normal"
+                title="Income minus spent, invested and saved. Worked out, not recorded."
+              >
+                Left over
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -58,10 +64,15 @@ export default function MonthByMonth({
                     <span className="w-24 text-right tabular-nums text-white">{money(r.spent)}</span>
                   </div>
                 </td>
-                <td className="py-2 pr-3 text-right tabular-nums text-midnight-300">{money(r.setAside)}</td>
-                <td className={`py-2 text-right tabular-nums ${r.kept < 0 ? 'text-expense' : 'text-white'}`}>
-                  {money(r.kept)}
-                  {r.rate !== null && <span className="ml-1 text-xs text-midnight-500">{Math.round(r.rate)}%</span>}
+                <td className="py-2 pr-3 text-right tabular-nums text-white">
+                  {money(r.invested)}
+                  {r.investedRate !== null && r.invested > 0 && (
+                    <span className="ml-1 text-xs text-midnight-500">{Math.round(r.investedRate)}%</span>
+                  )}
+                </td>
+                <td className="py-2 pr-3 text-right tabular-nums text-midnight-300">{money(r.saved)}</td>
+                <td className={`py-2 text-right tabular-nums ${r.leftOver < 0 ? 'text-expense' : 'text-midnight-400'}`}>
+                  {money(r.leftOver)}
                 </td>
               </tr>
             ))}

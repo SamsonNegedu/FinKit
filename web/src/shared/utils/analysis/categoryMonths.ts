@@ -1,5 +1,6 @@
 import type { Transaction } from '@/shared/types'
 import { parseLocalDate } from '@/shared/utils/dates'
+import { getCategoryColor } from '@/shared/utils/categorizer'
 import { analyze } from './analyze'
 
 export interface MonthKey {
@@ -19,6 +20,8 @@ export interface CategoryMonths {
   /** Oldest first, no gaps: a month with nothing spent still gets a column */
   months: MonthKey[]
   rows: CategoryMonthRow[]
+  /** Investments and savings by month: money put away, so not part of what was spent */
+  putAway: CategoryMonthRow[]
 }
 
 /**
@@ -34,7 +37,7 @@ export function categoryByMonth(transactions: Transaction[], count = 6): Categor
     newest = Math.max(newest, d.getFullYear() * 12 + d.getMonth())
   }
   if (newest < 0) {
-    return { months: [], rows: [] }
+    return { months: [], rows: [], putAway: [] }
   }
   const months = Array.from({ length: count }, (_, i) => {
     const index = newest - (count - 1 - i)
@@ -73,7 +76,19 @@ export function categoryByMonth(transactions: Transaction[], count = 6): Categor
     }
   })
 
-  return { months, rows: rows.sort((a, b) => sum(b.cells) - sum(a.cells)) }
+  const putAway = [...new Set(perMonth.flatMap(a => a.putAway.map(p => p.category)))].map(category => {
+    const cells = perMonth.map(a => a.putAway.find(p => p.category === category)?.total ?? 0)
+    const earlier = cells.slice(0, -1).filter(n => n > 0)
+
+    return {
+      category,
+      color: getCategoryColor(category),
+      cells,
+      usual: earlier.length ? earlier.reduce((total, n) => total + n, 0) / earlier.length : null,
+    }
+  })
+
+  return { months, rows: rows.sort((a, b) => sum(b.cells) - sum(a.cells)), putAway }
 }
 
 const sum = (cells: number[]) => cells.reduce((total, n) => total + n, 0)

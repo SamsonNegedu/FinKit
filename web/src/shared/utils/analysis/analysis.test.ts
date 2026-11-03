@@ -34,7 +34,10 @@ describe('analyze', () => {
 
     expect(a.spent).toBe(100)
     expect(a.setAside).toBe(250)
-    expect(a.avgDaily).toBe(10)
+    expect(a.invested).toBe(250)
+    expect(a.saved).toBe(0)
+    expect(a.everyday).toBe(100)
+    expect(a.everydayPerDay).toBe(10)
     expect(a.categories.map(c => c.category)).toEqual(['Groceries'])
   })
 
@@ -190,9 +193,9 @@ describe('monthlySeries', () => {
       [2026, 1],
       [2026, 0],
     ])
-    expect(m[0]).toMatchObject({ income: 3000, spent: 2000, setAside: 500, kept: 1000 })
-    expect(m[0].rate).toBeCloseTo(33.3, 1)
+    expect(m[0]).toMatchObject({ income: 3000, spent: 2000, setAside: 500, invested: 500, saved: 0, leftOver: 500 })
+    expect(m[0].investedRate).toBeCloseTo(16.7, 1)
     expect(monthlySeries(rows, 1)).toHaveLength(1)
-    expect(monthlySeries([tx({ date: '2026-03-01', amount: 5 })])[0].rate).toBeNull()
+    expect(monthlySeries([tx({ date: '2026-03-01', amount: 5 })])[0].investedRate).toBeNull()
   })
 })
