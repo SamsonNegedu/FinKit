@@ -15,10 +15,6 @@ export function addMilliseconds(date: Date, ms: number): Date {
   return new Date(date.getTime() + ms)
 }
 
-export function diffDays(later: Date, earlier: Date): number {
-  return (later.getTime() - earlier.getTime()) / MS_PER_DAY
-}
-
 export function isoDaysFromNow(days: number, at = Date.now()): string {
   return new Date(at + days * MS_PER_DAY).toISOString()
 }

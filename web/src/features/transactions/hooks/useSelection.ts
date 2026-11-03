@@ -17,7 +17,7 @@ export function useSelection(
     setSelectedIds,
     selectAll: () =>
       setSelectedIds(prev => (prev.size === visible.length ? new Set() : new Set(visible.map(t => t.id)))),
-    setCategory: (category: string) => apply({ category }),
+    setCategory: (category: string, detail?: string) => apply({ category, categoryDetail: detail || undefined }),
     exclude: () => apply({ isExcluded: true }),
     include: () => apply({ isExcluded: false }),
   }

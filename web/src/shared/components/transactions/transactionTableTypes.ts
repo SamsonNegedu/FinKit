@@ -12,6 +12,8 @@ export interface TableBehaviour {
   colorOf?: (category: string) => string
   /** Finer choices inside a category, offered right after picking it */
   detailsOf?: (category: string) => string[]
+  /** Categories that can take a subcategory; all of them when not given */
+  canAddDetail?: (category: string) => boolean
   /** A category and one of its details picked together; an empty detail means none */
   onPickDetail?: (id: string, category: string, detail: string) => void
   /** A subcategory typed in the picker for a category; the caller remembers it */
@@ -34,8 +36,8 @@ export interface TransactionTableProps {
   onSelectionChange: (ids: Set<string>) => void
   onSelectAll: () => void
   onUpdateTransaction: (id: string, updates: Partial<Transaction>, onlyThis?: boolean) => void
-  onBulkCategoryChange: (category: string) => void
-  onSetCategoryForIds: (ids: string[], category: string) => void
+  onBulkCategoryChange: (category: string, detail?: string) => void
+  onSetCategoryForIds: (ids: string[], category: string, detail?: string) => void
   onMakeRule?: (match: RuleMatch, category: string) => void
   onBulkExclude?: () => void
   onBulkInclude?: () => void

@@ -38,10 +38,6 @@ export function settingsAsyncReducer(state: SettingsAsyncState, action: Settings
   }
 }
 
-export function isSettingsBusy(state: SettingsAsyncState): boolean {
-  return state.operation.kind !== 'idle'
-}
-
 export function settingsLoading(state: SettingsAsyncState): boolean {
   return state.operation.kind === 'loading_config'
 }

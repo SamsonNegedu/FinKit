@@ -1,6 +1,6 @@
 import Tooltip from '@/shared/components/Tooltip'
 import { useState } from 'react'
-import { ChevronDown, ArrowLeftRight, MessageSquarePlus, Scissors, Undo2 } from 'lucide-react'
+import { ChevronDown, ArrowLeftRight, BookmarkPlus, MessageSquarePlus, Scissors, Undo2 } from 'lucide-react'
 import { Transaction } from '@/shared/types'
 import type { RuleMatch } from '@/shared/utils/categorizer'
 import { getCategoryColor } from '@/shared/utils/categorizer'
@@ -125,6 +125,17 @@ export default function TransactionTableRow({
             )}
             {tx.isRecurring && <RecurringBadge frequency={tx.recurringFrequency} />}
             {behaviour.rowActions?.(tx)}
+            {onMakeRule && (
+              <Tooltip label="Make a rule from this row">
+                <button
+                  onClick={() => setRuleFor(tx.category || 'Other')}
+                  className="p-1 rounded text-midnight-500 hover:text-ink hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                  aria-label={`Make a rule from ${displayNameOf(tx)}`}
+                >
+                  <BookmarkPlus className="w-3.5 h-3.5" />
+                </button>
+              </Tooltip>
+            )}
             {!tx.note && !noteOpen && (
               <Tooltip label="Add a note">
                 <button
@@ -166,7 +177,10 @@ export default function TransactionTableRow({
           onOpenChange={o => (o ? onOpenPicker(tx.id) : onClosePicker())}
           categories={categories}
           current={tx.category}
+          currentDetail={tx.categoryDetail}
+          merchantName={displayNameOf(tx)}
           detailsOf={behaviour.detailsOf}
+          canAddDetail={behaviour.canAddDetail}
           onAddDetail={behaviour.onAddDetail}
           onPick={(category, scope, detail) => {
             if (detail !== undefined && behaviour.onPickDetail) {

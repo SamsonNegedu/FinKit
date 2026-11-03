@@ -11,7 +11,7 @@ import { FUNDING_COLOR, tripCategoryColor } from '../utils/tripCategoryColor'
 import { FUNDING, toTableRow } from '../utils/tripRows'
 import { NOT_SPECIFIED } from '../constants/search.constants'
 import EditItemDialog from './EditItemDialog'
-import { editableFields } from './ItemFields'
+import { extraFieldsHint, hasExtraFields } from './ItemFields'
 
 const Chip = ({ children }: { children: string }) => (
   <span className="rounded-full bg-midnight-800 px-2 py-0.5 text-[11px] text-midnight-300">{children}</span>
@@ -55,12 +55,14 @@ export default function TripTransactions({
   const table = useMemo(() => rows.map(toTableRow), [rows])
   const byRef = useMemo(() => new Map(rows.map(r => [r.ref, r])), [rows])
 
-  const setCategory = (refs: string[], category: string) =>
+  const setCategory = (refs: string[], category: string, detail?: string) =>
     tag.mutate(
       {
         id: trip.id,
         items: refs.map(ref =>
-          category === FUNDING ? { ref, kind: 'funding' as const } : { ref, kind: 'cost' as const, category },
+          category === FUNDING
+            ? { ref, kind: 'funding' as const }
+            : { ref, kind: 'cost' as const, category, subcategory: detail ?? null },
         ),
       },
       {
@@ -89,8 +91,10 @@ export default function TripTransactions({
     categories: [FUNDING, ...categories],
     colorOf: c => (c === FUNDING ? FUNDING_COLOR : tripCategoryColor(c)),
     noSplit: true,
-    // Picking a category with details goes straight on to the detail, so there is no need for the pencil
     detailsOf: category => (category === FUNDING ? [] : (subcategories[category] ?? [])),
+    canAddDetail: category => category !== FUNDING,
+    // A suggested subcategory appears in the list once a cost uses it, so the server remembers it; nothing to store here
+    onAddDetail: () => {},
     onPickDetail: (id, category, detail) => {
       const r = byRef.get(id)
 
@@ -127,8 +131,8 @@ export default function TripTransactions({
 
       return r ? (
         <>
-          {r.kind === 'cost' && (
-            <Tooltip label={editableFields(trip, r.manual)}>
+          {r.kind === 'cost' && hasExtraFields(trip, r.manual) && (
+            <Tooltip label={extraFieldsHint(trip, r.manual)}>
               <button className={iconButton} aria-label="Edit details" onClick={() => setEditing(r)}>
                 <Pencil className="h-3.5 w-3.5" />
               </button>

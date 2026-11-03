@@ -139,5 +139,3 @@ export interface TripCategories {
 }
 export const listTripCategories = () => call<TripCategories>('/trip-categories')
 export const addTripCategory = (name: string) => call<unknown>('/trip-categories', send('POST', { name }))
-export const removeTripCategory = (name: string) =>
-  call<unknown>(`/trip-categories/${encodeURIComponent(name)}`, send('DELETE'))

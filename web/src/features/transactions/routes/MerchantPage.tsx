@@ -5,6 +5,7 @@ import { Link, useParams } from '@tanstack/react-router'
 import { Check, Pencil, X } from 'lucide-react'
 import { useApp } from '@/shared/contexts/AppState'
 import PageHeader from '@/shared/components/layout/PageHeader'
+import MakeRuleDialog from '@/shared/components/transactions/MakeRuleDialog'
 import { displayNameOf } from '@/shared/utils/aliases'
 import { getAvailableCategories, merchantKeyOf, sameMerchant } from '@/shared/utils/categorizer'
 import { formatDay } from '@/shared/utils/dates'
@@ -18,6 +19,7 @@ export default function MerchantPage() {
   const app = useApp()
   const { merchantKey } = useParams({ from: '/transactions/merchants/$merchantKey' })
   const [renaming, setRenaming] = useState(false)
+  const [ruleOpen, setRuleOpen] = useState(false)
 
   const rows = useMemo(
     () => inPeriod(app.displayTransactions, app.dateRange).filter(t => sameMerchant(merchantKeyOf(t), merchantKey)),
@@ -41,6 +43,9 @@ export default function MerchantPage() {
   const total = spent.reduce((s, t) => s + t.amount, 0)
   const categories = [...new Set(rows.map(t => t.category || 'Other'))]
   const category = categories.length === 1 ? categories[0] : undefined
+  const details = category ? (app.categoryList.details?.[category] ?? []) : []
+  const sameDetail = rows.every(t => (t.categoryDetail ?? '') === (rows[0].categoryDetail ?? ''))
+  const detail = sameDetail ? (rows[0].categoryDetail ?? '') : ''
   const sources = [...new Set(rows.map(t => t.bankName ?? 'Imported files'))]
   const dates = rows.map(t => t.date).sort()
 
@@ -82,42 +87,83 @@ export default function MerchantPage() {
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Fact label="Spent" value={formatCurrency(total, app.baseCurrency)} />
         <Fact label="Average" value={spent.length ? formatCurrency(total / spent.length, app.baseCurrency) : '-'} />
         <Fact label="From" value={sources.join(', ')} />
-        <div className="card !p-4">
-          <label htmlFor="merchant-category" className="text-xs text-midnight-400 block mb-1">
-            Category rule
-          </label>
-          <div className="flex items-center gap-2">
-            {category && <CategoryIcon category={category} size="sm" />}
-            <Select
-              id="merchant-category"
-              className="py-1 text-sm w-full"
-              value={category ?? ''}
-              onChange={value =>
-                value &&
-                app.bulkUpdate(
-                  rows.map(t => t.id),
-                  { category: value },
-                )
-              }
-              options={[
-                ...(category ? [] : [{ value: '', label: 'Mixed', disabled: true }]),
-                // The one it has now stays listed even if it has been archived, so the box is never blank
-                ...[...new Set([...(category ? [category] : []), ...getAvailableCategories()])].map(c => ({
-                  value: c,
-                  label: c,
-                })),
-              ]}
-            />
-          </div>
-          <p className="text-[11px] text-midnight-500 mt-1">Changing it also teaches FinKit for next time.</p>
-        </div>
       </div>
 
+      <section className="card !p-4" aria-label="Category for every transaction">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-44 flex-1">
+            <label htmlFor="merchant-category" className="block text-xs text-midnight-400 mb-1">
+              Category for all {rows.length} transactions
+            </label>
+            <div className="flex items-center gap-2">
+              {category && <CategoryIcon category={category} size="sm" />}
+              <Select
+                id="merchant-category"
+                className="py-1 text-sm w-full"
+                value={category ?? ''}
+                onChange={value =>
+                  value &&
+                  app.bulkUpdate(
+                    rows.map(t => t.id),
+                    { category: value, categoryDetail: undefined },
+                  )
+                }
+                options={[
+                  ...(category ? [] : [{ value: '', label: 'Mixed', disabled: true }]),
+                  // The one it has now stays listed even if it has been archived, so the box is never blank
+                  ...[...new Set([...(category ? [category] : []), ...getAvailableCategories()])].map(c => ({
+                    value: c,
+                    label: c,
+                  })),
+                ]}
+              />
+            </div>
+          </div>
+          {category && (
+            <div className="min-w-44 flex-1">
+              <label htmlFor="merchant-detail" className="block text-xs text-midnight-400 mb-1">
+                Subcategory
+              </label>
+              <Select
+                id="merchant-detail"
+                className="py-1 text-sm w-full"
+                value={detail}
+                onChange={value =>
+                  app.bulkUpdate(
+                    rows.map(t => t.id),
+                    { category, categoryDetail: value || undefined },
+                  )
+                }
+                options={[
+                  { value: '', label: 'No subcategory' },
+                  ...[...new Set([...(detail ? [detail] : []), ...details])].map(d => ({ value: d, label: d })),
+                ]}
+              />
+            </div>
+          )}
+          <button className="btn-secondary text-sm" onClick={() => setRuleOpen(true)}>
+            Create a rule…
+          </button>
+        </div>
+        <p className="mt-2 text-[11px] text-midnight-500">
+          Changes all of this merchant's rows and teaches FinKit for future ones. A rule can be narrower.
+        </p>
+      </section>
+
       <TransactionList transactions={rows} viewMode="list" />
+      {ruleOpen && (
+        <MakeRuleDialog
+          tx={rows[0]}
+          category={category ?? rows[0].category ?? 'Other'}
+          currency={app.baseCurrency}
+          onSave={match => app.makeRule(match, category ?? rows[0].category ?? 'Other')}
+          onClose={() => setRuleOpen(false)}
+        />
+      )}
     </div>
   )
 }

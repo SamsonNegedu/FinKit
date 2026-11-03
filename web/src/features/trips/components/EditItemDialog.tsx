@@ -47,7 +47,7 @@ export default function EditItemDialog({
   return (
     <Modal title={row.recipient || row.description} onClose={onClose}>
       <div className="mt-3 space-y-3">
-        <ItemFields trip={trip} value={item} onChange={setItem} manual={row.manual} />
+        <ItemFields trip={trip} value={item} onChange={setItem} manual={row.manual} extrasOnly />
         {tag.error && <p className="text-sm text-expense">{tag.error.message}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <button className="btn-secondary" onClick={onClose}>

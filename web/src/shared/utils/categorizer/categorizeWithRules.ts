@@ -27,14 +27,19 @@ export function categorizeWithRules(transactions: Transaction[]): Transaction[] 
       }
     }
 
-    // A rule the person made from a transaction is more specific than a merchant rule, so it goes first
+    const learned = findLearned(tx)
+    // A rule the person made from a transaction is more specific than a merchant rule, so it goes first.
+    // Custom rules carry no subcategory, so when both agree on the category the merchant rule's detail still applies.
     const ruleCategory = findRuleCategory(tx)
 
     if (ruleCategory) {
-      return { ...tx, category: ruleCategory, categorySource: 'learned' as const }
+      return {
+        ...tx,
+        category: ruleCategory,
+        categoryDetail: learned?.category === ruleCategory ? learned.detail : undefined,
+        categorySource: 'learned' as const,
+      }
     }
-
-    const learned = findLearned(tx)
 
     if (learned) {
       return { ...tx, category: learned.category, categoryDetail: learned.detail, categorySource: 'learned' as const }

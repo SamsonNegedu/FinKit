@@ -31,12 +31,12 @@ export async function getLearnedMappings(): Promise<LearnedMapping[]> {
   }
 }
 
-export async function saveLearnedMapping(merchant: string, category: string): Promise<boolean> {
+export async function saveLearnedMapping(merchant: string, category: string, detail?: string): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE}/learn/mapping`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ merchant, category }),
+      body: JSON.stringify({ merchant, category, ...(detail ? { detail } : {}) }),
     })
 
     return response.ok

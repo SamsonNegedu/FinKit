@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { BACKFILL_PAGE_PAUSE_MS, DEFAULT_BACKGROUND_REQUEST_CAP } from '../constants'
 
-export type ProviderMode = 'off' | 'mock' | 'enablebanking'
+type ProviderMode = 'off' | 'mock' | 'enablebanking'
 
 export interface BankingConfig {
   provider: ProviderMode

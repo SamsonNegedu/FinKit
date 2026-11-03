@@ -7,7 +7,6 @@ import {
   getTrip,
   listTripCategories,
   listTrips,
-  removeTripCategory,
   tagItems,
   untagItems,
   updateTrip,
@@ -49,6 +48,5 @@ export const useDeleteTrip = () => useRefreshing((id: string) => deleteTrip(id))
 export const useTagItems = () => useRefreshing(({ id, items }: { id: string; items: TagItem[] }) => tagItems(id, items))
 export const useUntagItems = () => useRefreshing(({ id, refs }: { id: string; refs: string[] }) => untagItems(id, refs))
 export const useAddTripCategory = () => useRefreshing((name: string) => addTripCategory(name))
-export const useRemoveTripCategory = () => useRefreshing((name: string) => removeTripCategory(name))
 export const useAddEntry = () =>
   useRefreshing(({ id, entry }: { id: string; entry: EntryInput }) => addEntry(id, entry))

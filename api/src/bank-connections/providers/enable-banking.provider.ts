@@ -375,7 +375,7 @@ export function pickBalance(balances: EbBalance[]): ProviderBalance | null {
  * We can honestly supply the person's IP address and browser; if the bank wants anything else, or
  * nobody asked for this fetch, send none and the request counts as a background one.
  */
-export function psuHeaders(required: string[] | undefined, psu: PsuInfo | undefined): Record<string, string> {
+function psuHeaders(required: string[] | undefined, psu: PsuInfo | undefined): Record<string, string> {
   if (!psu || !required?.length) {
     return {}
   }

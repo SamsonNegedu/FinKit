@@ -93,6 +93,9 @@ export default function TransactionTable({
           onMoveToTrip={onMoveToTrip}
           categories={behaviour.categories}
           colorOf={behaviour.colorOf}
+          detailsOf={behaviour.detailsOf}
+          canAddDetail={behaviour.canAddDetail}
+          onAddDetail={behaviour.onAddDetail}
           extra={behaviour.bulkActions?.([...selectedIds])}
         />
       )}

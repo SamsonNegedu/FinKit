@@ -42,7 +42,7 @@ const FREQUENCIES = [
   { value: 'yearly', label: 'Every year' },
 ]
 
-export const isDraftValid = (d: Draft, isNew: boolean) =>
+const isDraftValid = (d: Draft, isNew: boolean) =>
   text(d.name) !== '' && (!isNew || Number(d.amount) > 0) && (d.kmPerYear === '' || Number(d.kmPerYear) > 0)
 
 /** What the contract's payments cannot tell: its name, group, a note, and the kilometres a car is driven. */

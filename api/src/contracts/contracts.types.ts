@@ -3,16 +3,6 @@ export type Frequency = 'monthly' | 'quarterly' | 'yearly'
 export type Kind = 'fixed' | 'variable'
 export type State = 'detected' | 'confirmed' | 'dismissed' | 'manual'
 
-export const GROUPS = [
-  'Housing',
-  'Utilities',
-  'Subscriptions',
-  'Mobility',
-  'Insurance',
-  'Investments',
-  'Other',
-] as const
-
 /** What detection works out from the payments. Rewritten on every refresh. */
 export interface Detected {
   name: string

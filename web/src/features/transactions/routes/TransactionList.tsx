@@ -27,7 +27,9 @@ export default function TransactionList({ transactions, viewMode, onViewModeChan
         onUpdateTransaction={app.updateTransaction}
         onBulkCategoryChange={selection.setCategory}
         onMakeRule={app.makeRule}
-        onSetCategoryForIds={(ids, category) => app.bulkUpdate(ids, { category })}
+        onSetCategoryForIds={(ids, category, detail) =>
+          app.bulkUpdate(ids, { category, categoryDetail: detail || undefined })
+        }
         onBulkExclude={selection.exclude}
         onBulkInclude={selection.include}
         // Only bank-synced transactions can join a trip, so the action is offered once some exist

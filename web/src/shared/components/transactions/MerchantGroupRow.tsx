@@ -20,7 +20,7 @@ export interface MerchantGroupRowProps {
   onOpenPicker: (id: string) => void
   onClosePicker: () => void
   onRenameMerchant: (merchantKey: string, name: string) => void
-  onSetCategoryForIds: (ids: string[], category: string) => void
+  onSetCategoryForIds: (ids: string[], category: string, detail?: string) => void
   rowProps: Omit<TransactionTableRowProps, 'tx'>
 }
 
@@ -122,10 +122,15 @@ export default function MerchantGroupRow({
             onOpenChange={o => (o ? onOpenPicker(pickerId) : onClosePicker())}
             categories={categories}
             current={single}
-            onPick={category =>
+            merchantName={shownName}
+            detailsOf={rowProps.behaviour?.detailsOf}
+            canAddDetail={rowProps.behaviour?.canAddDetail}
+            onAddDetail={rowProps.behaviour?.onAddDetail}
+            onPick={(category, _scope, detail) =>
               onSetCategoryForIds(
                 group.items.map(t => t.id),
                 category,
+                detail,
               )
             }
             trigger={

@@ -1,26 +1,36 @@
 import { useState } from 'react'
-import { Check, ChevronRight } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { getCategoryColor } from '@/shared/utils/categorizer'
 import CategoryIcon from '@/shared/components/CategoryIcon'
 
 /**
  * A searchable list of categories you pick one from, with arrow keys and Enter. It owns its search and highlight,
  * so whoever shows it (the row picker in a table, the bulk bar) only says what to pick and what to do with it.
+ * Subcategories sit under their category as chips, so they are visible without a second click.
  */
 export default function CategoryList({
   categories,
   current,
+  currentDetail,
   onPick,
   colorOf = getCategoryColor,
-  onDetails,
+  detailsOf,
+  canAddDetail,
+  onAddDetail,
 }: {
   categories: string[]
   /** Marked with a tick */
   current?: string
-  onPick: (category: string) => void
+  /** The subcategory in use, marked when its category is current */
+  currentDetail?: string
+  onPick: (category: string, detail?: string) => void
   colorOf?: (category: string) => string
-  /** Opens the subcategories of a category; a button on each row, also for a category that has none yet */
-  onDetails?: (category: string) => void
+  /** Finer choices inside a category, shown as chips under it */
+  detailsOf?: (category: string) => string[]
+  /** Categories that can take a subcategory; all of them when not given */
+  canAddDetail?: (category: string) => boolean
+  /** Opens the input for a new subcategory of this category */
+  onAddDetail?: (category: string) => void
 }) {
   const [search, setSearch] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -52,38 +62,61 @@ export default function CategoryList({
         className="w-full px-3 py-2 bg-midnight-700 border-b border-line-strong text-sm focus:outline-none"
         autoFocus
       />
-      <div className="max-h-[240px] overflow-y-auto" role="listbox" aria-label="Categories">
-        {shown.map((category, i) => (
-          <div
-            key={category}
-            className={`group flex items-center hover:bg-midnight-700 ${i === activeIndex ? 'bg-midnight-700' : ''}`}
-          >
-            <button
-              role="option"
-              aria-selected={category === current}
-              ref={el => {
-                if (el && i === activeIndex) {
-                  el.scrollIntoView({ block: 'nearest' })
-                }
-              }}
-              onClick={() => onPick(category)}
-              className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left"
+      <div className="max-h-[280px] overflow-y-auto" role="group" aria-label="Categories">
+        {shown.map((category, i) => {
+          const details = detailsOf?.(category) ?? []
+          const active = i === activeIndex
+          const canAdd = (canAddDetail?.(category) ?? true) && onAddDetail && (active || category === current)
+
+          return (
+            <div
+              key={category}
+              onMouseEnter={() => setActiveIndex(i)}
+              className={`px-1.5 pb-1 hover:bg-midnight-700/60 ${active ? 'bg-midnight-700/60' : ''}`}
             >
-              <CategoryIcon category={category} color={colorOf(category)} size="sm" />
-              <span className="text-sm flex-1">{category}</span>
-              {category === current && <Check className="w-4 h-4 text-accent" />}
-            </button>
-            {onDetails && (
               <button
-                onClick={() => onDetails(category)}
-                aria-label={`Subcategories of ${category}`}
-                className="mr-1 rounded p-1.5 text-midnight-500 hover:bg-midnight-600 hover:text-ink focus:text-ink"
+                aria-pressed={category === current}
+                ref={el => {
+                  if (el && i === activeIndex) {
+                    el.scrollIntoView({ block: 'nearest' })
+                  }
+                }}
+                onClick={() => onPick(category)}
+                className="flex w-full items-center gap-3 rounded-md px-1.5 pb-1 pt-2 text-left"
               >
-                <ChevronRight className="h-3.5 w-3.5" />
+                <CategoryIcon category={category} color={colorOf(category)} size="sm" />
+                <span className="text-sm flex-1">{category}</span>
+                {category === current && <Check className="w-4 h-4 text-accent" />}
               </button>
-            )}
-          </div>
-        ))}
+              {(details.length > 0 || canAdd) && (
+                <div className="flex flex-wrap gap-1 pb-0.5 pl-8 pr-1.5">
+                  {details.map(detail => (
+                    <button
+                      key={detail}
+                      aria-pressed={category === current && detail === currentDetail}
+                      onClick={() => onPick(category, detail)}
+                      className={`rounded-full px-2 py-0.5 text-xs transition-colors ${
+                        category === current && detail === currentDetail
+                          ? 'bg-accent/20 text-accent'
+                          : 'bg-midnight-700 text-midnight-200 hover:bg-midnight-600 hover:text-ink'
+                      }`}
+                    >
+                      {detail}
+                    </button>
+                  ))}
+                  {canAdd && (
+                    <button
+                      onClick={() => onAddDetail(category)}
+                      className="rounded-full border border-dashed border-line-strong px-2 py-0.5 text-xs text-midnight-300 hover:border-accent hover:text-ink"
+                    >
+                      + New subcategory
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </>
   )

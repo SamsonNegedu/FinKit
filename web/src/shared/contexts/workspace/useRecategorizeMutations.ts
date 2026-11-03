@@ -37,9 +37,15 @@ export function createRecategorizeMutations(
         ? result.merchants[0]
         : `${result.targetCount} ${result.targetCount === 1 ? 'transaction' : 'transactions'}`
     const others = result.siblingCount > 0 ? ` · also updated ${result.siblingCount} similar` : ''
+    const learned =
+      result.merchants.length === 1
+        ? ' · merchant rule saved'
+        : result.merchants.length > 1
+          ? ` · ${result.merchants.length} merchant rules saved`
+          : ''
 
     pushToast({
-      message: `${label} → ${category}${extra.categoryDetail ? ` › ${extra.categoryDetail}` : ''}${others}`,
+      message: `${label} → ${category}${extra.categoryDetail ? ` › ${extra.categoryDetail}` : ''}${others}${learned}`,
       tone: 'success',
       actionLabel: 'Undo',
       onAction: () => {

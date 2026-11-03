@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /** Money categories the app always has, apart from the person's own; they cannot be added, archived or repeated. */
-export const SYSTEM_CATEGORIES = ['Income', 'Cash', 'Savings', 'Investment', 'Transfer']
+const SYSTEM_CATEGORIES = ['Income', 'Cash', 'Savings', 'Investment', 'Transfer']
 
 const name = z.string().trim().min(1).max(40)
 const key = (n: string) => n.toLowerCase()

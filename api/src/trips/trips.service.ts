@@ -9,7 +9,7 @@ import { MANUAL_PREFIX, Trip, TripEntry, TripItem } from './trips.types'
 
 // Built in, so they exist for everyone and can't be removed. They are not the app's spending
 // categories and are never written to a sheet.
-export const DEFAULT_TRIP_CATEGORIES = [
+const DEFAULT_TRIP_CATEGORIES = [
   'Accommodation',
   'Transport',
   'Food & drink',
@@ -19,7 +19,7 @@ export const DEFAULT_TRIP_CATEGORIES = [
   'Other',
 ]
 // Suggestions that come with a category. They are offered, never required, and a person can type their own.
-export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
+const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
   Accommodation: ['Hotel', 'Hostel', 'Apartment', 'Campsite'],
   Transport: ['Flight', 'Train', 'Bus', 'Metro & tram', 'Taxi & rides', 'Car hire', 'Ferry', 'Fuel & parking'],
   'Food & drink': ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Coffee', 'Drinks', 'Groceries'],

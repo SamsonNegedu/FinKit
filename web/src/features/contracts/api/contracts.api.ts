@@ -1,14 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
-export const GROUPS = [
-  'Housing',
-  'Utilities',
-  'Subscriptions',
-  'Mobility',
-  'Insurance',
-  'Investments',
-  'Other',
-] as const
 export type Frequency = 'monthly' | 'quarterly' | 'yearly'
 export type ContractState = 'detected' | 'confirmed' | 'dismissed' | 'manual'
 

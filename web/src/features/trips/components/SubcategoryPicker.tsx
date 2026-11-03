@@ -43,7 +43,7 @@ export default function SubcategoryPicker({
           className="input flex-1 min-w-0"
           value={name}
           maxLength={40}
-          placeholder={`New ${category.toLowerCase()} detail`}
+          placeholder="New subcategory"
           onChange={e => setName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && submit()}
         />

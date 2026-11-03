@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { categorizeWithRules } from './categorizeWithRules'
+import { setLearnedMappings } from './learnedMappings'
 import { findRuleCategory, setTransactionRules, suggestRule } from './transactionRules'
 
-afterEach(() => setTransactionRules([]))
+afterEach(() => {
+  setTransactionRules([])
+  setLearnedMappings([])
+})
 
 const plan = {
   recipient: 'Aldi',
@@ -46,6 +50,26 @@ describe('transaction rules', () => {
 
     expect(p.category).toBe('Internet')
     expect(g.category).toBe('Groceries')
+  })
+
+  it('keeps the merchant rule’s subcategory when a custom rule agrees on the category', () => {
+    setLearnedMappings([{ merchant: 'Aldi', category: 'Internet', detail: 'Phone plan' }])
+    setTransactionRules([{ id: '1', category: 'Internet', match: { payee: 'Aldi', words: ['Prepaid-Konto'] } }])
+    const base = { id: 'a', date: '2026-08-12', currency: 'EUR', type: 'expense', rawData: {} } as const
+    const [p] = categorizeWithRules([{ ...base, ...plan } as never])
+
+    expect(p.category).toBe('Internet')
+    expect(p.categoryDetail).toBe('Phone plan')
+  })
+
+  it('drops the merchant subcategory when a custom rule picks another category', () => {
+    setLearnedMappings([{ merchant: 'Aldi', category: 'Groceries', detail: 'Fruit' }])
+    setTransactionRules([{ id: '1', category: 'Internet', match: { payee: 'Aldi' } }])
+    const base = { id: 'a', date: '2026-08-12', currency: 'EUR', type: 'expense', rawData: {} } as const
+    const [p] = categorizeWithRules([{ ...base, ...plan } as never])
+
+    expect(p.category).toBe('Internet')
+    expect(p.categoryDetail).toBeUndefined()
   })
 
   it('suggests the payee, distinctive words and the amount', () => {

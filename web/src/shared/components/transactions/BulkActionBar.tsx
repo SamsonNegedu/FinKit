@@ -11,7 +11,7 @@ interface BulkActionBarProps {
   /** What the selection adds up to, shown beside the count */
   totals?: SelectionTotal[]
   onClearSelection: () => void
-  onCategoryChange: (category: string) => void
+  onCategoryChange: (category: string, detail?: string) => void
   onExclude?: () => void
   onInclude?: () => void
   onMoveToTrip?: () => void
@@ -22,6 +22,12 @@ interface BulkActionBarProps {
   onArmRange?: () => void
   categories?: string[]
   colorOf?: (category: string) => string
+  /** Finer choices inside a category, offered under it as chips */
+  detailsOf?: (category: string) => string[]
+  /** Categories that can take a subcategory; all of them when not given */
+  canAddDetail?: (category: string) => boolean
+  /** Remembers a subcategory typed in the picker */
+  onAddDetail?: (category: string, name: string) => void
   /** More buttons, after the usual ones */
   extra?: ReactNode
 }
@@ -39,6 +45,9 @@ export default function BulkActionBar({
   onArmRange,
   categories = getAvailableCategories(),
   colorOf = getCategoryColor,
+  detailsOf,
+  canAddDetail,
+  onAddDetail,
   extra,
 }: BulkActionBarProps) {
   const [showDropdown, setShowDropdown] = useState(false)
@@ -92,7 +101,10 @@ export default function BulkActionBar({
           side="top"
           categories={categories}
           colorOf={colorOf}
-          onPick={onCategoryChange}
+          onPick={(category, _scope, detail) => onCategoryChange(category, detail)}
+          detailsOf={detailsOf}
+          canAddDetail={canAddDetail}
+          onAddDetail={onAddDetail}
           trigger={
             <button className="flex items-center gap-2 px-3 py-1.5 bg-midnight-700 hover:bg-midnight-600 rounded-lg transition-colors">
               <Tag className="w-4 h-4 text-midnight-400" />
