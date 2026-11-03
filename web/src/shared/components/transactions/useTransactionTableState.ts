@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react'
 import { Transaction } from '@/shared/types'
+import { signedTransactionAmount } from '@/shared/utils/transactionAmount'
 import { getAvailableCategories, merchantKeyOf, sameMerchant } from '@/shared/utils/categorizer'
 import { parseLocalDate } from '@/shared/utils/dates'
 import type { MerchantGroup, SortDirection, SortField } from './transactionTableTypes'
@@ -11,7 +12,7 @@ import {
   type TableInteractionAction,
 } from './tableInteraction'
 
-const PAGE = 200
+const PAGE = 100
 
 export function useTransactionTableState(
   transactions: Transaction[],
@@ -170,7 +171,7 @@ export function useTransactionTableState(
     for (const tx of sortedTransactions) {
       const key = merchantKeyOf(tx)
       const group = result.find(g => sameMerchant(g.key, key))
-      const signed = tx.isExcluded ? 0 : tx.type === 'income' ? tx.amount : -tx.amount
+      const signed = signedTransactionAmount(tx)
 
       if (group) {
         group.items.push(tx)

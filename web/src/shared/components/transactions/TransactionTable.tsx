@@ -1,12 +1,14 @@
-import { useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 import { merchantKeyOf, normalizeMerchant } from '@/shared/utils/categorizer'
 import type { Transaction } from '@/shared/types'
 import { selectionTotals } from '@/shared/utils/selectionTotal'
+import { signedTransactionAmount } from '@/shared/utils/transactionAmount'
 import BulkActionBar from './BulkActionBar'
 import SplitDialog from './SplitDialog'
 import TransactionTableHead from './TransactionTableHead'
 import TransactionTableRow from './TransactionTableRow'
 import MerchantGroupRow from './MerchantGroupRow'
+import MonthHeaderRow from './MonthHeaderRow'
 import { useTransactionTableState } from './useTransactionTableState'
 import type { TransactionTableProps, SortField, SortDirection } from './transactionTableTypes'
 import Select from '@/shared/components/forms/Select'
@@ -60,6 +62,21 @@ export default function TransactionTable({
     [transactions, selectedIds, currency],
   )
   const showYear = useMemo(() => new Set(transactions.map(t => t.date.slice(0, 4))).size > 1, [transactions])
+  // Month dividers only make sense when the list runs in date order
+  const monthly = state.viewMode === 'list' && state.sortField === 'date'
+  const months = useMemo(() => {
+    const byMonth = new Map<string, { count: number; net: number }>()
+
+    for (const t of state.sortedTransactions.slice(0, state.limit)) {
+      const m = byMonth.get(t.date.slice(0, 7)) ?? { count: 0, net: 0 }
+
+      m.count += 1
+      m.net += signedTransactionAmount(t)
+      byMonth.set(t.date.slice(0, 7), m)
+    }
+
+    return byMonth
+  }, [state.sortedTransactions, state.limit])
   const rowProps = {
     selectedIds,
     currency,
@@ -147,9 +164,17 @@ export default function TransactionTable({
             />
             <tbody className="max-md:block">
               {state.viewMode === 'list'
-                ? state.sortedTransactions
-                    .slice(0, state.limit)
-                    .map(tx => <TransactionTableRow key={tx.id} tx={tx} {...rowProps} />)
+                ? state.sortedTransactions.slice(0, state.limit).map((tx, i, rows) => {
+                    const month = tx.date.slice(0, 7)
+                    const first = monthly && (i === 0 || rows[i - 1].date.slice(0, 7) !== month)
+
+                    return (
+                      <Fragment key={tx.id}>
+                        {first && <MonthHeaderRow month={month} currency={currency} {...months.get(month)!} />}
+                        <TransactionTableRow tx={tx} {...rowProps} />
+                      </Fragment>
+                    )
+                  })
                 : state.visibleGroups.map(group => (
                     <MerchantGroupRow
                       key={group.key}

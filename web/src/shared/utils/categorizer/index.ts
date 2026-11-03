@@ -5,6 +5,7 @@ export {
   sameMerchant,
   setLocalLearnedMapping,
   normalizeMerchant,
+  stripReference,
 } from './learnedMappings'
 export { addLocalRule, findRule, removeLocalRule, setTransactionRules, suggestRule } from './transactionRules'
 export type { RuleMatch, TransactionRule } from './transactionRules'

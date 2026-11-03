@@ -1,5 +1,5 @@
 import { Transaction } from '@/shared/types'
-import { merchantKeyOf, normalizeMerchant } from './categorizer'
+import { merchantKeyOf, normalizeMerchant, stripReference } from './categorizer'
 import { merchantFromDescription, shopBehindProcessor } from './merchantFromDescription'
 
 // User-chosen display names for merchants, e.g. "AMZN Mktp DE*2K4" -> "Amazon".
@@ -38,14 +38,23 @@ export function applyAliases(txs: Transaction[], aliases: AliasMap = loadAliases
   return txs.map(t => {
     const name = aliases[normalizeMerchant(merchantKeyOf(t))]
 
-    return name ? { ...t, displayName: name } : t.displayName ? { ...t, displayName: undefined } : t
+    if (name) {
+      return { ...t, displayName: name }
+    }
+    if (t.displayName) {
+      return { ...t, displayName: undefined }
+    }
+
+    return t
   })
 }
 
 export function displayNameOf(t: Pick<Transaction, 'displayName' | 'merchant' | 'recipient' | 'description'>): string {
-  const fromText = t.merchant
-    ? undefined
-    : (shopBehindProcessor(t) ?? (t.recipient ? undefined : merchantFromDescription(t.description)))
+  // The shop behind PayPal or Klarna beats `merchant`: the anonymizer fills that with the processor's own name
+  const fromText =
+    shopBehindProcessor(t) ?? (t.merchant || t.recipient ? undefined : merchantFromDescription(t.description))
 
-  return t.displayName || fromText || t.merchant || t.recipient || t.description.slice(0, 40)
+  const payee = t.merchant || t.recipient
+
+  return t.displayName || fromText || (payee ? stripReference(payee) : t.description.slice(0, 40))
 }

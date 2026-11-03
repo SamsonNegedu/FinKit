@@ -1,23 +1,21 @@
 import { RefreshCw } from 'lucide-react'
+import Tooltip from '@/shared/components/Tooltip'
 
 interface RecurringBadgeProps {
   frequency?: 'weekly' | 'monthly' | 'quarterly' | 'yearly'
 }
 
+const LABELS = { weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly' }
+
+/** A quiet icon rather than a pill: in a list of subscriptions every row is recurring, so a pill is only noise. */
 export default function RecurringBadge({ frequency }: RecurringBadgeProps) {
-  const label = frequency
-    ? {
-        weekly: 'Weekly',
-        monthly: 'Monthly',
-        quarterly: 'Quarterly',
-        yearly: 'Yearly',
-      }[frequency]
-    : 'Recurring'
+  const label = frequency ? LABELS[frequency] : 'Recurring'
 
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent/20 text-accent text-xs font-medium rounded-full">
-      <RefreshCw className="w-3 h-3" />
-      {label}
-    </span>
+    <Tooltip label={`Recurring · ${label.toLowerCase()}`}>
+      <span role="img" aria-label={`Recurring, ${label.toLowerCase()}`} className="p-1 text-accent/70">
+        <RefreshCw className="w-3.5 h-3.5" />
+      </span>
+    </Tooltip>
   )
 }

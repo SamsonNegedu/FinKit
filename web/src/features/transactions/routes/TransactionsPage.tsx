@@ -13,6 +13,8 @@ import { FILES, TransactionsSearch } from '@/features/transactions/constants/sea
 import { inPeriod } from '@/shared/utils/summary'
 import { isLeftOutTransfer } from '@/shared/utils/transfers'
 import TransactionList from './TransactionList'
+import { commonTraits, netOf } from '../utils/listSummary'
+import { formatCurrency } from '@/shared/utils/format'
 
 export default function TransactionsPage() {
   const app = useApp()
@@ -80,6 +82,9 @@ export default function TransactionsPage() {
   const accounts = search.bank && search.bank !== FILES ? [...(sources.banks.get(search.bank) ?? [])] : []
   const hasSources = sources.banks.size > 0
 
+  const net = useMemo(() => netOf(filtered), [filtered])
+  const traits = useMemo(() => commonTraits(filtered), [filtered])
+
   const chips: Array<{ label: string; remove: () => void }> = [
     ...(search.q ? [{ label: `“${search.q}”`, remove: () => set({ q: undefined }) }] : []),
     ...(search.cat ?? []).map(c => ({
@@ -117,6 +122,15 @@ export default function TransactionsPage() {
             </span>
             <TripsMovedNote />
           </span>
+        }
+        actions={
+          <div className="text-right">
+            <p className="text-xs text-midnight-400">Net</p>
+            <p className={`text-2xl font-semibold tabular-nums ${net < 0 ? 'text-expense' : 'text-ink'}`}>
+              {net < 0 ? '-' : ''}
+              {formatCurrency(Math.abs(net), app.baseCurrency)}
+            </p>
+          </div>
         }
       />
 
@@ -189,6 +203,8 @@ export default function TransactionsPage() {
         )}
         <SavedViews current={search} onApply={view => navigate({ to: '/transactions', search: view })} />
       </div>
+
+      {traits && <p className="mb-2 text-sm text-midnight-400">{traits}</p>}
 
       <TransactionList
         transactions={filtered}

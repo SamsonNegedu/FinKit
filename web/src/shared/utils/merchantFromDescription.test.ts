@@ -40,3 +40,17 @@ describe('shopBehindProcessor', () => {
     expect(shopBehindProcessor({ recipient: 'REWE', description: 'Purchase at Back Market' })).toBeUndefined()
   })
 })
+
+describe('displayNameOf with a processor as merchant', () => {
+  it('shows the shop even when merchant holds the PayPal name', async () => {
+    const { displayNameOf } = await import('./aliases')
+
+    expect(
+      displayNameOf({
+        merchant: 'PayPal Europe',
+        recipient: 'PayPal Europe S.a.r.l. et Cie S.C.A',
+        description: '1053665350900/PP.5490.PP/. MILES Mobility GmbH, Ihr Einkauf bei MILES Mobility GmbH',
+      }),
+    ).toBe('MILES Mobility GmbH')
+  })
+})

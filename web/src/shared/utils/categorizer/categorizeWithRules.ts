@@ -33,10 +33,16 @@ export function categorizeWithRules(transactions: Transaction[]): Transaction[] 
     const custom = findRule(tx)
 
     if (custom) {
+      let categoryDetail = custom.detail
+
+      if (categoryDetail === undefined && learned?.category === custom.category) {
+        categoryDetail = learned.detail
+      }
+
       return {
         ...tx,
         category: custom.category,
-        categoryDetail: custom.detail ?? (learned?.category === custom.category ? learned.detail : undefined),
+        categoryDetail,
         categorySource: 'learned' as const,
       }
     }

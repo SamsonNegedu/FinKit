@@ -60,6 +60,12 @@ export default function BudgetSpendSection({
     />
   )
 
+  const query = search.trim().toLowerCase()
+  // A goal has no over/watch/ok state, so a status filter hides goals; a search still applies to their names
+  const goals = filter === 'all' ? goalRows.filter(r => !query || r.category.toLowerCase().includes(query)) : []
+  const narrowed = filter !== 'all' || query !== ''
+  const noMatch = spendCount > 0 && shownCount === 0
+
   return (
     <section className="card space-y-1 divide-y divide-line">
       {many && (
@@ -88,8 +94,25 @@ export default function BudgetSpendSection({
           />
         </div>
       )}
-      {spendCount > 0 && shownCount === 0 && <p className="py-2 text-sm text-midnight-400">No budgets match.</p>}
-      <BudgetListHead labels={['Used', 'Spent', 'Limit', 'Left', 'Last 6 months']} />
+      {noMatch && goals.length === 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 py-6 text-sm text-midnight-400">
+          <span>No budgets match{narrowed ? ' these filters' : ''}.</span>
+          {narrowed && (
+            <button
+              className="text-accent underline underline-offset-2 hover:text-ink"
+              onClick={() => {
+                onSearchChange('')
+                onFilterChange('all')
+              }}
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      )}
+      {(!noMatch || goals.length > 0) && (
+        <BudgetListHead labels={['Used', 'Spent', 'Limit', 'Left', 'Last 6 months']} />
+      )}
       <ul className="divide-y divide-line">{(fold ? attention : shown).map(card)}</ul>
       {fold && onTrack.length > 0 && (
         <div>
@@ -104,12 +127,12 @@ export default function BudgetSpendSection({
           {showOk && <ul className="divide-y divide-line">{onTrack.map(card)}</ul>}
         </div>
       )}
-      {goalRows.length > 0 && (
+      {goals.length > 0 && (
         <div className="!border-t-0 pt-4">
           <h2 className="pb-1 text-xs uppercase tracking-wide text-midnight-500">
             Put away <span className="normal-case">· a goal to reach, not counted as spent</span>
           </h2>
-          <ul className="divide-y divide-line">{goalRows.map(card)}</ul>
+          <ul className="divide-y divide-line">{goals.map(card)}</ul>
         </div>
       )}
     </section>

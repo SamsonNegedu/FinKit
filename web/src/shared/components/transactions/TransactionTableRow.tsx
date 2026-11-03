@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import Tooltip from '@/shared/components/Tooltip'
 import { Transaction } from '@/shared/types'
 import type { RuleMatch } from '@/shared/utils/categorizer'
 import { getCategoryColor } from '@/shared/utils/categorizer'
 import TransactionRowToolbar from './TransactionRowToolbar'
 import TransactionNote from './TransactionNote'
 import { displayNameOf } from '@/shared/utils/aliases'
+import { shopBehindProcessor } from '@/shared/utils/merchantFromDescription'
 import { formatCurrency } from '@/shared/utils/format'
 import { formatTransactionDate } from './transactionTableTypes'
 import CategoryPopover, { type PickScope } from './CategoryPopover'
 import MakeRuleDialog from './MakeRuleDialog'
 import CountsToMonth from './CountsToMonth'
-import CategoryIcon from '@/shared/components/CategoryIcon'
 import type { TableBehaviour } from './transactionTableTypes'
 import Checkbox from '@/shared/components/forms/Checkbox'
 
@@ -53,6 +54,7 @@ export default function TransactionTableRow({
   onStartSplit,
   behaviour = {},
 }: TransactionTableRowProps) {
+  const platform = shopBehindProcessor(tx) ? tx.recipient : undefined
   const colorOf = behaviour.colorOf ?? getCategoryColor
   const [noteOpen, setNoteOpen] = useState(false)
   const [ruleFor, setRuleFor] = useState<{ category: string; detail?: string } | null>(null)
@@ -81,22 +83,24 @@ export default function TransactionTableRow({
           />
         </label>
       </td>
-      <td className="py-3 px-4 whitespace-nowrap max-md:col-start-3 max-md:row-start-2 max-md:py-0 max-md:px-3 max-md:text-right">
+      <td className="py-2.5 px-4 whitespace-nowrap max-md:col-start-3 max-md:row-start-2 max-md:py-0 max-md:px-3 max-md:text-right">
         <div className="flex items-center gap-1.5 max-md:justify-end">
           <span className="text-sm text-midnight-300 max-md:text-xs">{formatTransactionDate(tx.date, showYear)}</span>
           {!behaviour.noSplit && <CountsToMonth tx={tx} onChange={updates => onUpdateTransaction(tx.id, updates)} />}
         </div>
       </td>
       {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label -- a table cell, not a control */}
-      <td className="py-3 px-4 max-w-0 max-md:max-w-none max-md:col-start-2 max-md:row-start-1 max-md:py-1 max-md:px-3">
+      <td className="py-2.5 px-4 max-w-0 max-md:max-w-none max-md:col-start-2 max-md:row-start-1 max-md:py-1 max-md:px-3">
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0 overflow-hidden">
-            <p className="text-sm text-ink truncate" title={displayNameOf(tx)}>
-              {displayNameOf(tx)}
-            </p>
-            <p className="text-xs text-midnight-500 truncate" title={tx.description}>
-              {tx.description}
-            </p>
+            {/* The bank's own text is a hover away: one line per row keeps a long list scannable */}
+            <Tooltip label={tx.description}>
+              <span className="flex items-baseline gap-2 min-w-0 text-sm">
+                <span className="text-ink truncate shrink-0 max-w-full">{displayNameOf(tx)}</span>
+                {/* The processor stays visible: "Apple · PayPal" says how it was paid, not just what */}
+                {platform && <span className="text-midnight-500 truncate min-w-0">· {platform}</span>}
+              </span>
+            </Tooltip>
             <TransactionNote
               note={tx.note}
               open={noteOpen}
@@ -124,7 +128,7 @@ export default function TransactionTableRow({
           </div>
         </div>
       </td>
-      <td className="py-3 px-4 relative max-md:col-start-2 max-md:row-start-2 max-md:py-0 max-md:px-3">
+      <td className="py-2.5 px-4 relative max-md:col-start-2 max-md:row-start-2 max-md:py-0 max-md:px-3">
         <CategoryPopover
           open={editingId === tx.id}
           onOpenChange={o => (o ? onOpenPicker(tx.id) : onClosePicker())}
@@ -156,23 +160,26 @@ export default function TransactionTableRow({
             <button
               aria-label={`Category: ${tx.category || 'Other'}. Change category`}
               className={`
-                        flex items-center gap-2 h-8 px-3 max-w-full rounded-lg text-sm whitespace-nowrap transition-all
+                        flex items-center gap-2 h-8 -mx-2 px-2 max-w-full rounded-lg text-sm whitespace-nowrap transition-colors
                         ${editingId === tx.id ? 'bg-accent/20 ring-2 ring-accent' : 'hover:bg-midnight-700'}
                       `}
-              style={{
-                backgroundColor: editingId !== tx.id ? `${colorOf(tx.category || 'Other')}20` : undefined,
-              }}
             >
-              <CategoryIcon category={tx.category} color={colorOf(tx.category || 'Other')} size="sm" />
-              <span className="text-midnight-100 truncate">{tx.category || 'Other'}</span>
-              <ChevronDown className="w-3 h-3 text-midnight-400 shrink-0 ml-auto" />
+              <span
+                aria-hidden="true"
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: colorOf(tx.category || 'Other') }}
+              />
+              <span className="text-midnight-100 truncate">
+                {tx.category || 'Other'}
+                {!behaviour.categoryNote && tx.categoryDetail && (
+                  <span className="text-midnight-400"> · {tx.categoryDetail}</span>
+                )}
+              </span>
+              <ChevronDown className="w-3 h-3 text-midnight-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
             </button>
           }
         />
         {behaviour.categoryNote?.(tx)}
-        {!behaviour.categoryNote && tx.categoryDetail && (
-          <span className="block truncate px-3 text-xs text-midnight-400 max-md:hidden">{tx.categoryDetail}</span>
-        )}
         {ruleFor && onMakeRule && (
           <MakeRuleDialog
             tx={tx}
@@ -184,7 +191,7 @@ export default function TransactionTableRow({
           />
         )}
       </td>
-      <td className="py-3 px-4 text-right whitespace-nowrap max-md:col-start-3 max-md:row-start-1 max-md:py-1 max-md:px-3">
+      <td className="py-2.5 px-4 text-right whitespace-nowrap max-md:col-start-3 max-md:row-start-1 max-md:py-1 max-md:px-3">
         <span className={`text-sm font-medium ${tx.type === 'income' ? 'text-income' : 'text-expense'}`}>
           {tx.type === 'income' ? '+' : '-'}
           {formatCurrency(tx.amount, tx.currency || currency)}

@@ -62,8 +62,9 @@ export default function SearchFilter({
       {/* Category filter: a Radix popover, so Escape, outside clicks and focus are handled for us */}
       <Popover.Root onOpenChange={open => !open && setCategoryQuery('')}>
         <Popover.Trigger asChild>
-          <button className="input flex w-full items-center justify-between gap-2 sm:w-auto" aria-label="Categories">
-            <span className="text-sm">
+          <button className="input flex w-full items-center justify-between gap-2 sm:w-48" aria-label="Categories">
+            {/* A fixed width: "All Categories" and "2 selected" differ in length, and the search box beside it would shift */}
+            <span className="truncate text-sm">
               {selectedCategories.length === 0 ? 'All Categories' : `${selectedCategories.length} selected`}
             </span>
             <ChevronDown className="w-4 h-4 text-midnight-400" aria-hidden="true" />

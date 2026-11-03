@@ -16,8 +16,22 @@ export function setLearnedMappings(mappings: Array<{ merchant: string; category:
   console.log(`Loaded ${learnedMappings.size} learned categorizations`)
 }
 
+// Marketplaces end the name with an order reference ("AMZN Mktp DE*BT7WM55K4"), so every purchase would look like a
+// merchant of its own and nothing could be grouped or given a rule. Only a token with three or more digits counts
+// as a reference: "GOOGLE *YouTube" and "SumUp *Banh Mi Trang" name the shop and stay.
+const REFERENCE = /\s*\*\s*(?=(?:[A-Za-z]*\d){3})[A-Za-z0-9]{6,}\b.*$/
+
+export function stripReference(name: string): string {
+  const stripped = name.replace(REFERENCE, '').trim()
+
+  return stripped.length >= 3 ? stripped : name
+}
+
 export function merchantKeyOf(tx: Pick<Transaction, 'merchant' | 'recipient' | 'description'>): string {
-  return tx.merchant || shopBehindProcessor(tx) || tx.recipient || descriptionKey(tx.description)
+  // The shop first: `merchant` can just be the processor's cleaned name, which would group every PayPal row together
+  const payee = tx.merchant || tx.recipient
+
+  return shopBehindProcessor(tx) || (payee ? stripReference(payee) : descriptionKey(tx.description))
 }
 
 // Card payments often carry the merchant only in the text, wrapped in a bank prefix and a changing
@@ -106,14 +120,15 @@ export function findLearned(tx: Transaction): Learned | null {
 
   // A PayPal recipient would apply one category to every shop; the shop name is matched through the description below
   if (tx.recipient && !shopBehindProcessor(tx)) {
-    const learned = learnedMappings.get(normalizeMerchant(tx.recipient))
+    const learned = learnedMappings.get(normalizeMerchant(stripReference(tx.recipient)))
 
     if (learned) {
       return learned
     }
   }
 
-  const descNormalized = normalizeMerchant(tx.description)
+  // The star is a separator here, or "DE*BT7" would fuse into one word and never contain the merchant "DE"
+  const descNormalized = normalizeMerchant(tx.description.replace(/\*/g, ' '))
 
   for (const [merchant, found] of learnedMappings) {
     if (merchant.length > 3 && containsWords(descNormalized, merchant)) {
