@@ -29,6 +29,12 @@ export interface Transaction extends RawTransaction {
   recurringFrequency?: 'weekly' | 'monthly' | 'quarterly' | 'yearly'
   isExcluded?: boolean
   categorySource?: 'rule' | 'manual' | 'learned'
+  /** Your own finer label inside the category (Shopping › Fashion). The bank's own `subcategory` is a different thing. */
+  categoryDetail?: string
+  /** The month (YYYY-MM) this counts toward in monthly totals, when it is not the month of the bank's date */
+  countsToMonth?: string
+  /** Set when the person chose the month, so a reimport keeps it */
+  countsToMonthSource?: 'manual'
   doubleBookingMatch?: string // ID of the matching transaction in a double-booking pair
   displayName?: string // user-chosen merchant name (grouping and learning still use the original)
   excludedManually?: boolean // the user (not an automatic rule) chose the excluded state

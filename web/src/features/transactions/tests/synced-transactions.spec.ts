@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Transaction } from '@/shared/types'
 import { categorizeWithRules } from '@/shared/utils/categorizer/categorizeWithRules'
 import { detectDoubleBookings } from '@/shared/utils/double-booking'
-import { findLearnedCategory, merchantKeyOf, setLearnedMappings } from '@/shared/utils/categorizer/learnedMappings'
+import { findLearned, merchantKeyOf, setLearnedMappings } from '@/shared/utils/categorizer/learnedMappings'
 
 // Shaped like bank-synced rows: no category, subcategory or transfer flag (Finanzguru supplied those)
 const synced = (o: Partial<Transaction>): Transaction => ({
@@ -84,13 +84,13 @@ describe('PayPal payments', () => {
       { merchant: 'Rebtel Networks AB', category: 'Phone' },
     ])
 
-    expect(findLearnedCategory(synced(tx))).toBe('Phone')
+    expect(findLearned(synced(tx))?.category).toBe('Phone')
     setLearnedMappings([])
   })
   it('do not fall back to a rule made for PayPal', () => {
     setLearnedMappings([{ merchant: 'PayPal Europe S.a.r.l. et Cie S.C.A', category: 'Subscriptions' }])
 
-    expect(findLearnedCategory(synced(tx))).toBeNull()
+    expect(findLearned(synced(tx))).toBeNull()
     setLearnedMappings([])
   })
 })

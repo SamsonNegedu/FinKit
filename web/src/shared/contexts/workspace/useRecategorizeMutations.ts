@@ -27,10 +27,10 @@ export function createRecategorizeMutations(
     }
     const previousMappings = result.merchants.map(m => ({
       merchant: m,
-      previous: setLocalLearnedMapping(m, category),
+      previous: setLocalLearnedMapping(m, { category, detail: extra.categoryDetail || undefined }),
     }))
 
-    persistMappings(result.merchants.map(m => ({ merchant: m, category })))
+    persistMappings(result.merchants.map(m => ({ merchant: m, category, detail: extra.categoryDetail || undefined })))
     store.commit(result.next)
     const label =
       result.merchants.length === 1
@@ -39,7 +39,7 @@ export function createRecategorizeMutations(
     const others = result.siblingCount > 0 ? ` · also updated ${result.siblingCount} similar` : ''
 
     pushToast({
-      message: `${label} → ${category}${others}`,
+      message: `${label} → ${category}${extra.categoryDetail ? ` › ${extra.categoryDetail}` : ''}${others}`,
       tone: 'success',
       actionLabel: 'Undo',
       onAction: () => {
@@ -49,7 +49,7 @@ export function createRecategorizeMutations(
         for (const { merchant, previous } of previousMappings) {
           setLocalLearnedMapping(merchant, previous)
           if (previous) {
-            restore.push({ merchant, category: previous })
+            restore.push({ merchant, category: previous.category, detail: previous.detail })
           } else {
             deleteLearnedMapping(merchant)
           }
@@ -67,7 +67,9 @@ export function createRecategorizeMutations(
     if (!existing) {
       return
     }
-    if (category && category !== existing.category) {
+    const detailChanged = 'categoryDetail' in rest && rest.categoryDetail !== existing.categoryDetail
+
+    if (category && (category !== existing.category || detailChanged)) {
       recategorize([id], category, 'isExcluded' in rest ? { ...rest, excludedManually: true } : rest, onlyThis)
 
       return

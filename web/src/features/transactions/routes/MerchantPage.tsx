@@ -84,7 +84,7 @@ export default function MerchantPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Fact label="Spent" value={formatCurrency(total, app.baseCurrency)} />
-        <Fact label="Average" value={spent.length ? formatCurrency(total / spent.length, app.baseCurrency) : '—'} />
+        <Fact label="Average" value={spent.length ? formatCurrency(total / spent.length, app.baseCurrency) : '-'} />
         <Fact label="From" value={sources.join(', ')} />
         <div className="card !p-4">
           <label htmlFor="merchant-category" className="text-xs text-midnight-400 block mb-1">

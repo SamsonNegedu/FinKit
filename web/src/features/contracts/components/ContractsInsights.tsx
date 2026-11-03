@@ -11,7 +11,7 @@ function Item({ icon, children, onOpen }: { icon: ReactNode; children: ReactNode
     <li>
       <button
         onClick={onOpen}
-        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm hover:bg-midnight-800/70"
+        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-sm hover:bg-accent/10"
       >
         {icon}
         <span className="min-w-0 flex-1 truncate">{children}</span>

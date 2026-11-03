@@ -7,7 +7,7 @@ import type { Trip } from '../api/trips.api'
 import { useDeleteTrip, useUpdateTrip } from '../hooks/trips-queries'
 import TripFields, { draftOf, isTripDraftValid, tripPayload } from './TripFields'
 
-/** A titled card. An action goes on the right of the heading, so buttons line up down the page. */
+/** A titled section, set off by a line. An action goes on the right of the heading, so buttons line up down the page. */
 const Section = ({
   title,
   hint,
@@ -19,7 +19,7 @@ const Section = ({
   action?: ReactNode
   children?: ReactNode
 }) => (
-  <section className="card space-y-3">
+  <section className="space-y-3 border-t border-midnight-700 pt-6 first:border-t-0 first:pt-0">
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div className="min-w-0 flex-1 basis-64">
         <h3 className="font-medium text-white">{title}</h3>

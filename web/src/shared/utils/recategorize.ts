@@ -12,6 +12,8 @@ interface RecategorizeResult {
 /**
  * Set a category on some transactions and carry it to every other transaction from the same
  * merchant that the user hasn't categorized by hand. Returns null if nothing matched.
+ * A subcategory (`extra.categoryDetail`) goes along with the category; picking a category without one clears it,
+ * because a subcategory only means something inside its own category.
  * Splits and cash withdrawals are one-offs: what a withdrawal was for says nothing about the next one.
  * `onlyThese` makes the whole call a one-off: a shop that sells different things (Back Market, Amazon) can't
  * have one category, so nothing is learned and no other transaction changes.
@@ -44,19 +46,20 @@ export function recategorize(
     }
   }
 
+  const detail = extra.categoryDetail || undefined
   let siblingCount = 0
   const next = current.map(t => {
     if (idSet.has(t.id)) {
-      return { ...t, ...extra, category, categorySource: 'manual' as const }
+      return { ...t, ...extra, category, categoryDetail: detail, categorySource: 'manual' as const }
     }
     if (
       t.categorySource !== 'manual' &&
-      t.category !== category &&
+      (t.category !== category || t.categoryDetail !== detail) &&
       merchants.some(m => sameMerchant(m, merchantKeyOf(t)))
     ) {
       siblingCount++
 
-      return { ...t, category, categorySource: 'learned' as const }
+      return { ...t, category, categoryDetail: detail, categorySource: 'learned' as const }
     }
 
     return t

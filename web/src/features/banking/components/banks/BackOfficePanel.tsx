@@ -140,7 +140,7 @@ function SyncLog() {
       {data.map((r, i) => (
         <tr key={i} className="border-b border-midnight-800">
           <td className="py-2 pr-4 whitespace-nowrap text-midnight-300">{timeAgo(String(r.started_at))}</td>
-          <td className="py-2 pr-4">{r.bank ?? '—'}</td>
+          <td className="py-2 pr-4">{r.bank ?? '-'}</td>
           <td className="py-2 pr-4 whitespace-nowrap text-midnight-300">
             {r.date_from} → {r.date_to}
           </td>

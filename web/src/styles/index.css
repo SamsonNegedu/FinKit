@@ -15,6 +15,13 @@
   body {
     @apply bg-midnight-950 text-midnight-100 antialiased;
   }
+  ::selection {
+    @apply bg-accent/40 text-white;
+  }
+  /* Native checkboxes, radios and range sliders that no shared component has replaced */
+  input {
+    accent-color: theme('colors.accent.DEFAULT');
+  }
 }
 
 @layer components {
@@ -69,7 +76,7 @@ html body[data-scroll-locked] {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-midnight-500;
+  @apply bg-accent-dark;
 }
 
 @keyframes toast-in {

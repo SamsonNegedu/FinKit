@@ -69,7 +69,7 @@ function Summary({ totals, trip }: { totals: TripTotals; trip: Trip }) {
   ].filter(Boolean)
 
   return (
-    <div className="card space-y-4">
+    <div className="space-y-4">
       {/* What is left only means something against money put in, so without any the box would just repeat Spent */}
       {totals.funded > 0 ? (
         <div className="grid grid-cols-3 gap-4">

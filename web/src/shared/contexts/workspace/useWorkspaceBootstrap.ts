@@ -4,6 +4,7 @@ import {
   setExpenseCategories,
   setArchivedCategories,
   setCategoryStyles,
+  setCategoryDetails,
   setTransactionRules,
 } from '@/shared/utils/categorizer'
 import { resolveCategories, type CategoryList } from '@/shared/utils/categorizer/categoryList'
@@ -146,6 +147,7 @@ export function syncExpenseCategories(sheetConfig: SheetConfig | null, stored: C
   setExpenseCategories(list.active)
   setArchivedCategories(list.archived)
   setCategoryStyles(list.style)
+  setCategoryDetails(list.details)
 
   return list
 }

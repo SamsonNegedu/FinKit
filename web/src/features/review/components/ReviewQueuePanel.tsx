@@ -52,7 +52,7 @@ export default function ReviewQueuePanel({
   const hiddenUpNext = Math.max(0, pendingCount - 1 - upNext.length)
 
   return (
-    <div className="card space-y-5">
+    <div className="space-y-5">
       <div>
         <div className="flex justify-between text-xs text-midnight-400 mb-1">
           <span>

@@ -13,6 +13,7 @@ import type { WorkspacePhase, SheetBootstrapPhase } from './workspacePhase'
 export interface MappingChange {
   merchant: string
   category: string
+  detail?: string
 }
 
 export interface AppState {
@@ -29,6 +30,8 @@ export interface AppState {
   sheetConfig: SheetConfig | null
   /** The categories in use: those to pick from, and those archived (still shown in filters and history) */
   categoryList: CategoryList
+  /** Remembers a subcategory inside a category, so it can be picked again */
+  addCategoryDetail: (category: string, name: string) => void
   setSheetConfig: (config: SheetConfig | null) => void
   isLoading: boolean
   isRestoring: boolean

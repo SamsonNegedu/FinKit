@@ -10,10 +10,12 @@ export interface TableBehaviour {
   categories?: string[]
   /** The color of a category; the monthly one by default */
   colorOf?: (category: string) => string
-  /** Finer choices inside a category, offered right after picking it. Needs `onPickDetail`. */
+  /** Finer choices inside a category, offered right after picking it */
   detailsOf?: (category: string) => string[]
   /** A category and one of its details picked together; an empty detail means none */
   onPickDetail?: (id: string, category: string, detail: string) => void
+  /** A subcategory typed in the picker for a category; the caller remembers it */
+  onAddDetail?: (category: string, name: string) => void
   /** Hide splitting a payment across categories */
   noSplit?: boolean
   /** More information under the description, such as chips */

@@ -1,3 +1,4 @@
+import { countedDate } from '@/shared/utils/countsToMonth'
 import { AnalysisSummary, DateRange, Transaction } from '@/shared/types'
 import { displayNameOf } from './aliases'
 import { getCategoryColor } from './categorizer'
@@ -12,7 +13,7 @@ export function inPeriod(transactions: Transaction[], range: DateRange | null): 
   }
 
   return transactions.filter(tx => {
-    const d = parseLocalDate(tx.date)
+    const d = parseLocalDate(countedDate(tx))
 
     return d >= range.startDate && d <= range.endDate
   })

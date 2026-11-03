@@ -11,6 +11,7 @@ import { formatCurrency } from '@/shared/utils/format'
 import { formatTransactionDate } from './transactionTableTypes'
 import CategoryPopover, { type PickScope } from './CategoryPopover'
 import MakeRuleDialog from './MakeRuleDialog'
+import CountsToMonth from './CountsToMonth'
 import CategoryIcon from '@/shared/components/CategoryIcon'
 import type { TableBehaviour } from './transactionTableTypes'
 import Checkbox from '@/shared/components/forms/Checkbox'
@@ -82,7 +83,10 @@ export default function TransactionTableRow({
         </label>
       </td>
       <td className="py-3 px-4 whitespace-nowrap max-md:col-start-3 max-md:row-start-2 max-md:py-0 max-md:px-3 max-md:text-right">
-        <span className="text-sm text-midnight-300 max-md:text-xs">{formatTransactionDate(tx.date, showYear)}</span>
+        <div className="flex items-center gap-1.5 max-md:justify-end">
+          <span className="text-sm text-midnight-300 max-md:text-xs">{formatTransactionDate(tx.date, showYear)}</span>
+          {!behaviour.noSplit && <CountsToMonth tx={tx} onChange={updates => onUpdateTransaction(tx.id, updates)} />}
+        </div>
       </td>
       {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label -- a table cell, not a control */}
       <td className="py-3 px-4 max-w-0 max-md:max-w-none max-md:col-start-2 max-md:row-start-1 max-md:py-1 max-md:px-3">
@@ -162,14 +166,19 @@ export default function TransactionTableRow({
           onOpenChange={o => (o ? onOpenPicker(tx.id) : onClosePicker())}
           categories={categories}
           current={tx.category}
-          detailsOf={behaviour.onPickDetail ? behaviour.detailsOf : undefined}
+          detailsOf={behaviour.detailsOf}
+          onAddDetail={behaviour.onAddDetail}
           onPick={(category, scope, detail) => {
             if (detail !== undefined && behaviour.onPickDetail) {
               behaviour.onPickDetail(tx.id, category, detail)
 
               return
             }
-            onUpdateTransaction(tx.id, { category }, scope !== 'all')
+            onUpdateTransaction(
+              tx.id,
+              detail === undefined ? { category } : { category, categoryDetail: detail || undefined },
+              scope !== 'all',
+            )
             if (scope === 'rule') {
               setRuleFor(category)
             }
@@ -194,6 +203,9 @@ export default function TransactionTableRow({
           }
         />
         {behaviour.categoryNote?.(tx)}
+        {!behaviour.categoryNote && tx.categoryDetail && (
+          <span className="block truncate px-3 text-xs text-midnight-400 max-md:hidden">{tx.categoryDetail}</span>
+        )}
         {ruleFor && onMakeRule && (
           <MakeRuleDialog
             tx={tx}

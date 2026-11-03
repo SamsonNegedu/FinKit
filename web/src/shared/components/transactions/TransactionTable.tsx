@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { merchantKeyOf, normalizeMerchant } from '@/shared/utils/categorizer'
 import type { Transaction } from '@/shared/types'
+import { selectionTotals } from '@/shared/utils/selectionTotal'
 import BulkActionBar from './BulkActionBar'
 import SplitDialog from './SplitDialog'
 import TransactionTableHead from './TransactionTableHead'
@@ -54,6 +55,10 @@ export default function TransactionTable({
   }, [transactions])
   const hasSiblings = (tx: Transaction) => (merchantCounts.get(normalizeMerchant(merchantKeyOf(tx))) ?? 0) > 1
 
+  const selected = useMemo(
+    () => selectionTotals(transactions, selectedIds, currency),
+    [transactions, selectedIds, currency],
+  )
   const showYear = useMemo(() => new Set(transactions.map(t => t.date.slice(0, 4))).size > 1, [transactions])
   const rowProps = {
     selectedIds,
@@ -77,6 +82,7 @@ export default function TransactionTable({
       {selectedIds.size > 0 && (
         <BulkActionBar
           selectedCount={selectedIds.size}
+          totals={selected}
           rangeHint={state.viewMode === 'list'}
           rangeArmed={state.rangeArmed}
           onArmRange={state.armRange}
@@ -127,7 +133,7 @@ export default function TransactionTable({
         />
       </div>
 
-      <div className="card overflow-hidden md:overflow-visible">
+      <div className="overflow-hidden md:overflow-visible">
         <div className="overflow-x-auto md:overflow-visible">
           <table className="w-full md:table-fixed md:min-w-[640px] max-md:block">
             <TransactionTableHead

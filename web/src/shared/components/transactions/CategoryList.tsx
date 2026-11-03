@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check } from 'lucide-react'
+import { Check, ChevronRight } from 'lucide-react'
 import { getCategoryColor } from '@/shared/utils/categorizer'
 import CategoryIcon from '@/shared/components/CategoryIcon'
 
@@ -12,12 +12,15 @@ export default function CategoryList({
   current,
   onPick,
   colorOf = getCategoryColor,
+  onDetails,
 }: {
   categories: string[]
   /** Marked with a tick */
   current?: string
   onPick: (category: string) => void
   colorOf?: (category: string) => string
+  /** Opens the subcategories of a category; a button on each row, also for a category that has none yet */
+  onDetails?: (category: string) => void
 }) {
   const [search, setSearch] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
@@ -51,22 +54,35 @@ export default function CategoryList({
       />
       <div className="max-h-[240px] overflow-y-auto" role="listbox" aria-label="Categories">
         {shown.map((category, i) => (
-          <button
+          <div
             key={category}
-            role="option"
-            aria-selected={category === current}
-            ref={el => {
-              if (el && i === activeIndex) {
-                el.scrollIntoView({ block: 'nearest' })
-              }
-            }}
-            onClick={() => onPick(category)}
-            className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-midnight-700 text-left ${i === activeIndex ? 'bg-midnight-700' : ''}`}
+            className={`group flex items-center hover:bg-midnight-700 ${i === activeIndex ? 'bg-midnight-700' : ''}`}
           >
-            <CategoryIcon category={category} color={colorOf(category)} size="sm" />
-            <span className="text-sm flex-1">{category}</span>
-            {category === current && <Check className="w-4 h-4 text-accent" />}
-          </button>
+            <button
+              role="option"
+              aria-selected={category === current}
+              ref={el => {
+                if (el && i === activeIndex) {
+                  el.scrollIntoView({ block: 'nearest' })
+                }
+              }}
+              onClick={() => onPick(category)}
+              className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left"
+            >
+              <CategoryIcon category={category} color={colorOf(category)} size="sm" />
+              <span className="text-sm flex-1">{category}</span>
+              {category === current && <Check className="w-4 h-4 text-accent" />}
+            </button>
+            {onDetails && (
+              <button
+                onClick={() => onDetails(category)}
+                aria-label={`Subcategories of ${category}`}
+                className="mr-1 rounded p-1.5 text-midnight-500 hover:bg-midnight-600 hover:text-white focus:text-white"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         ))}
       </div>
     </>

@@ -53,7 +53,7 @@ export default function ConnectionCard({
         <div>
           <dt className="text-xs text-midnight-400">Accounts</dt>
           <dd className="text-midnight-100">
-            {c.accounts.map(a => `${a.label}${a.currency ? ' · ' + a.currency : ''}`).join(', ') || '—'}
+            {c.accounts.map(a => `${a.label}${a.currency ? ' · ' + a.currency : ''}`).join(', ') || '-'}
           </dd>
         </div>
         <div>

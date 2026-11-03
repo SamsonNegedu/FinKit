@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import type { DateRange, RawTransaction } from '@/shared/types'
 import { parseFile } from '@/shared/utils/parser'
 import { parseLocalDate } from '@/shared/utils/dates'
+import { carryOverEdits } from '@/shared/utils/carryOverEdits'
 import { mergeWithoutDuplicates } from '@/shared/utils/dedupe'
 import { applySplits, type SplitMap } from '@/shared/utils/splits'
 import type { ImportOptions } from '@/features/import/components/FileUpload'
@@ -27,26 +28,7 @@ export function useWorkspaceImport({
 }: ImportDeps) {
   const reprocess = useCallback(
     (raw: RawTransaction[], anonymize: boolean) => {
-      const manual = new Map(
-        store.transactionsRef.current.filter(t => t.categorySource === 'manual' && !t.splitOf).map(t => [t.id, t]),
-      )
-      const excluded = new Map(
-        store.transactionsRef.current.filter(t => t.excludedManually && !t.splitOf).map(t => [t.id, t]),
-      )
-      const processed = processTransactions(raw, anonymize).map(t => {
-        const old = manual.get(t.id)
-        const keepExcluded = excluded.get(t.id)
-        let out = t
-
-        if (old) {
-          out = { ...out, category: old.category, categorySource: 'manual' as const }
-        }
-        if (keepExcluded) {
-          out = { ...out, isExcluded: keepExcluded.isExcluded, excludedManually: true }
-        }
-
-        return out
-      })
+      const processed = carryOverEdits(store.transactionsRef.current, processTransactions(raw, anonymize))
       const fresh: SplitMap = {}
 
       for (const [id, rec] of Object.entries(store.splitsRef.current)) {

@@ -32,6 +32,11 @@ export function formatCurrency(amount: number, currency = 'EUR'): string {
   return new Intl.NumberFormat(locale(), { style: 'currency', currency, minimumFractionDigits: 2 }).format(amount)
 }
 
+/** A whole number with thousands separators and no symbol, for tables where the unit is said once in the heading */
+export function formatWhole(amount: number): string {
+  return new Intl.NumberFormat(locale(), { maximumFractionDigits: 0 }).format(amount)
+}
+
 // Plain number for pasting into a sheet (no symbol, no thousands separator)
 export function formatForSheet(amount: number): string {
   const fixed = amount.toFixed(2)

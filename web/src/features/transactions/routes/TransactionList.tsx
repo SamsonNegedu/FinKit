@@ -36,6 +36,10 @@ export default function TransactionList({ transactions, viewMode, onViewModeChan
         onUnsplit={app.unsplit}
         onRenameMerchant={app.renameMerchant}
         currency={app.baseCurrency}
+        behaviour={{
+          detailsOf: category => app.categoryList.details?.[category] ?? [],
+          onAddDetail: app.addCategoryDetail,
+        }}
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
       />

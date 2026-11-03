@@ -3,9 +3,13 @@ import { useState, type ReactNode } from 'react'
 import CategoryPopover from './CategoryPopover'
 import { X, ChevronDown, Tag, EyeOff, Eye, Plane } from 'lucide-react'
 import { getAvailableCategories, getCategoryColor } from '@/shared/utils/categorizer'
+import { formatCurrency } from '@/shared/utils/format'
+import type { SelectionTotal } from '@/shared/utils/selectionTotal'
 
 interface BulkActionBarProps {
   selectedCount: number
+  /** What the selection adds up to, shown beside the count */
+  totals?: SelectionTotal[]
   onClearSelection: () => void
   onCategoryChange: (category: string) => void
   onExclude?: () => void
@@ -24,6 +28,7 @@ interface BulkActionBarProps {
 
 export default function BulkActionBar({
   selectedCount,
+  totals = [],
   onClearSelection,
   onCategoryChange,
   onExclude,
@@ -55,6 +60,19 @@ export default function BulkActionBar({
         <span className="text-sm text-midnight-300">
           <span className="font-medium text-white">{selectedCount}</span> selected
         </span>
+        {totals.map(total => (
+          <Tooltip
+            key={total.currency}
+            label={`In ${formatCurrency(total.incoming, total.currency)} · Out ${formatCurrency(total.outgoing, total.currency)}`}
+          >
+            <span
+              className={`text-sm font-medium tabular-nums ${total.net > 0.005 ? 'text-income' : total.net < -0.005 ? 'text-expense' : 'text-midnight-300'}`}
+            >
+              {total.net > 0.005 ? '+' : ''}
+              {formatCurrency(total.net, total.currency)}
+            </span>
+          </Tooltip>
+        ))}
 
         <div className="w-px h-6 bg-midnight-600" />
 
