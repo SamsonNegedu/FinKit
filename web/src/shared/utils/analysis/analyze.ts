@@ -4,6 +4,9 @@ import { displayNameOf } from '@/shared/utils/aliases'
 import { isCashWithdrawal } from '@/shared/utils/cashWithdrawal'
 import { getCategoryColor, normalizeMerchant } from '@/shared/utils/categorizer'
 import { parseLocalDate } from '@/shared/utils/dates'
+import { detailsOf, merchantsOf, type DetailRow, type MerchantRow } from './detailBreakdown'
+
+export type { DetailRow, MerchantRow }
 
 /** Money put aside is not money spent: it gets its own line, as in your sheet. */
 /** Money put away, not spent: left out of "spent" everywhere, including the overall budget cap. */
@@ -18,11 +21,10 @@ export interface CategoryRow {
   color: string
   /** What it was in the period before; null when there is no earlier period to compare with */
   previous: number | null
-}
-export interface MerchantRow {
-  merchant: string
-  total: number
-  count: number
+  /** Who it went to */
+  merchants: MerchantRow[]
+  /** The split by subcategory; empty until something in the category has one */
+  details: DetailRow[]
 }
 /** Money put away in one of the set-aside categories, and who it went to. */
 export interface PutAwayRow {
@@ -84,9 +86,16 @@ export function analyze(rows: Transaction[], earlier: Transaction[] | null, days
   const before = earlier ? spendingOf(earlier).filter(t => !SET_ASIDE.has(t.category || '')) : null
   const prevByCategory = before ? totalBy(before, t => t.category || 'Other') : null
   const counts = new Map<string, number>()
+  const inCategory = new Map<string, Transaction[]>()
 
   for (const t of spending) {
-    counts.set(t.category || 'Other', (counts.get(t.category || 'Other') ?? 0) + 1)
+    const category = t.category || 'Other'
+
+    counts.set(category, (counts.get(category) ?? 0) + 1)
+    const list = inCategory.get(category) ?? []
+
+    list.push(t)
+    inCategory.set(category, list)
   }
   const categories = [...totalBy(spending, t => t.category || 'Other')]
     .map(([category, total]) => ({
@@ -96,6 +105,8 @@ export function analyze(rows: Transaction[], earlier: Transaction[] | null, days
       share: spent > 0 ? (total / spent) * 100 : 0,
       color: getCategoryColor(category),
       previous: prevByCategory ? (prevByCategory.get(category) ?? 0) : null,
+      merchants: merchantsOf(inCategory.get(category) ?? []),
+      details: detailsOf(inCategory.get(category) ?? []),
     }))
     .sort((a, b) => b.total - a.total)
 

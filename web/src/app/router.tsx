@@ -7,20 +7,22 @@ import {
   validateConnectSearch,
 } from '@/features/banking/constants/search.constants'
 import { validateTripSearch } from '@/features/trips/constants/search.constants'
-import { validateAnalyticsSearch } from '@/features/analytics/constants/search.constants'
+import { ANALYTICS_PATHS, validateAnalyticsSearch } from '@/features/analytics/constants/search.constants'
 import { validateTransactionsSearch } from '@/features/transactions/constants/search.constants'
 import OverviewPage from '@/features/overview/routes'
 import ReviewPage from '@/features/review/routes'
 import IncomePage from '@/features/income/routes'
-import ExportPage from '@/features/export/routes'
+import { validateRulesSearch } from '@/features/settings/constants/search.constants'
 import SettingsPage from '@/features/settings/routes'
-import { AnalyticsPage, TrendsPage } from '@/features/analytics/routes'
+import { AnalyticsPage } from '@/features/analytics/routes'
 import { BanksPage, BankDetailPage, ConnectBankPage } from '@/features/banking/routes'
 import TransactionsPage from '@/features/transactions/routes'
 import MerchantPage from '@/features/transactions/routes/MerchantPage'
 import { TripPage, TripsPage } from '@/features/trips/routes'
 import { BudgetsPage } from '@/features/budgets/routes'
 import { ContractsPage } from '@/features/contracts/routes'
+import { validateGuideSearch } from '@/features/guide/constants/search.constants'
+import GuidePage from '@/features/guide/routes/GuidePage'
 import AppShell from '@/app/shell'
 
 const root = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -93,11 +95,59 @@ const income = createRoute({ getParentRoute: () => root, path: '/income', compon
 const analytics = createRoute({
   getParentRoute: () => root,
   path: '/analytics',
-  component: AnalyticsPage,
   validateSearch: validateAnalyticsSearch,
+  // Before the views had pages of their own they were tabs: /analytics?tab=months
+  beforeLoad: ({ search }) => {
+    if (search.tab) {
+      throw redirect({ to: ANALYTICS_PATHS[search.tab] })
+    }
+  },
+  component: () => <AnalyticsPage section="where" />,
 })
-const trends = createRoute({ getParentRoute: () => root, path: '/analytics/trends', component: TrendsPage })
-const exportRoute = createRoute({ getParentRoute: () => root, path: '/export', component: ExportPage })
+const analyticsMonths = createRoute({
+  getParentRoute: () => root,
+  path: '/analytics/months',
+  component: () => <AnalyticsPage section="months" />,
+})
+const analyticsYear = createRoute({
+  getParentRoute: () => root,
+  path: '/analytics/year',
+  component: () => <AnalyticsPage section="year" />,
+})
+const analyticsTrend = createRoute({
+  getParentRoute: () => root,
+  path: '/analytics/trend',
+  component: () => <AnalyticsPage section="trend" />,
+})
+// The old standalone Trends page is the Trend view now
+const trends = createRoute({
+  getParentRoute: () => root,
+  path: '/analytics/trends',
+  beforeLoad: () => {
+    throw redirect({ to: '/analytics/trend' })
+  },
+})
+// Export became Your year: copy a month or the whole year there
+const exportRoute = createRoute({
+  getParentRoute: () => root,
+  path: '/export',
+  beforeLoad: () => {
+    throw redirect({ to: '/analytics/year' })
+  },
+})
+const guide = createRoute({
+  getParentRoute: () => root,
+  path: '/guide',
+  beforeLoad: () => {
+    throw redirect({ to: '/guide/$sectionId', params: { sectionId: 'start' } })
+  },
+})
+const guideSection = createRoute({
+  getParentRoute: () => root,
+  path: '/guide/$sectionId',
+  component: GuidePage,
+  validateSearch: validateGuideSearch,
+})
 const settings = createRoute({
   getParentRoute: () => root,
   path: '/settings',
@@ -124,6 +174,7 @@ const rules = createRoute({
   getParentRoute: () => root,
   path: '/settings/rules',
   component: () => <SettingsPage section="rules" />,
+  validateSearch: validateRulesSearch,
 })
 const backOffice = createRoute({
   getParentRoute: () => root,
@@ -146,8 +197,13 @@ const routeTree = root.addChildren([
   review,
   income,
   analytics,
+  analyticsMonths,
+  analyticsYear,
+  analyticsTrend,
   trends,
   exportRoute,
+  guide,
+  guideSection,
   settings,
   sheet,
   categories,

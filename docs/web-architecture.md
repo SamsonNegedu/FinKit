@@ -1,6 +1,6 @@
 # Web frontend architecture
 
-Feature-based layout: **`app/`** wires the shell, **`features/`** own product areas, **`shared/`** holds cross-cutting code. Features may import from `shared/` only—not from other features.
+Feature-based layout: **`app/`** wires the shell, **`features/`** own product areas, **`shared/`** holds cross-cutting code. Features may import from `shared/` only, not from other features.
 
 ## File size
 
@@ -12,12 +12,12 @@ Multi-step UI and async flows use **discriminated unions + reducers** (not scatt
 
 | Area | Types / module |
 |------|----------------|
-| Workspace restore & import | `shared/contexts/workspace/workspacePhase.ts` — `WorkspacePhase`, `SheetBootstrapPhase` |
-| Empty-state file upload UI | `features/import/components/fileUploadPhase.ts` — `FileUploadUiPhase` |
-| Review triage | `features/review/components/reviewQueuePhase.ts` — `ReviewQueuePhase` + session reducer |
-| Transaction table modals | `features/transactions/components/tableInteraction.ts` — `TableInteraction` |
-| Settings sheet async | `features/settings/components/settingsAsyncPhase.ts` — `SettingsAsyncOperation` |
-| Bank OAuth return & card busy | `features/banking/bankingUiPhase.ts` — `BankConnectReturnPhase`, `ConnectionCardOperation` |
+| Workspace restore & import | `shared/contexts/workspace/workspacePhase.ts`: `WorkspacePhase`, `SheetBootstrapPhase` |
+| Empty-state file upload UI | `features/import/components/fileUploadPhase.ts`: `FileUploadUiPhase` |
+| Review triage | `features/review/components/reviewQueuePhase.ts`: `ReviewQueuePhase` + session reducer |
+| Transaction table modals | `features/transactions/components/tableInteraction.ts`: `TableInteraction` |
+| Settings sheet async | `features/settings/components/settingsAsyncPhase.ts`: `SettingsAsyncOperation` |
+| Bank OAuth return & card busy | `features/banking/bankingUiPhase.ts`: `BankConnectReturnPhase`, `ConnectionCardOperation` |
 
 `AppState` still exposes `isLoading`, `isRestoring`, and `error` as **derived** from `workspacePhase` for existing callers; prefer `workspacePhase` for new code.
 
@@ -53,7 +53,7 @@ web/src/
 │   ├── services/           # HTTP helpers (`API_BASE`, headers)
 │   ├── types/              # shared TS types
 │   └── utils/              # parsing, categorization, dates, storage, etc.
-│       ├── parser/         # CSV/XLSX/OFX import (import via `@/shared/utils/parser` — thin `.ts` shim re-exports the folder)
+│       ├── parser/         # CSV/XLSX/OFX import (import via `@/shared/utils/parser`: thin `.ts` shim re-exports the folder)
 │       ├── categorizer/    # rules + learned mappings
 │       ├── anonymizer/     # optional PII masking
 │       └── sheetLayout/    # Google Sheet column layout
@@ -70,7 +70,7 @@ Add folders **only when they contain code**. Do not scaffold empty `api/`, `hook
 | `routes/`     | Route entry components; `index.tsx` re-exports the page |
 | `components/` | Presentational UI; no data fetching |
 | `hooks/`      | TanStack Query / local logic (e.g. `banking/hooks`, `transactions/hooks`) |
-| `api/`        | Backend calls owned by this feature (**`export/api`** — Google Sheet layout/metadata; **`settings/api`** — sheet config & learned mappings; **`banking/api`** — open banking) |
+| `api/`        | Backend calls owned by this feature (**`export/api`**: Google Sheet layout/metadata; **`settings/api`**: sheet config & learned mappings; **`banking/api`**: open banking) |
 | `constants/`  | Search params, durations, domain numbers (see `constants.ts`; time units in `@/shared/constants/time`) |
 | `utils/`      | Pure helpers scoped to the feature |
 | `tests/`      | Vitest specs (e.g. `transactions/tests`) |
@@ -108,8 +108,8 @@ Most features are UI over **`AppState`** and **`shared/utils`**; they need only 
 | `transactions` | `/transactions`, `/transactions/merchants/$merchantKey` | Core table & filters |
 | `review` | `/review` | Review queue |
 | `income` | `/income` | Income review |
-| `analytics` | `/analytics`, `/analytics/trends` | Charts |
-| `export` | `/export` | Sheet export preview |
+| `analytics` | `/analytics`, `/analytics/year`, `/analytics/months`, `/analytics/trend` | One section, a page per view. Your year is the export sheet's columns, month by month, with copy-to-sheet |
+| `export` | none (API calls only) | The Google Sheets layout and metadata calls used by Settings; the Export page became Your year |
 | `settings` | `/settings/*` | Sheet, columns, rules |
 | `banking` | `/banks/*` | Optional; gated when API banking is off |
 | `trips` | `/trips`, `/trips/$tripId` | Needs banking: only synced transactions have a server ref |

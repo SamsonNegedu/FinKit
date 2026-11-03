@@ -1,10 +1,9 @@
 import Tooltip from '@/shared/components/Tooltip'
 import { useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { Link, Outlet } from '@tanstack/react-router'
+import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import {
   FilePlus,
-  FileSpreadsheet,
   Inbox,
   Landmark,
   LayoutDashboard,
@@ -15,6 +14,7 @@ import {
   Plane,
   Repeat,
   Target,
+  BookOpen,
   Settings,
   Shield,
   ShieldOff,
@@ -38,9 +38,19 @@ export default function AppShell() {
   const { data: connections = [] } = useConnections()
   const reconnect = useStartConnect()
   const [navOpen, setNavOpen] = useState(false)
-
   const hasData = app.transactions.length > 0
   const attention = connections.filter(c => c.status !== 'active').length
+  const path = useRouterState({ select: s => s.location.pathname }).replace(/^\/app/, '') || '/'
+  // A page that is a wide table (Analytics) uses the whole width; the rest keep a readable column
+  const wide = path.startsWith('/analytics')
+  // The period picker belongs only to the pages that follow it. Elsewhere it would show a period the page ignores
+  // (Budgets has its own month, Your year its own year), which reads as a contradiction.
+  const followsPeriod =
+    path === '/' ||
+    path.startsWith('/transactions') ||
+    path === '/review' ||
+    path === '/income' ||
+    path === '/analytics'
   const reviewCount = inPeriod(app.displayTransactions, app.dateRange).filter(
     t => t.category !== 'Transfer' && needsReview(t),
   ).length
@@ -75,7 +85,6 @@ export default function AppShell() {
       group: BALANCE,
     },
     { to: '/income', label: 'Income', icon: Wallet, group: BALANCE },
-    { to: '/export', label: 'Export', icon: FileSpreadsheet, group: BALANCE },
     { to: '/analytics', label: 'Analytics', icon: PieChart, group: INSIGHTS },
     { to: '/budgets', label: 'Budgets', icon: Target, group: INSIGHTS },
     {
@@ -85,6 +94,7 @@ export default function AppShell() {
       hidden: !banking?.enabled,
       group: INSIGHTS,
     },
+    { to: '/guide/start', label: 'Guide', icon: BookOpen, group: 'Setup' },
     { to: '/settings', label: 'Settings', icon: Settings, group: 'Setup' },
   ]
 
@@ -135,7 +145,7 @@ export default function AppShell() {
                   <Loader2 className="w-3 h-3 animate-spin" /> Saving…
                 </span>
               )}
-              {hasData && (
+              {hasData && followsPeriod && (
                 <PeriodPicker
                   dateRange={app.dateRange}
                   onChange={app.setDateRange}
@@ -191,7 +201,7 @@ export default function AppShell() {
           </div>
         </header>
 
-        <main className="flex-1 px-4 sm:px-6 py-6 max-md:pb-24 max-w-6xl w-full mx-auto">
+        <main className={`flex-1 px-4 sm:px-6 py-6 max-md:pb-24 w-full mx-auto ${wide ? 'max-w-none' : 'max-w-6xl'}`}>
           {banking?.enabled && (
             <BankBanners
               connections={connections}

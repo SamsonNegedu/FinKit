@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useApp } from '@/shared/contexts/AppState'
 import { analyze, daysIn, spanDays } from '@/shared/utils/analysis/analyze'
 import { highlightsOf } from '@/shared/utils/analysis/highlights'
-import { previousRange } from '@/shared/utils/analysis/previousPeriod'
+import { earlierTransactions } from '@/shared/utils/analysis/previousPeriod'
 import { unusualOf } from '@/shared/utils/analysis/unusual'
 import { inPeriod } from '@/shared/utils/summary'
 
@@ -16,9 +16,8 @@ export function usePeriodAnalysis() {
 
   return useMemo(() => {
     const period = inPeriod(app.displayTransactions, app.dateRange)
-    const earlier = previousRange(app.dateRange)
     const days = app.dateRange ? daysIn(app.dateRange.startDate, app.dateRange.endDate) : spanDays(period)
-    const analysis = analyze(period, earlier ? inPeriod(app.displayTransactions, earlier) : null, days)
+    const analysis = analyze(period, earlierTransactions(app.displayTransactions, app.dateRange), days)
 
     return {
       period,

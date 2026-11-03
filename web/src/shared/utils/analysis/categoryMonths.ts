@@ -1,3 +1,4 @@
+import { countedDate } from '@/shared/utils/countsToMonth'
 import type { Transaction } from '@/shared/types'
 import { parseLocalDate } from '@/shared/utils/dates'
 import { getCategoryColor } from '@/shared/utils/categorizer'
@@ -32,7 +33,7 @@ export function categoryByMonth(transactions: Transaction[], count = 6): Categor
   let newest = -1
 
   for (const t of transactions) {
-    const d = parseLocalDate(t.date)
+    const d = parseLocalDate(countedDate(t))
 
     newest = Math.max(newest, d.getFullYear() * 12 + d.getMonth())
   }
@@ -47,7 +48,7 @@ export function categoryByMonth(transactions: Transaction[], count = 6): Categor
   const perMonth = months.map(m =>
     analyze(
       transactions.filter(t => {
-        const d = parseLocalDate(t.date)
+        const d = parseLocalDate(countedDate(t))
 
         return d.getFullYear() === m.year && d.getMonth() === m.month
       }),

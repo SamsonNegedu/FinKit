@@ -4,6 +4,7 @@ import { merchantKeyOf, sameMerchant } from '@/shared/utils/categorizer'
 import { displayNameOf } from '@/shared/utils/aliases'
 import { useConnections } from '@/features/banking/hooks/banking-queries'
 import { useTrips } from '@/features/trips/hooks/trips-queries'
+import { FEATURE_GUIDE_SECTIONS } from '@/shared/guides/featureGuide'
 import { useApp } from '@/shared/contexts/AppState'
 
 interface Crumb {
@@ -15,8 +16,9 @@ interface Crumb {
 
 const SETTINGS_LABEL: Record<string, string> = {
   sheet: 'Google Sheet',
+  categories: 'Categories',
   columns: 'Columns',
-  rules: 'Learned rules',
+  rules: 'Rules',
   'back-office': 'Back office',
 }
 
@@ -56,9 +58,27 @@ export default function Breadcrumbs() {
       crumbs.push({ label: trips.find(t => t.id === second)?.name ?? 'Trip' })
     }
   } else if (first === 'analytics') {
-    crumbs.push({ label: 'Analytics', to: second ? '/analytics' : undefined })
-    if (second === 'trends') {
-      crumbs.push({ label: 'Trends' })
+    crumbs.push({ label: 'Analytics', to: '/analytics' })
+    // The plain /analytics address is the "Where it went" view
+    const view = {
+      where: 'Where it went',
+      months: 'Category by month',
+      year: 'Your year',
+      trend: 'Trend',
+      trends: 'Trend',
+    }[second ?? 'where']
+
+    if (view) {
+      crumbs.push({ label: view })
+    }
+  } else if (first === 'guide') {
+    crumbs.push({ label: 'Guide', to: '/guide/start' })
+    if (second) {
+      const section = FEATURE_GUIDE_SECTIONS.find(s => s.id === second)?.title
+
+      if (section) {
+        crumbs.push({ label: section })
+      }
     }
   } else if (first === 'settings') {
     crumbs.push({ label: 'Settings', to: '/settings' })
@@ -68,9 +88,13 @@ export default function Breadcrumbs() {
   } else {
     crumbs.push({
       label:
-        { review: 'Review', income: 'Income', export: 'Export', contracts: 'Recurring payments', budgets: 'Budgets' }[
-          first
-        ] ?? first,
+        {
+          review: 'Review',
+          income: 'Income',
+          contracts: 'Recurring payments',
+          budgets: 'Budgets',
+          guide: 'Guide',
+        }[first] ?? first,
     })
   }
 

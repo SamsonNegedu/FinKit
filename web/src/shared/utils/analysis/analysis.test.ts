@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { Transaction } from '@/shared/types'
 import { analyze } from './analyze'
 import { highlightsOf } from './highlights'
-import { monthlySeries } from './monthly'
 import { unusualOf } from './unusual'
-import { previousRange } from './previousPeriod'
+import { earlierTransactions, previousRange } from './previousPeriod'
 
 const tx = (over: Partial<Transaction>): Transaction =>
   ({
@@ -131,6 +130,21 @@ describe('previousRange', () => {
   })
 })
 
+describe('earlierTransactions', () => {
+  const march = { startDate: new Date(2026, 2, 1), endDate: new Date(2026, 2, 31) }
+
+  it('has nothing to compare with when no data reaches back before the period', () => {
+    expect(earlierTransactions([tx({ date: '2026-03-10' })], march)).toBeNull()
+    expect(earlierTransactions([tx({ date: '2026-03-10' })], null)).toBeNull()
+  })
+
+  it('gives the earlier stretch once it holds transactions', () => {
+    const rows = [tx({ date: '2026-02-10' }), tx({ date: '2026-03-10' })]
+
+    expect(earlierTransactions(rows, march)).toHaveLength(1)
+  })
+})
+
 describe('unusualOf', () => {
   const history = Array.from({ length: 80 }, (_, i) =>
     tx({ date: new Date(Date.UTC(2025, 9, 1 + i)).toISOString().slice(0, 10), amount: 12, recipient: `Shop ${i % 5}` }),
@@ -175,27 +189,5 @@ describe('unusualOf', () => {
     expect(unusualOf([big], [...history, big]).map(u => u.kind)).toEqual(['newBig'])
     expect(unusualOf([big], [big])).toEqual([]) // no history: everything is new
     expect(unusualOf([tx({ amount: 650, recipient: 'Shop 1', date: '2026-01-05' })], history)).toEqual([])
-  })
-})
-
-describe('monthlySeries', () => {
-  it('gives each month its income, spending and what was kept, newest first', () => {
-    const rows = [
-      tx({ date: '2026-01-05', amount: 3000, type: 'income', category: 'Income' }),
-      tx({ date: '2026-01-10', amount: 1000 }),
-      tx({ date: '2026-02-05', amount: 3000, type: 'income', category: 'Income' }),
-      tx({ date: '2026-02-12', amount: 500, category: 'Investment' }),
-      tx({ date: '2026-02-20', amount: 2000 }),
-    ]
-    const m = monthlySeries(rows)
-
-    expect(m.map(x => [x.year, x.month])).toEqual([
-      [2026, 1],
-      [2026, 0],
-    ])
-    expect(m[0]).toMatchObject({ income: 3000, spent: 2000, setAside: 500, invested: 500, saved: 0, leftOver: 500 })
-    expect(m[0].investedRate).toBeCloseTo(16.7, 1)
-    expect(monthlySeries(rows, 1)).toHaveLength(1)
-    expect(monthlySeries([tx({ date: '2026-03-01', amount: 5 })])[0].investedRate).toBeNull()
   })
 })

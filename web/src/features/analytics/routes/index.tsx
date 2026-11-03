@@ -1,1 +1,1 @@
-export { AnalyticsPage, TrendsPage } from './AnalyticsPage'
+export { AnalyticsPage } from './AnalyticsPage'

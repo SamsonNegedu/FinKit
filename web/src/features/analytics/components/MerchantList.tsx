@@ -1,11 +1,8 @@
 import Tooltip from '@/shared/components/Tooltip'
-import { useState } from 'react'
 import { formatCurrency } from '@/shared/utils/format'
 import type { MerchantRow } from '@/shared/utils/analysis/analyze'
 
-const SHOWN = 10
-
-/** Who the money went to, however they were spelled; the top ten up front and the rest one click away. */
+/** Who the money went to, however they were spelled, biggest first. Scrolls inside the card so it can match the category card's height. */
 export default function MerchantList({
   rows,
   currency,
@@ -15,24 +12,22 @@ export default function MerchantList({
   currency: string
   onSelect: (merchant: string) => void
 }) {
-  const [all, setAll] = useState(false)
-  const shown = all ? rows : rows.slice(0, SHOWN)
   const max = rows[0]?.total ?? 1
 
   return (
-    <section className="card !p-4 sm:!p-6">
+    <section className="card flex flex-col !p-4 sm:!p-6 lg:h-full lg:min-h-0">
       <h2 className="text-lg font-semibold text-white">Top merchants</h2>
       {rows.length === 0 ? (
         <p className="mt-3 text-midnight-400">No spending in this period.</p>
       ) : (
-        <ul className={`mt-3 ${all ? 'max-h-[460px] overflow-y-auto pr-1' : ''}`}>
-          {shown.map((m, i) => (
+        <ul className="mt-3 max-h-[460px] overflow-y-auto pr-1 lg:max-h-none lg:min-h-0 lg:flex-1">
+          {rows.map((m, i) => (
             <li key={m.merchant}>
               <Tooltip label={`Show ${m.merchant} transactions`}>
                 <button
                   aria-label={`Show ${m.merchant} transactions`}
                   onClick={() => onSelect(m.merchant)}
-                  className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-midnight-800/70"
+                  className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-accent/10"
                 >
                   <span className="w-5 shrink-0 text-xs tabular-nums text-midnight-500">{i + 1}</span>
                   <span className="min-w-0 flex-1">
@@ -45,7 +40,7 @@ export default function MerchantList({
                     </span>
                     <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-midnight-800" aria-hidden>
                       <span
-                        className="block h-full rounded-full bg-accent/70"
+                        className="block h-full rounded-full bg-accent"
                         style={{ width: `${Math.max(2, (m.total / max) * 100)}%` }}
                       />
                     </span>
@@ -55,11 +50,6 @@ export default function MerchantList({
             </li>
           ))}
         </ul>
-      )}
-      {rows.length > SHOWN && (
-        <button className="mt-2 text-sm text-midnight-400 underline" onClick={() => setAll(v => !v)}>
-          {all ? 'Show fewer' : `Show all ${rows.length}`}
-        </button>
       )}
     </section>
   )
