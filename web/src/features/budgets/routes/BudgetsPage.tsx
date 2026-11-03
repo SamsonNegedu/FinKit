@@ -10,7 +10,7 @@ import CategoryIcon from '@/shared/components/CategoryIcon'
 import { getAvailableCategories } from '@/shared/utils/categorizer/categoryMeta'
 import BudgetSetupDialog from '../components/BudgetSetupDialog'
 import BudgetDialog from '../components/BudgetDialog'
-import BudgetRowCard from '../components/BudgetRowCard'
+import BudgetRowCard, { BUDGET_COLUMNS } from '../components/BudgetRowCard'
 import BudgetCapCard from '../components/BudgetCapCard'
 import BudgetCapDialog from '../components/BudgetCapDialog'
 import BudgetSummary from '../components/BudgetSummary'
@@ -19,6 +19,7 @@ import { useBudgets, useDeleteBudget, useDeleteCap, useSaveBudget, useSaveCap } 
 import {
   NOT_BUDGETABLE,
   budgetRows,
+  budgetHistory,
   capSummary,
   monthKey,
   setupSuggestions,
@@ -80,6 +81,31 @@ export default function BudgetsPage() {
     () => budgetRows(limits, displayTransactions, baseCurrency, today, year, month),
     [limits, displayTransactions, baseCurrency, today, year, month],
   )
+  const totals = useMemo(() => totalsOf(rows), [rows])
+  // How the month before went, to put this one in context. Nothing when there is no data that far back.
+  const before = new Date(year, month - 1, 1)
+  const previous = useMemo(() => {
+    if (before.getFullYear() * 12 + before.getMonth() < earliest.year * 12 + earliest.month) {
+      return null
+    }
+    const t = totalsOf(
+      budgetRows(limits, displayTransactions, baseCurrency, today, before.getFullYear(), before.getMonth()),
+    )
+
+    if (t.budgeted === 0 || t.spent === 0) {
+      return null
+    }
+    const name = before.toLocaleDateString('en-GB', { month: 'long' })
+    const flagged = t.over > 0 ? ` · ${t.over} over` : ''
+
+    return `${name}: ${formatCurrency(t.spent, baseCurrency)} of ${formatCurrency(t.budgeted, baseCurrency)}${flagged}`
+    // `before` follows year and month
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [limits, displayTransactions, baseCurrency, today, year, month, earliest])
+  const history = useMemo(
+    () => budgetHistory(limits, displayTransactions, baseCurrency, today, year, month, earliest),
+    [limits, displayTransactions, baseCurrency, today, year, month, earliest],
+  )
   const open = useMemo(
     () => unbudgeted(displayTransactions, limits, year, month).slice(0, 6),
     [displayTransactions, limits, year, month],
@@ -91,9 +117,12 @@ export default function BudgetsPage() {
   const taken = new Set(rows.map(r => r.category))
   // Income and transfers are not spending, so there is nothing to budget
   const choices = getAvailableCategories().filter(c => !taken.has(c) && !NOT_BUDGETABLE.has(c))
-  const many = rows.length > MANY
+  // Money put away is a goal to reach, so it is listed apart from the limits to stay under
+  const spendRows = rows.filter(r => !r.goal)
+  const goalRows = rows.filter(r => r.goal)
+  const many = spendRows.length > MANY
   const query = search.trim().toLowerCase()
-  const shown = rows.filter(
+  const shown = spendRows.filter(
     r => (filter === 'all' || r.state === filter) && (!query || r.category.toLowerCase().includes(query)),
   )
   const attention = shown.filter(r => r.state !== 'ok')
@@ -104,6 +133,7 @@ export default function BudgetsPage() {
     <BudgetRowCard
       key={r.category}
       row={r}
+      history={history.get(r.category)}
       busy={remove.isPending}
       onOpen={() => toCategory(r.category)}
       onChange={amount => void put(r.category, amount).catch(() => undefined)}
@@ -132,25 +162,24 @@ export default function BudgetsPage() {
         title="Budgets"
         description="A monthly limit per category. Spending is counted from your transactions, the same way as in Analytics."
         actions={
-          <div className="flex gap-2">
-            {suggestions.length > 0 && (
-              <button className="btn-secondary" onClick={() => setSetup(true)}>
-                {rows.length === 0 ? 'Set up from my spending' : 'Suggest more'}
-              </button>
-            )}
-            {!cap && (
-              <button className="btn-secondary" onClick={() => setCapOpen(true)}>
-                Set monthly cap
-              </button>
-            )}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <MonthSwitcher value={view} min={earliest} max={thisMonth} onChange={setView} />
             <button className="btn-primary flex items-center gap-1.5" onClick={() => setAdding('')}>
               <Plus className="h-4 w-4" /> Add budget
             </button>
           </div>
         }
       />
-      <MonthSwitcher value={view} min={earliest} max={thisMonth} onChange={setView} />
       {failure && !adding && !capOpen && <p className="text-sm text-rose-400">{failure}</p>}
+      {spendRows.length > 0 && (
+        <BudgetSummary
+          totals={totals}
+          currency={baseCurrency}
+          paceAt={capPace}
+          previous={previous}
+          onSetCap={cap ? undefined : () => setCapOpen(true)}
+        />
+      )}
       {cap && (
         <BudgetCapCard
           cap={cap}
@@ -160,61 +189,87 @@ export default function BudgetsPage() {
           onRemove={() => removeCap.mutate(baseCurrency)}
         />
       )}
-      {rows.length > 0 && <BudgetSummary totals={totalsOf(rows)} currency={baseCurrency} monthLabel={monthLabel} />}
       {isLoading ? null : rows.length === 0 ? (
-        <p className="text-sm text-midnight-400">
-          No budgets yet. Set them up from your spending, or add one to see how this month is going.
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-midnight-400">
+            No budgets yet. Set them up from your spending, or add one to see how this month is going.
+          </p>
+          {suggestions.length > 0 && (
+            <button className="btn-secondary" onClick={() => setSetup(true)}>
+              Set up from my spending
+            </button>
+          )}
+        </div>
       ) : (
-        <section className="card space-y-1 divide-y divide-midnight-800">
-          {many && (
-            <div className="flex flex-wrap items-center gap-2 pb-3">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-midnight-400" />
-                <input
-                  className="input w-48 pl-8 text-sm"
-                  placeholder="Search budgets"
-                  aria-label="Search budgets"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
+        <>
+          <section className="card space-y-1 divide-y divide-midnight-800">
+            {many && (
+              <div className="flex flex-wrap items-center gap-2 pb-3">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-midnight-400" />
+                  <input
+                    className="input w-48 pl-8 text-sm"
+                    placeholder="Search budgets"
+                    aria-label="Search budgets"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                </div>
+                <Select
+                  className="w-40"
+                  ariaLabel="Show"
+                  value={filter}
+                  onChange={setFilter}
+                  options={[
+                    { value: 'all', label: 'All budgets' },
+                    { value: 'over', label: 'Over' },
+                    { value: 'watch', label: 'Close to limit' },
+                    { value: 'ok', label: 'On track' },
+                  ]}
                 />
               </div>
-              <Select
-                className="w-40"
-                ariaLabel="Show"
-                value={filter}
-                onChange={setFilter}
-                options={[
-                  { value: 'all', label: 'All budgets' },
-                  { value: 'over', label: 'Over' },
-                  { value: 'watch', label: 'Close to limit' },
-                  { value: 'ok', label: 'On track' },
-                ]}
-              />
-            </div>
-          )}
-          {shown.length === 0 && <p className="py-2 text-sm text-midnight-400">No budgets match.</p>}
-          <ul className="divide-y divide-midnight-800">{(fold ? attention : shown).map(card)}</ul>
-          {fold && onTrack.length > 0 && (
-            <div>
-              <button
-                className="flex items-center gap-1 pt-3 text-sm text-midnight-300 hover:text-white"
-                aria-expanded={showOk}
-                onClick={() => setShowOk(v => !v)}
-              >
-                {showOk ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                {onTrack.length} on track
-              </button>
-              {showOk && <ul className="divide-y divide-midnight-800">{onTrack.map(card)}</ul>}
-            </div>
-          )}
-        </section>
+            )}
+            {spendRows.length > 0 && shown.length === 0 && (
+              <p className="py-2 text-sm text-midnight-400">No budgets match.</p>
+            )}
+            <ListHead labels={['Used', 'Spent', 'Limit', 'Left', 'Last 6 months']} />
+            <ul className="divide-y divide-midnight-800">{(fold ? attention : shown).map(card)}</ul>
+            {fold && onTrack.length > 0 && (
+              <div>
+                <button
+                  className="flex items-center gap-1 pt-3 text-sm text-midnight-300 hover:text-white"
+                  aria-expanded={showOk}
+                  onClick={() => setShowOk(v => !v)}
+                >
+                  {showOk ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  {onTrack.length} on track
+                </button>
+                {showOk && <ul className="divide-y divide-midnight-800">{onTrack.map(card)}</ul>}
+              </div>
+            )}
+            {goalRows.length > 0 && (
+              <div className="!border-t-0 pt-4">
+                <h2 className="pb-1 text-xs uppercase tracking-wide text-midnight-500">
+                  Put away <span className="normal-case">· a goal to reach, not counted as spent</span>
+                </h2>
+                <ul className="divide-y divide-midnight-800">{goalRows.map(card)}</ul>
+              </div>
+            )}
+          </section>
+        </>
       )}
       {open.length > 0 && (
         <section className="card space-y-2">
-          <h2 className="text-sm font-medium text-midnight-400">
-            Spent {isCurrent ? 'this month' : `in ${monthLabel}`} with no budget
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-medium text-midnight-400">
+              Spent {isCurrent ? 'this month' : `in ${monthLabel}`} with no budget
+            </h2>
+            {suggestions.length > 0 && rows.length > 0 && (
+              <button className="text-sm text-emerald-400 hover:underline" onClick={() => setSetup(true)}>
+                Suggest limits for these
+              </button>
+            )}
+          </div>
           <ul className="divide-y divide-midnight-800">
             {open.map(o => (
               <li key={o.category} className="flex items-center justify-between gap-3 py-1.5 text-sm">
@@ -268,6 +323,21 @@ export default function BudgetsPage() {
           onClose={() => setAdding(null)}
         />
       )}
+    </div>
+  )
+}
+
+/** Column headings over a list of budgets, lined up with the rows. Hidden on a phone, where a row names its own parts. */
+function ListHead({ labels }: { labels: [string, string, string, string, string] }) {
+  return (
+    <div aria-hidden="true" className={`hidden gap-x-4 pb-1 text-xs text-midnight-500 sm:grid ${BUDGET_COLUMNS}`}>
+      <span>Category</span>
+      <span>{labels[0]}</span>
+      <span className="text-right">{labels[1]}</span>
+      <span className="text-right">{labels[2]}</span>
+      <span className="text-right">{labels[3]}</span>
+      <span className="text-right">{labels[4]}</span>
+      <span />
     </div>
   )
 }

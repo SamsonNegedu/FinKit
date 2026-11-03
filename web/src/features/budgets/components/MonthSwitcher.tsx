@@ -28,38 +28,44 @@ export default function MonthSwitcher({
     onChange({ year: Math.floor(i / 12), month: i % 12 })
   }
   const arrow =
-    'rounded-lg p-1.5 text-midnight-300 hover:bg-midnight-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent'
+    'p-2.5 text-midnight-300 hover:bg-midnight-700 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent'
+  const current = index(value) >= index(max)
 
   return (
-    <div className="flex items-center gap-1">
-      <Tooltip label="Earlier month">
-        <button
-          className={arrow}
-          aria-label="Earlier month"
-          disabled={index(value) <= index(min)}
-          onClick={() => step(-1)}
+    <div className="flex items-center gap-2">
+      {/* One bordered control, like the period picker in the header, so it reads as a control and not loose text */}
+      <div className="flex items-center overflow-hidden rounded-lg border border-midnight-600 bg-midnight-800">
+        <Tooltip label="Earlier month">
+          <button
+            className={arrow}
+            aria-label="Earlier month"
+            disabled={index(value) <= index(min)}
+            onClick={() => step(-1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </Tooltip>
+        <span
+          className="min-w-[9.5rem] border-x border-midnight-600 px-3 py-2 text-center text-sm font-medium text-white"
+          aria-live="polite"
         >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-      </Tooltip>
-      <span className="min-w-36 text-center text-sm font-medium text-white" aria-live="polite">
-        {label(value)}
-      </span>
-      <Tooltip label="Later month">
-        <button
-          className={arrow}
-          aria-label="Later month"
-          disabled={index(value) >= index(max)}
-          onClick={() => step(1)}
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      </Tooltip>
-      {index(value) < index(max) && (
-        <button className="ml-1 text-xs text-accent hover:underline" onClick={() => onChange(max)}>
-          This month
-        </button>
-      )}
+          {label(value)}
+        </span>
+        <Tooltip label="Later month">
+          <button
+            className={arrow}
+            aria-label="Later month"
+            disabled={index(value) >= index(max)}
+            onClick={() => step(1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </Tooltip>
+      </div>
+      {/* Always there, dimmed on the current month, so the controls do not shift as you step back */}
+      <button className="btn-secondary text-sm disabled:opacity-40" disabled={current} onClick={() => onChange(max)}>
+        This month
+      </button>
     </div>
   )
 }

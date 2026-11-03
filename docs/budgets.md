@@ -26,9 +26,11 @@ Budgets do **not** need banking: `BudgetsModule` is registered in `app.module.ts
 
 ## What the page shows
 
-- A summary: what's left or over, spent of budgeted, and how many are over or close (`WATCH_AT` = 80%).
-- One row per budget, worst first. Past 100% the bar rescales: a white tick marks the limit and the overshoot is solid red. A thin line marks how far through the month it is (`paceAt`).
-- Each row has a carry-over toggle, an edit pencil and a delete. The limit shown includes anything carried in, and a note says how much.
+- A summary: what's left or over as a bar with a marker for how far through the month it is, how many are over or close (`WATCH_AT` = 80%), and how the month before went. It does not name the month: the switcher above does. While there is no overall cap it offers "Set an overall cap".
+- One row per spending budget, worst first, under column headings (Category, Used, Spent, Limit, Left). Past 100% the bar rescales: a white tick marks the limit and the overshoot is solid red. A thin line marks how far through the month it is (`paceAt`).
+- Click the limit to change it. Everything else (see transactions, carry over, remove) is in the row's "…" menu. A small repeat icon beside the name shows carry-over is on. The limit shown includes anything carried in, and a note says how much.
+- **Last 6 months**: one dot per month before the one shown, oldest first (`budgetHistory`): green within the limit, amber close, red over, hollow when there is nothing to compare (before the data or before the budget began). Hover a dot for the figures. It judges past months against today's limit, as rollover does, because limits are not kept per month. Put-away goals show cyan when reached.
+- **Put away** (Savings, Investment) is a goal, not a limit (`BudgetRow.goal`): listed apart, the bar only fills (cyan), it is never over or close, it has no carry-over, and it is left out of "left to spend" (`totalsOf`) and the Overview alert.
 - With more than 8 budgets: search, a filter, and the on-track ones fold away.
 - "Spent this month with no budget": categories with spending and no limit, with a one-click "Set budget".
 - "Add budget" keeps the dialog open so several can be added in one sitting. "Set up from my spending" suggests a limit per category (the last three full months' average, rounded up to 10) and saves the ticked ones together.

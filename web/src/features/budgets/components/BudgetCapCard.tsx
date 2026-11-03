@@ -40,7 +40,16 @@ export default function BudgetCapCard({
           </button>
         </span>
       </div>
-      <BudgetBar used={cap.used} state={cap.state} paceAt={paceAt} label="Monthly cap used" />
+      <BudgetBar
+        used={cap.used}
+        state={cap.state}
+        paceAt={paceAt}
+        label="Monthly cap used"
+        thick
+        paceLabel="Today"
+        overLabel={`+${formatCurrency(-cap.left, currency)}`}
+        limitLabel={`Cap ${formatCurrency(cap.cap, currency)}`}
+      />
       <div className="flex flex-wrap justify-between gap-x-4 text-sm tabular-nums">
         <span className="text-midnight-300">
           {formatCurrency(cap.spent, currency)} of {formatCurrency(cap.cap, currency)} ({Math.round(cap.used * 100)}%)
