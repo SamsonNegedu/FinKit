@@ -278,9 +278,7 @@ export class TripsService implements OnModuleInit {
     if (kind === 'cost' && !category) {
       throw new BadRequestException({ error: `Unknown trip category: ${input.category}` })
     }
-    // Only manual entries can be paid by someone else: a bank transaction left your own account
-    const paidBy =
-      manual && kind === 'cost' ? (input.paidBy !== undefined ? input.paidBy : (before?.paidBy ?? null)) : null
+    const paidBy = this.resolvePaidBy(manual, kind, input, before)
 
     this.checkPayer(trip, paidBy)
     // A subcategory belongs to its category, so moving to another category clears it unless a new one is given
@@ -291,16 +289,59 @@ export class TripsService implements OnModuleInit {
       tripId: trip.id,
       kind,
       category,
-      subcategory:
-        kind === 'funding' || !category
-          ? null
-          : input.subcategory !== undefined
-            ? this.subcategoryOf(userId, category, input.subcategory)
-            : kept,
-      place: kind === 'funding' ? null : input.place !== undefined ? input.place : (before?.place ?? null),
+      subcategory: this.resolveSubcategory(userId, kind, category, input, kept),
+      place: this.resolvePlace(kind, input, before),
       shared: kind === 'funding' ? false : (input.shared ?? before?.shared ?? false),
       paidBy,
     }
+  }
+
+  private resolvePaidBy(
+    manual: boolean,
+    kind: TripItem['kind'],
+    input: TagItemsInput['items'][number],
+    before: TripItem | undefined,
+  ): string | null {
+    if (!manual || kind !== 'cost') {
+      return null
+    }
+    if (input.paidBy !== undefined) {
+      return input.paidBy
+    }
+
+    return before?.paidBy ?? null
+  }
+
+  private resolvePlace(
+    kind: TripItem['kind'],
+    input: TagItemsInput['items'][number],
+    before: TripItem | undefined,
+  ): string | null {
+    if (kind === 'funding') {
+      return null
+    }
+    if (input.place !== undefined) {
+      return input.place
+    }
+
+    return before?.place ?? null
+  }
+
+  private resolveSubcategory(
+    userId: string,
+    kind: TripItem['kind'],
+    category: string | null,
+    input: TagItemsInput['items'][number],
+    kept: string | null,
+  ): string | null {
+    if (kind === 'funding' || !category) {
+      return null
+    }
+    if (input.subcategory !== undefined) {
+      return this.subcategoryOf(userId, category, input.subcategory)
+    }
+
+    return kept
   }
 
   /** The known spelling when it matches one (so "flight" and "Flight" are one), otherwise what was typed. */

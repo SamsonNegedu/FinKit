@@ -5,6 +5,7 @@ import { X, ChevronDown, Tag, EyeOff, Eye, Plane } from 'lucide-react'
 import { getAvailableCategories, getCategoryColor } from '@/shared/utils/categorizer'
 import { formatCurrency } from '@/shared/utils/format'
 import type { SelectionTotal } from '@/shared/utils/selectionTotal'
+import { netAmountClass, netAmountPrefix } from '@/shared/utils/selectionTotal'
 
 interface BulkActionBarProps {
   selectedCount: number
@@ -74,10 +75,8 @@ export default function BulkActionBar({
             key={total.currency}
             label={`In ${formatCurrency(total.incoming, total.currency)} · Out ${formatCurrency(total.outgoing, total.currency)}`}
           >
-            <span
-              className={`text-sm font-medium tabular-nums ${total.net > 0.005 ? 'text-income' : total.net < -0.005 ? 'text-expense' : 'text-midnight-300'}`}
-            >
-              {total.net > 0.005 ? '+' : ''}
+            <span className={`text-sm font-medium tabular-nums ${netAmountClass(total.net)}`}>
+              {netAmountPrefix(total.net)}
               {formatCurrency(total.net, total.currency)}
             </span>
           </Tooltip>

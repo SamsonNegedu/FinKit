@@ -13,7 +13,7 @@ import { getTransactionRules } from '@/features/settings/api/transactionRules.ap
 import { getRememberPreference, loadSession, saveSession } from '@/shared/utils/storage'
 import { migrateOldIds } from '@/shared/utils/ids'
 import type { DateRange, SheetConfig, Transaction } from '@/shared/types'
-import type { SheetBootstrapPhase } from './workspacePhase'
+import type { SheetBootstrapDispatch } from './useSheetBootstrapPhase'
 import type { WorkspacePhaseDispatch } from './useWorkspacePhase'
 import type { TransactionStore } from './useTransactionStore'
 
@@ -23,7 +23,7 @@ type BootstrapArgs = {
   setAnonymizationEnabled: (v: boolean) => void
   setDateRange: (r: DateRange | null) => void
   setSheetConfig: (c: SheetConfig | null) => void
-  setSheetBootstrap: (p: SheetBootstrapPhase) => void
+  dispatchSheetBootstrap: SheetBootstrapDispatch
   remember: boolean
   isRestoring: boolean
   dateRange: DateRange | null
@@ -37,7 +37,7 @@ export function useWorkspaceBootstrap({
   setAnonymizationEnabled,
   setDateRange,
   setSheetConfig,
-  setSheetBootstrap,
+  dispatchSheetBootstrap,
   remember,
   isRestoring,
   dateRange,
@@ -77,23 +77,23 @@ export function useWorkspaceBootstrap({
     let cancelled = false
 
     async function loadSheet() {
-      setSheetBootstrap({ kind: 'loading_config' })
+      dispatchSheetBootstrap({ type: 'START_LOAD_CONFIG' })
       const config = await getSheetConfig()
 
       if (!config || cancelled) {
         if (!cancelled) {
-          setSheetBootstrap({ kind: 'ready' })
+          dispatchSheetBootstrap({ type: 'CONFIG_ABSENT' })
         }
 
         return
       }
       setSheetConfig(config)
       if (!config.sheetId || !config.headerRow) {
-        setSheetBootstrap({ kind: 'ready' })
+        dispatchSheetBootstrap({ type: 'CONFIG_READY_WITHOUT_SYNC' })
 
         return
       }
-      setSheetBootstrap({ kind: 'syncing_layout' })
+      dispatchSheetBootstrap({ type: 'START_SYNC_LAYOUT' })
       try {
         const synced = await syncSheetLayout(config)
 
@@ -104,11 +104,11 @@ export function useWorkspaceBootstrap({
         if (JSON.stringify(synced.layout) !== JSON.stringify(config.layout)) {
           saveSheetConfig(synced)
         }
-        setSheetBootstrap({ kind: 'ready' })
+        dispatchSheetBootstrap({ type: 'SYNC_LAYOUT_DONE' })
       } catch (e) {
         if (!cancelled) {
-          setSheetBootstrap({
-            kind: 'error',
+          dispatchSheetBootstrap({
+            type: 'SYNC_LAYOUT_FAIL',
             message: e instanceof Error ? e.message : 'Failed to sync sheet layout',
           })
         }
@@ -119,7 +119,7 @@ export function useWorkspaceBootstrap({
     return () => {
       cancelled = true
     }
-  }, [setSheetConfig, setSheetBootstrap])
+  }, [setSheetConfig, dispatchSheetBootstrap])
 
   useEffect(() => {
     if (isRestoring || transactions.length === 0 || !remember) {

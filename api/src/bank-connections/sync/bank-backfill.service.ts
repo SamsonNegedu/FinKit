@@ -25,6 +25,17 @@ import { openSession } from './session'
 const day = (d: Date) => d.toISOString().slice(0, 10)
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
+function backfillErrorKind(e: unknown): string {
+  if (e instanceof ProviderError) {
+    return e.kind
+  }
+  if (e instanceof BudgetExhausted) {
+    return 'budget'
+  }
+
+  return 'unavailable'
+}
+
 /**
  * Walks back through a connection's older history, one window a day, using only the bank requests
  * the scheduled syncs leave over. It stops when the bank has nothing older, refuses older dates, or
@@ -185,7 +196,7 @@ export class BankBackfillService {
   ) {
     const userId = row.user_id!
     const keep = { cursor: at.cursor, empty: row.backfill_empty ?? 0, day: at.today }
-    const kind = e instanceof ProviderError ? e.kind : e instanceof BudgetExhausted ? 'budget' : 'unavailable'
+    const kind = backfillErrorKind(e)
 
     this.logger.warn(`Backfill stopped (${kind}): ${errorSummary(e)}`)
     this.store.finishSyncLog(

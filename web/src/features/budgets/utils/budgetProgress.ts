@@ -40,6 +40,17 @@ export const MIN_PACE_DAYS = 7
 /** At this share of the limit a budget starts to warn. */
 export const WATCH_AT = 0.8
 
+export function budgetUsedState(used: number): BudgetRow['state'] {
+  if (used > 1) {
+    return 'over'
+  }
+  if (used >= WATCH_AT) {
+    return 'watch'
+  }
+
+  return 'ok'
+}
+
 /**
  * Spending is counted exactly as Analytics counts it (expenses, no transfers, nothing excluded), so a budget
  * and the category breakdown never disagree about what was spent.
@@ -193,7 +204,7 @@ export function capSummary(
     spent,
     left: cap - spent,
     used,
-    state: used > 1 ? 'over' : used >= WATCH_AT ? 'watch' : 'ok',
+    state: budgetUsedState(used),
   }
 }
 
@@ -294,6 +305,37 @@ export interface HistoryMonth {
   state: 'ok' | 'watch' | 'over' | 'met' | 'short' | null
 }
 
+export function budgetLeftCaption(row: Pick<BudgetRow, 'left' | 'goal' | 'currency'>): {
+  text: string
+  tone: string
+} {
+  if (row.left >= 0) {
+    const suffix = row.goal ? 'to go' : 'left'
+
+    return { text: `${formatCurrency(row.left, row.currency)} ${suffix}`, tone: 'text-midnight-300' }
+  }
+  if (row.goal) {
+    return { text: 'Goal reached', tone: 'text-cyan-400' }
+  }
+
+  return { text: `${formatCurrency(-row.left, row.currency)} over`, tone: 'text-negative' }
+}
+
+export function historyMonthState(row: BudgetRow | undefined, beforeBudget: boolean): HistoryMonth['state'] {
+  if (!row || beforeBudget) {
+    return null
+  }
+  if (row.goal) {
+    if (row.used >= 1) {
+      return 'met'
+    }
+
+    return 'short'
+  }
+
+  return row.state
+}
+
 /**
  * How each budget fared in the months before the one on screen, oldest first, to show which ones keep going over.
  * It uses the limit as it is now, as rollover does, because limits are not kept per month. A put-away goal is
@@ -323,8 +365,7 @@ export function budgetHistory(
       const row = byCategory.get(l.category)
       const began = l.startsMonth ? l.startsMonth.split('-').map(Number) : null
       const beforeBudget = began !== null && index < began[0] * 12 + (began[1] - 1)
-      const state: HistoryMonth['state'] =
-        !row || beforeBudget ? null : row.goal ? (row.used >= 1 ? 'met' : 'short') : row.state
+      const state = historyMonthState(row, beforeBudget)
 
       out.set(l.category, [
         ...(out.get(l.category) ?? []),

@@ -31,17 +31,23 @@ export default function SettingsPage({ section }: { section: Section }) {
         className="mb-6"
         links={tabs.map(([id, label]) => ({ label, link: { to: `/settings/${id}` }, active: section === id }))}
       />
-      {section === 'back-office' ? (
-        <BackOffice />
-      ) : section === 'rules' ? (
-        <Rules />
-      ) : section === 'categories' ? (
-        <CategoriesPanel />
-      ) : (
-        <SettingsPanel config={app.sheetConfig} onSave={app.setSheetConfig} section={section} />
-      )}
+      <SettingsSectionPanel section={section} app={app} />
     </div>
   )
+}
+
+function SettingsSectionPanel({ section, app }: { section: Section; app: ReturnType<typeof useApp> }) {
+  if (section === 'back-office') {
+    return <BackOffice />
+  }
+  if (section === 'rules') {
+    return <Rules />
+  }
+  if (section === 'categories') {
+    return <CategoriesPanel />
+  }
+
+  return <SettingsPanel config={app.sheetConfig} onSave={app.setSheetConfig} section={section} />
 }
 
 function BackOffice() {

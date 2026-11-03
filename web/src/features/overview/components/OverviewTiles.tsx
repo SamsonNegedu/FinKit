@@ -1,5 +1,17 @@
 import { formatCurrency } from '@/shared/utils/format'
 import type { Analysis } from '@/shared/utils/analysis/analyze'
+import { percentChangeNote, percentChangeTone } from '@/shared/utils/spendDelta'
+
+function tileNoteColor(tone?: 'up' | 'down' | 'bad'): string {
+  if (tone === 'up') {
+    return 'text-warning'
+  }
+  if (tone === 'down') {
+    return 'text-positive'
+  }
+
+  return 'text-ink-faint'
+}
 
 function Tile({
   label,
@@ -12,7 +24,7 @@ function Tile({
   note?: string
   tone?: 'up' | 'down' | 'bad'
 }) {
-  const color = tone === 'up' ? 'text-warning' : tone === 'down' ? 'text-positive' : 'text-ink-faint'
+  const color = tileNoteColor(tone)
 
   return (
     <div className="card-raised !p-4">
@@ -29,18 +41,13 @@ export default function OverviewTiles({ a, currency }: { a: Analysis; currency: 
   const left = a.income - a.spent - a.setAside
   const delta =
     a.previousSpent !== null && a.previousSpent > 0 ? ((a.spent - a.previousSpent) / a.previousSpent) * 100 : null
+  const spentNote = delta === null ? undefined : percentChangeNote(delta)
+  const spentTone = delta === null ? undefined : percentChangeTone(delta)
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <Tile label="Income" value={money(a.income)} />
-      <Tile
-        label="Spent"
-        value={money(a.spent)}
-        note={
-          delta === null ? undefined : `${delta > 0 ? '▲' : '▼'} ${Math.abs(Math.round(delta))}% vs the period before`
-        }
-        tone={delta === null ? undefined : delta > 0 ? 'up' : 'down'}
-      />
+      <Tile label="Spent" value={money(a.spent)} note={spentNote} tone={spentTone} />
       <Tile label="Set aside" value={money(a.setAside)} note="Savings and investments" />
       <Tile
         label="Left over"

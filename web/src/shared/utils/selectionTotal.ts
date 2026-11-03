@@ -1,5 +1,26 @@
 import type { Transaction } from '@/shared/types'
 
+const NET_EPS = 0.005
+
+export function netAmountClass(net: number): string {
+  if (net > NET_EPS) {
+    return 'text-income'
+  }
+  if (net < -NET_EPS) {
+    return 'text-expense'
+  }
+
+  return 'text-midnight-300'
+}
+
+export function netAmountPrefix(net: number): string {
+  if (net > NET_EPS) {
+    return '+'
+  }
+
+  return ''
+}
+
 export interface SelectionTotal {
   currency: string
   /** What came in minus what went out; negative when more went out */

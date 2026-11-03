@@ -12,7 +12,7 @@ import ContractsInsights from '../components/ContractsInsights'
 import ContractsSummary from '../components/ContractsSummary'
 import { useContracts, useCreateContract, useDeleteContract, useUpdateContract } from '../hooks/contracts-queries'
 import { combineTotals, insightsOf } from '../utils/contractInsights'
-import { groupContracts } from '../utils/contractGroups'
+import { groupContracts, monthlyInBase } from '../utils/contractGroups'
 import { uploadCandidates, type UploadCandidate } from '../utils/uploadCandidates'
 
 type Dialog = { kind: 'add' } | { kind: 'edit'; contract: Contract } | null
@@ -32,8 +32,7 @@ export default function ContractsPage() {
   const currency = baseCurrency
   // One total in your base currency using the rates from Settings; a currency without a rate is listed apart
   const { combined, unconverted } = combineTotals(data?.totals ?? [], currency, rates)
-  const toBase = (monthly: number, from: string) =>
-    from === currency ? monthly : rates[from] > 0 ? monthly * rates[from] : null
+  const toBase = (monthly: number, from: string) => monthlyInBase(monthly, from, currency, rates)
   const { groups, ended, dismissed } = groupContracts(data?.contracts ?? [], toBase)
   const candidates = uploadCandidates(transactions, data?.contracts ?? [])
   const insights = insightsOf(data?.contracts ?? [], today, currency)

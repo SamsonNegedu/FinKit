@@ -7,6 +7,7 @@ import type { Trip, TripTotals } from '../api/trips.api'
 import { tripCategoryColor } from '../utils/tripCategoryColor'
 import { combineTotals, tripLength } from '../utils/tripMath'
 import { DailyChart, Settlement, SliceBars, SubSlices } from './BreakdownCharts'
+import { tripBudgetBarFillClass } from '../utils/tripBudgetUi'
 import { placeColor } from '../utils/placeColor'
 
 const Stat = ({ label, value, tone }: { label: string; value: string; tone?: string }) => (
@@ -19,6 +20,7 @@ const Stat = ({ label, value, tone }: { label: string; value: string; tone?: str
 function Budget({ spent, budget, money }: { spent: number; budget: number; money: (n: number) => string }) {
   const used = Math.min(100, (spent / budget) * 100)
   const over = spent > budget
+  const ratio = spent / budget
 
   return (
     <div>
@@ -29,10 +31,7 @@ function Budget({ spent, budget, money }: { spent: number; budget: number; money
         </span>
       </div>
       <div className="mt-1 h-2 rounded bg-midnight-800">
-        <div
-          className={`h-2 rounded ${over ? 'bg-expense' : spent / budget > 0.8 ? 'bg-warning' : 'bg-income'}`}
-          style={{ width: `${used}%` }}
-        />
+        <div className={`h-2 rounded ${tripBudgetBarFillClass(over, ratio)}`} style={{ width: `${used}%` }} />
       </div>
     </div>
   )

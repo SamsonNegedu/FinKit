@@ -57,7 +57,7 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
 
   useReviewQueueKeyboard(quickPicks, assign, skip, exclude)
 
-  if (derived.phase === 'empty') {
+  if (derived.phase.kind === 'empty') {
     return (
       <div className="card text-center py-12">
         <CheckCircle2 className="w-10 h-10 text-income mx-auto mb-3" />
@@ -67,10 +67,10 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
     )
   }
 
-  if (derived.phase === 'all_skipped') {
+  if (derived.phase.kind === 'all_skipped') {
     return (
       <div className="card text-center py-12">
-        <p className="text-ink font-medium">{session.skipped.size} skipped</p>
+        <p className="text-ink font-medium">{derived.phase.skippedCount} skipped</p>
         <button className="btn-secondary mt-4" onClick={() => dispatchSession({ type: 'RESET_SKIPPED' })}>
           Review skipped again
         </button>

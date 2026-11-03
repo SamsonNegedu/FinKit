@@ -8,6 +8,7 @@ import PageHeader from '@/shared/components/layout/PageHeader'
 import { timeAgo } from '@/features/banking/api/banking.api'
 import { useBankingStatus, useConnections } from '@/features/banking/hooks/banking-queries'
 import { formatCurrency } from '@/shared/utils/format'
+import { signedTransactionAmount } from '@/shared/utils/transactionAmount'
 
 /** One bank: its accounts, how much each has brought in, and how to sync or disconnect. */
 export default function BankDetailPage() {
@@ -59,7 +60,7 @@ export default function BankDetailPage() {
         <ul className="divide-y divide-line">
           {c.accounts.map(a => {
             const rows = mine.filter(t => t.accountLabel === a.label)
-            const net = rows.reduce((s, t) => s + (t.isExcluded ? 0 : t.type === 'income' ? t.amount : -t.amount), 0)
+            const net = rows.reduce((s, t) => s + signedTransactionAmount(t), 0)
 
             return (
               <li key={a.id}>

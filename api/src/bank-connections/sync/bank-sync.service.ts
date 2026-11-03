@@ -13,6 +13,7 @@ import { openSession } from './session'
 import { addDays, addMilliseconds, MS_PER_DAY } from '../../shared/constants/time'
 import { BANKING_CONFIG, BankingConfig, CLOCK, Clock } from '../config/bank-connections.tokens'
 import { connectionStatus } from '../connections/connection-status'
+import { syncFailureErrorBody, syncFailureHttpStatus } from './sync-failure-http'
 import { SyncInput } from '../connections/bank-connections.schemas'
 import { BankConnectionsStore, ConnectionRow } from '../connections/bank-connections.store'
 import {
@@ -161,9 +162,9 @@ export class BankSyncService {
       }
       this.store.finishSyncLog(logId, kind === 'rate_limited' ? 'rate_limited' : 'failed', 0, kind)
       this.store.audit(who, 'sync.failed', row.aspsp_name, { kind }, userId)
-      const status = kind === 'consent_expired' ? 409 : kind === 'rate_limited' ? 429 : kind === 'too_large' ? 422 : 502
+      const status = syncFailureHttpStatus(kind)
 
-      throw new HttpException({ error: kind === 'consent_expired' ? 'expired' : kind }, status)
+      throw new HttpException(syncFailureErrorBody(kind), status)
     }
   }
 

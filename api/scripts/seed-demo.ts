@@ -85,13 +85,24 @@ interface Recurring {
 const ym = (y: number, m: number) => `${y}-${pad(m)}`
 const label = (y: number, m: number) => `${pad(m)}/${y}`
 
+function demoRentAmount(yearMonth: string): number {
+  if (yearMonth >= '2026-09') {
+    return 1020
+  }
+  if (yearMonth >= '2025-09') {
+    return 950
+  }
+
+  return 920
+}
+
 const RECURRING: Recurring[] = [
   {
     who: 'Hausverwaltung Müller GmbH',
     text: (y, m) => `Miete Hauptstr. 12 ${label(y, m)}`,
     day: 1,
     // A rent rise this autumn, so the "price changed" note shows
-    amount: (y, m) => (ym(y, m) >= '2026-09' ? 1020 : ym(y, m) >= '2025-09' ? 950 : 920),
+    amount: (y, m) => demoRentAmount(ym(y, m)),
     iban: 'DE89370400440532013000',
   },
   {

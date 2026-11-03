@@ -176,7 +176,6 @@ export function useSettingsPanelState(config: SheetConfig | null, onSave: (confi
   return {
     loading,
     saving,
-    asyncOperation: asyncState.operation,
     sheetTab: {
       sheetId,
       tabName,

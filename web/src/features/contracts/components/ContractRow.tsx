@@ -3,7 +3,7 @@ import { ChevronRight, Check } from 'lucide-react'
 import { formatCurrency } from '@/shared/utils/format'
 import type { Contract } from '../api/contracts.api'
 import { getCategoryColor } from '@/shared/utils/categorizer/categoryMeta'
-import { FREQUENCY_LABEL } from '../utils/contractGroups'
+import { FREQUENCY_LABEL, FREQUENCY_TITLE } from '../utils/contractGroups'
 
 interface Props {
   contract: Contract
@@ -16,7 +16,7 @@ const shortDate = (d: string) =>
   new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 
 function subtitle(c: Contract) {
-  const every = c.frequency === 'monthly' ? 'Monthly' : c.frequency === 'quarterly' ? 'Quarterly' : 'Yearly'
+  const every = FREQUENCY_TITLE[c.frequency]
 
   if (!c.active && c.lastDate) {
     return `Ended · last paid ${shortDate(c.lastDate)}`

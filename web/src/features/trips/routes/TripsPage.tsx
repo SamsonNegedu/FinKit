@@ -12,6 +12,7 @@ import TripStarters from '../components/TripStarters'
 import type { Candidate } from '../utils/tripCandidates'
 import { useCreateTrip, useTagItems, useTrips } from '../hooks/trips-queries'
 import { tripDates } from '../utils/tripDates'
+import { tripBudgetBarFillClass, tripBudgetCaption, compareTripYearKeys } from '../utils/tripBudgetUi'
 
 /** What the trip has cost, and where it stands against its budget or what was put in. */
 function TripMoneyLine({ trip }: { trip: TripSummary }) {
@@ -25,6 +26,15 @@ function TripMoneyLine({ trip }: { trip: TripSummary }) {
     return <span className="mt-auto block pt-3 text-sm text-midnight-500">Nothing spent yet</span>
   }
   const over = budget !== undefined && money.spent > budget
+  const caption = tripBudgetCaption({
+    budget,
+    over,
+    spent: money.spent,
+    funded: money.funded,
+    remaining: money.remaining,
+    money: fmt,
+  })
+  const ratio = budget !== undefined && budget > 0 ? money.spent / budget : 0
 
   return (
     <span className="mt-auto block pt-3">
@@ -32,21 +42,13 @@ function TripMoneyLine({ trip }: { trip: TripSummary }) {
         <span className="text-lg font-semibold text-ink tabular-nums">
           {fmt(money.spent)} <span className="text-sm font-normal text-midnight-400">spent</span>
         </span>
-        <span className={`text-sm tabular-nums ${over ? 'text-expense' : 'text-midnight-300'}`}>
-          {budget !== undefined
-            ? over
-              ? `${fmt(money.spent - budget)} over ${fmt(budget)}`
-              : `${fmt(budget - money.spent)} left of ${fmt(budget)}`
-            : money.funded > 0
-              ? `${fmt(money.remaining)} left`
-              : ''}
-        </span>
+        <span className={`text-sm tabular-nums ${over ? 'text-expense' : 'text-midnight-300'}`}>{caption}</span>
       </span>
       {budget !== undefined && budget > 0 && (
         <span className="mt-1.5 block h-1.5 rounded bg-midnight-800" aria-hidden>
           <span
-            className={`block h-1.5 rounded ${over ? 'bg-expense' : money.spent / budget > 0.8 ? 'bg-warning' : 'bg-income'}`}
-            style={{ width: `${Math.min(100, (money.spent / budget) * 100)}%` }}
+            className={`block h-1.5 rounded ${tripBudgetBarFillClass(over, ratio)}`}
+            style={{ width: `${Math.min(100, ratio * 100)}%` }}
           />
         </span>
       )}
@@ -98,7 +100,7 @@ function TripsByYear({ trips }: { trips: TripSummary[] }) {
 
     groups.set(year, [...(groups.get(year) ?? []), t])
   }
-  const years = [...groups.keys()].sort((a, b) => (a === NO_DATES ? 1 : b === NO_DATES ? -1 : b.localeCompare(a)))
+  const years = [...groups.keys()].sort((a, b) => compareTripYearKeys(a, b, NO_DATES))
 
   // One year on its own needs no heading
   if (years.length <= 1) {

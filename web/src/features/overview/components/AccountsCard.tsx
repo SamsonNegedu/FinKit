@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { MS_PER_DAY } from '@/shared/constants/time'
 import { formatCurrency } from '@/shared/utils/format'
+import { monthlyInBase } from '@/features/contracts/utils/contractGroups'
 import { timeAgo, type AccountBalance } from '@/features/banking/api/banking.api'
 
 /** What your accounts hold: each one, and a total in your base currency for those with a rate. */
@@ -19,8 +20,7 @@ export default function AccountsCard({
   if (balances.length === 0) {
     return null
   }
-  const toBase = (b: AccountBalance) =>
-    b.currency === baseCurrency ? b.amount : rates[b.currency] > 0 ? b.amount * rates[b.currency] : null
+  const toBase = (b: AccountBalance) => monthlyInBase(b.amount, b.currency, baseCurrency, rates)
   const counted = balances.filter(b => toBase(b) !== null)
   const total = counted.reduce((sum, b) => sum + (toBase(b) ?? 0), 0)
   const left = balances.length - counted.length

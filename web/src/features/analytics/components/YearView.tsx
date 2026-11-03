@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, Loader2 } from 'lucide-react'
 import Select from '@/shared/components/forms/Select'
 import { useApp } from '@/shared/contexts/AppState'
 import { latestCompleteMonth, monthGroups, monthsTsv, monthTsv } from '@/shared/utils/analysis/sheetYear'
@@ -36,6 +36,16 @@ export default function YearView() {
     }
   }
   const gaps = useMemo(() => incomeGaps(months).filter(g => g.key.startsWith(`${year}-`)), [months, year])
+  const sheetLoading = app.isRestoring || app.sheetBootstrapPending
+
+  if (sheetLoading) {
+    return (
+      <div className="flex items-center justify-center gap-3 py-16 text-midnight-400">
+        <Loader2 className="h-6 w-6 animate-spin text-accent" />
+        Loading your sheet layout…
+      </div>
+    )
+  }
 
   if (years.length === 0) {
     return <p className="text-midnight-400">No transactions yet.</p>

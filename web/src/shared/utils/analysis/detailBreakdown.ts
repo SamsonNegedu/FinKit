@@ -31,6 +31,17 @@ export function merchantsOf(txs: Transaction[]): MerchantRow[] {
   return [...byName.values()].sort((a, b) => b.total - a.total)
 }
 
+function compareDetailRows(a: DetailRow, b: DetailRow): number {
+  if (a.detail === null) {
+    return 1
+  }
+  if (b.detail === null) {
+    return -1
+  }
+
+  return b.total - a.total
+}
+
 /**
  * The split of one category by subcategory, biggest first, with what is not sorted yet last. Empty when nothing in
  * the category has a subcategory, so a category nobody refined shows no split. The parent total never changes.
@@ -57,5 +68,5 @@ export function detailsOf(txs: Transaction[]): DetailRow[] {
       count: rows.length,
       merchants: merchantsOf(rows),
     }))
-    .sort((a, b) => (a.detail === null ? 1 : b.detail === null ? -1 : b.total - a.total))
+    .sort(compareDetailRows)
 }

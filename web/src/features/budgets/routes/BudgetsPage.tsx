@@ -45,6 +45,47 @@ export default function BudgetsPage() {
     })
   }
   const failure = (save.error ?? remove.error ?? saveCap.error ?? removeCap.error ?? error)?.message
+  let budgetList = null
+
+  if (!isLoading && model.rows.length === 0) {
+    budgetList = (
+      <div className="space-y-3">
+        <p className="text-sm text-midnight-400">
+          No budgets yet. Set them up from your spending, or add one to see how this month is going.
+        </p>
+        {model.suggestions.length > 0 && (
+          <button className="btn-secondary" onClick={() => setSetup(true)}>
+            Set up from my spending
+          </button>
+        )}
+      </div>
+    )
+  } else if (!isLoading) {
+    budgetList = (
+      <BudgetSpendSection
+        many={model.many}
+        search={model.search}
+        onSearchChange={model.setSearch}
+        filter={model.filter}
+        onFilterChange={model.setFilter}
+        spendCount={model.spendRows.length}
+        shownCount={model.shown.length}
+        fold={model.fold}
+        showOk={model.showOk}
+        onToggleShowOk={() => model.setShowOk(v => !v)}
+        attention={model.attention}
+        onTrack={model.onTrack}
+        shown={model.shown}
+        goalRows={model.goalRows}
+        history={model.history}
+        removePending={remove.isPending}
+        onOpenCategory={toCategory}
+        onChangeAmount={(row, amount) => void put(row.category, amount).catch(() => undefined)}
+        onRemove={row => remove.mutate(row)}
+        onToggleRollover={row => void put(row.category, row.base, !row.rollover).catch(() => undefined)}
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -79,41 +120,7 @@ export default function BudgetsPage() {
           onRemove={() => removeCap.mutate(baseCurrency)}
         />
       )}
-      {isLoading ? null : model.rows.length === 0 ? (
-        <div className="space-y-3">
-          <p className="text-sm text-midnight-400">
-            No budgets yet. Set them up from your spending, or add one to see how this month is going.
-          </p>
-          {model.suggestions.length > 0 && (
-            <button className="btn-secondary" onClick={() => setSetup(true)}>
-              Set up from my spending
-            </button>
-          )}
-        </div>
-      ) : (
-        <BudgetSpendSection
-          many={model.many}
-          search={model.search}
-          onSearchChange={model.setSearch}
-          filter={model.filter}
-          onFilterChange={model.setFilter}
-          spendCount={model.spendRows.length}
-          shownCount={model.shown.length}
-          fold={model.fold}
-          showOk={model.showOk}
-          onToggleShowOk={() => model.setShowOk(v => !v)}
-          attention={model.attention}
-          onTrack={model.onTrack}
-          shown={model.shown}
-          goalRows={model.goalRows}
-          history={model.history}
-          removePending={remove.isPending}
-          onOpenCategory={toCategory}
-          onChangeAmount={(row, amount) => void put(row.category, amount).catch(() => undefined)}
-          onRemove={row => remove.mutate(row)}
-          onToggleRollover={row => void put(row.category, row.base, !row.rollover).catch(() => undefined)}
-        />
-      )}
+      {budgetList}
       <BudgetUnbudgetedSection
         open={model.open}
         isCurrent={model.isCurrent}

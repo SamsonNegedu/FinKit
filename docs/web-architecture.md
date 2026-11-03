@@ -12,9 +12,9 @@ Multi-step UI and async flows use **discriminated unions + reducers** (not scatt
 
 | Area | Types / module |
 |------|----------------|
-| Workspace restore & import | `shared/contexts/workspace/workspacePhase.ts`: `WorkspacePhase`, `SheetBootstrapPhase` |
+| Workspace restore & import | `shared/contexts/workspace/workspacePhase.ts`: `WorkspacePhase`, `SheetBootstrapPhase` + `sheetBootstrapReducer` |
 | Empty-state file upload UI | `features/import/components/fileUploadPhase.ts`: `FileUploadUiPhase` |
-| Review triage | `features/review/components/reviewQueuePhase.ts`: `ReviewQueuePhase` + session reducer |
+| Review triage | `features/review/components/reviewQueuePhase.ts`: discriminated `ReviewQueuePhase` + session reducer |
 | Transaction table modals | `features/transactions/components/tableInteraction.ts`: `TableInteraction` |
 | Settings sheet async | `features/settings/components/settingsAsyncPhase.ts`: `SettingsAsyncOperation` |
 | Bank OAuth return & card busy | `features/banking/bankingUiPhase.ts`: `BankConnectReturnPhase`, `ConnectionCardOperation` |

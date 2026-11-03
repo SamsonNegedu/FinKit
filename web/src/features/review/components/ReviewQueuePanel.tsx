@@ -20,6 +20,23 @@ interface ReviewQueuePanelProps {
   onFocusKey: (key: string) => void
 }
 
+function reviewCategoryOptions(
+  query: string,
+  showAll: boolean,
+  quickPicks: string[],
+  rest: string[],
+  selectable: string[],
+): string[] {
+  if (query) {
+    return selectable.filter(c => c.toLowerCase().includes(query))
+  }
+  if (showAll) {
+    return [...quickPicks, ...rest]
+  }
+
+  return quickPicks
+}
+
 export default function ReviewQueuePanel({
   currency,
   current,
@@ -40,11 +57,7 @@ export default function ReviewQueuePanel({
   const selectable = getExpenseCategories().filter(c => c !== 'Transfer' && c !== 'Other')
   const rest = selectable.filter(c => !quickPicks.includes(c))
   // Frequent picks first (numbered for the 1-9 keys); the rest follow on request or when searching
-  const options = query
-    ? selectable.filter(c => c.toLowerCase().includes(query))
-    : showAll
-      ? [...quickPicks, ...rest]
-      : quickPicks
+  const options = reviewCategoryOptions(query, showAll, quickPicks, rest, selectable)
   const pick = (category: string) => {
     setSearch('')
     onAssign(category)

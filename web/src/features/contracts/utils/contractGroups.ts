@@ -37,3 +37,26 @@ export function groupContracts(contracts: Contract[], toBase: ToBase) {
 }
 
 export const FREQUENCY_LABEL = { monthly: 'month', quarterly: 'quarter', yearly: 'year' } as const
+
+export const FREQUENCY_TITLE: Record<keyof typeof FREQUENCY_LABEL, string> = {
+  monthly: 'Monthly',
+  quarterly: 'Quarterly',
+  yearly: 'Yearly',
+}
+
+/** Monthly cost in the base currency, or null when that currency has no rate. */
+export function monthlyInBase(
+  monthly: number,
+  from: string,
+  base: string,
+  rates: Record<string, number>,
+): number | null {
+  if (from === base) {
+    return monthly
+  }
+  if (rates[from] > 0) {
+    return monthly * rates[from]
+  }
+
+  return null
+}

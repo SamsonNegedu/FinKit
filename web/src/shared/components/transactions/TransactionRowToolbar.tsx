@@ -5,6 +5,47 @@ import { displayNameOf } from '@/shared/utils/aliases'
 import RecurringBadge from './RecurringBadge'
 import type { TableBehaviour } from './transactionTableTypes'
 
+function SplitControl({
+  tx,
+  behaviour,
+  onUnsplit,
+  onStartSplit,
+}: {
+  tx: Transaction
+  behaviour: TableBehaviour
+  onUnsplit: (parentId: string) => void
+  onStartSplit: (tx: Transaction) => void
+}) {
+  if (behaviour.noSplit) {
+    return null
+  }
+  if (tx.splitOf) {
+    return (
+      <Tooltip label="Part of a split. Click to undo the split">
+        <button
+          onClick={() => onUnsplit(tx.splitOf!)}
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30"
+        >
+          <Undo2 className="w-3 h-3" />
+          <span className="hidden sm:inline">Split</span>
+        </button>
+      </Tooltip>
+    )
+  }
+
+  return (
+    <Tooltip label="Split across categories">
+      <button
+        onClick={() => onStartSplit(tx)}
+        className="p-1 rounded text-midnight-500 hover:text-ink hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+        aria-label={`Split ${displayNameOf(tx)}`}
+      >
+        <Scissors className="w-3.5 h-3.5" />
+      </button>
+    </Tooltip>
+  )
+}
+
 export default function TransactionRowToolbar({
   tx,
   behaviour,
@@ -65,27 +106,7 @@ export default function TransactionRowToolbar({
           </button>
         </Tooltip>
       )}
-      {behaviour.noSplit ? null : tx.splitOf ? (
-        <Tooltip label="Part of a split. Click to undo the split">
-          <button
-            onClick={() => onUnsplit(tx.splitOf!)}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30"
-          >
-            <Undo2 className="w-3 h-3" />
-            <span className="hidden sm:inline">Split</span>
-          </button>
-        </Tooltip>
-      ) : (
-        <Tooltip label="Split across categories">
-          <button
-            onClick={() => onStartSplit(tx)}
-            className="p-1 rounded text-midnight-500 hover:text-ink hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-            aria-label={`Split ${displayNameOf(tx)}`}
-          >
-            <Scissors className="w-3.5 h-3.5" />
-          </button>
-        </Tooltip>
-      )}
+      <SplitControl tx={tx} behaviour={behaviour} onUnsplit={onUnsplit} onStartSplit={onStartSplit} />
     </div>
   )
 }

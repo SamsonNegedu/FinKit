@@ -38,6 +38,10 @@ export interface AppState {
   error: string | null
   workspacePhase: WorkspacePhase
   sheetBootstrapPhase: SheetBootstrapPhase
+  /** True while the saved Google Sheet config or layout is loading at startup */
+  sheetBootstrapPending: boolean
+  sheetBootstrapError: string | null
+  dismissSheetBootstrapError: () => void
   anonymizationEnabled: boolean
   toggleAnonymization: () => void
   uploadFile: (file: File, options: ImportOptions) => Promise<void>

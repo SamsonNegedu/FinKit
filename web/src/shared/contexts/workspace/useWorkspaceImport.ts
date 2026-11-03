@@ -19,6 +19,22 @@ type ImportDeps = {
   setDateRange: (r: DateRange | null) => void
 }
 
+function mergeImportToastMessage(label: string | undefined, added: number, skipped: number): string {
+  const prefix = label ? `${label}: ` : ''
+
+  if (added === 0 && skipped > 0) {
+    return `${prefix}Nothing new`
+  }
+  const plural = added === 1 ? '' : 's'
+  let message = `${prefix}Added ${added} new transaction${plural}`
+
+  if (skipped) {
+    message += `, ${skipped} already imported`
+  }
+
+  return message
+}
+
 export function useWorkspaceImport({
   store,
   anonymizationEnabled,
@@ -73,7 +89,7 @@ export function useWorkspaceImport({
       setDateRange({ startDate: new Date(min.getFullYear(), min.getMonth(), 1), endDate: end })
       dispatchPhase({ type: 'IMPORT_DONE' })
       pushToast({
-        message: `${label ? `${label}: ` : ''}${added === 0 && skipped > 0 ? 'Nothing new' : `Added ${added} new transaction${added === 1 ? '' : 's'}`}${skipped ? `, ${skipped} already imported` : ''}`,
+        message: mergeImportToastMessage(label, added, skipped),
         tone: 'success',
         actionLabel: 'Undo',
         onAction: () => {

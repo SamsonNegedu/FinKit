@@ -4,6 +4,7 @@ import {
   alertLine,
   budgetHistory,
   budgetRows,
+  budgetUsedState,
   capSummary,
   monthKey,
   setupSuggestions,
@@ -262,5 +263,11 @@ describe('budget progress', () => {
   it('names a month the way the server stores it', () => {
     expect(monthKey(2026, 0)).toBe('2026-01')
     expect(monthKey(2026, 10)).toBe('2026-11')
+  })
+
+  it('classifies used share into ok, watch, and over', () => {
+    expect(budgetUsedState(0.5)).toBe('ok')
+    expect(budgetUsedState(0.8)).toBe('watch')
+    expect(budgetUsedState(1.2)).toBe('over')
   })
 })

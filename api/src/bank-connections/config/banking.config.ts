@@ -131,7 +131,14 @@ export function loadBankingConfig(env: NodeJS.ProcessEnv = process.env): ConfigR
 function parseHours(value?: string): number {
   const n = value === undefined || value === '' ? 12 : Number(value)
 
-  return Number.isFinite(n) && n >= 0 ? (n === 0 ? 0 : Math.max(6, n)) : 12
+  if (!Number.isFinite(n) || n < 0) {
+    return 12
+  }
+  if (n === 0) {
+    return 0
+  }
+
+  return Math.max(6, n)
 }
 
 /** Lower it if a bank allows less; a bad value falls back to the default rather than risking the bank's limit. */

@@ -1,7 +1,20 @@
 import type { Transaction } from '@/shared/types'
 import { buildReviewGroups } from './reviewQueueUtils'
 
-export type ReviewQueuePhase = 'empty' | 'triaging' | 'all_skipped'
+export type ReviewQueuePhase = { kind: 'empty' } | { kind: 'all_skipped'; skippedCount: number } | { kind: 'triaging' }
+
+export type ReviewGroup = ReturnType<typeof buildReviewGroups>[number]
+
+export type DerivedReviewQueue = {
+  phase: ReviewQueuePhase
+  groups: ReviewGroup[]
+  current: ReviewGroup | undefined
+  pending: ReviewGroup[]
+  upNext: ReviewGroup[]
+  transactionsLeft: number
+  done: number
+  total: number
+}
 
 export type ReviewSessionState = {
   skipped: Set<string>
@@ -30,19 +43,7 @@ export function reviewSessionReducer(state: ReviewSessionState, action: ReviewSe
   }
 }
 
-export function deriveReviewQueuePhase(
-  transactions: Transaction[],
-  session: ReviewSessionState,
-): {
-  phase: ReviewQueuePhase
-  groups: ReturnType<typeof buildReviewGroups>
-  current: ReturnType<typeof buildReviewGroups>[number] | undefined
-  pending: ReturnType<typeof buildReviewGroups>
-  upNext: ReturnType<typeof buildReviewGroups>
-  transactionsLeft: number
-  done: number
-  total: number
-} {
+export function deriveReviewQueuePhase(transactions: Transaction[], session: ReviewSessionState): DerivedReviewQueue {
   const groups = buildReviewGroups(transactions)
   const pending = groups.filter(g => !session.skipped.has(g.key))
   const focused = session.focusKey ? pending.find(g => g.key === session.focusKey) : undefined
@@ -51,13 +52,14 @@ export function deriveReviewQueuePhase(
   const transactionsLeft = pending.reduce((n, g) => n + g.items.length, 0)
   const total = session.totalAtStart ?? groups.length
   const done = Math.max(0, total - groups.length)
+  const base = { groups, current, pending, upNext, transactionsLeft, done, total }
 
   if (groups.length === 0) {
-    return { phase: 'empty', groups, current: undefined, pending, upNext, transactionsLeft, done, total }
+    return { ...base, phase: { kind: 'empty' } }
   }
   if (!current) {
-    return { phase: 'all_skipped', groups, current, pending, upNext, transactionsLeft, done, total }
+    return { ...base, phase: { kind: 'all_skipped', skippedCount: session.skipped.size } }
   }
 
-  return { phase: 'triaging', groups, current, pending, upNext, transactionsLeft, done, total }
+  return { ...base, phase: { kind: 'triaging' } }
 }

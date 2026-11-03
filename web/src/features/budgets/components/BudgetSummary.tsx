@@ -1,5 +1,5 @@
 import { formatCurrency } from '@/shared/utils/format'
-import { WATCH_AT, type BudgetTotals } from '../utils/budgetProgress'
+import { budgetUsedState, type BudgetTotals } from '../utils/budgetProgress'
 import BudgetBar from './BudgetBar'
 
 /**
@@ -24,7 +24,7 @@ export default function BudgetSummary({
 }) {
   const over = totals.left < 0
   const used = totals.budgeted > 0 ? totals.spent / totals.budgeted : 0
-  const state = over ? 'over' : used >= WATCH_AT ? 'watch' : 'ok'
+  const state = over ? 'over' : budgetUsedState(used)
   const note =
     totals.over + totals.watch === 0
       ? 'Everything on track'

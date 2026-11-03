@@ -69,3 +69,39 @@ export type SheetBootstrapPhase =
   | { kind: 'syncing_layout' }
   | { kind: 'ready' }
   | { kind: 'error'; message: string }
+
+export type SheetBootstrapAction =
+  | { type: 'START_LOAD_CONFIG' }
+  | { type: 'CONFIG_ABSENT' }
+  | { type: 'CONFIG_READY_WITHOUT_SYNC' }
+  | { type: 'START_SYNC_LAYOUT' }
+  | { type: 'SYNC_LAYOUT_DONE' }
+  | { type: 'SYNC_LAYOUT_FAIL'; message: string }
+  | { type: 'DISMISS_ERROR' }
+
+export function sheetBootstrapReducer(phase: SheetBootstrapPhase, action: SheetBootstrapAction): SheetBootstrapPhase {
+  switch (action.type) {
+    case 'START_LOAD_CONFIG':
+      return { kind: 'loading_config' }
+    case 'CONFIG_ABSENT':
+    case 'CONFIG_READY_WITHOUT_SYNC':
+    case 'SYNC_LAYOUT_DONE':
+      return { kind: 'ready' }
+    case 'START_SYNC_LAYOUT':
+      return { kind: 'syncing_layout' }
+    case 'SYNC_LAYOUT_FAIL':
+      return { kind: 'error', message: action.message }
+    case 'DISMISS_ERROR':
+      return phase.kind === 'error' ? { kind: 'ready' } : phase
+    default:
+      return phase
+  }
+}
+
+export function isSheetBootstrapPending(phase: SheetBootstrapPhase): boolean {
+  return phase.kind === 'loading_config' || phase.kind === 'syncing_layout'
+}
+
+export function sheetBootstrapErrorMessage(phase: SheetBootstrapPhase): string | null {
+  return phase.kind === 'error' ? phase.message : null
+}

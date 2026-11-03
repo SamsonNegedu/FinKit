@@ -14,6 +14,7 @@ import {
   parseBankConnectReturn,
   type BankConnectReturnPhase,
 } from '@/features/banking/bankingUiPhase'
+import type { BankConnection } from '@/features/banking/api/banking.api'
 
 export default function BanksPage() {
   const app = useApp()
@@ -73,44 +74,66 @@ export default function BanksPage() {
           </>
         }
       />
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-accent" />
+      <ConnectionsBody isLoading={isLoading} connections={connections} actions={actions} mock={!!status?.mock} />
+    </div>
+  )
+}
+
+function ConnectionsBody({
+  isLoading,
+  connections,
+  actions,
+  mock,
+}: {
+  isLoading: boolean
+  connections: BankConnection[]
+  actions: ReturnType<typeof useConnectionActions>
+  mock: boolean
+}) {
+  const navigate = useNavigate()
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-accent" />
+      </div>
+    )
+  }
+  if (connections.length === 0) {
+    return (
+      <div className="card flex flex-col items-center text-center py-12 px-6 gap-6">
+        <div className="w-14 h-14 rounded-2xl bg-accent/15 text-accent grid place-items-center">
+          <Landmark className="w-7 h-7" />
         </div>
-      ) : connections.length === 0 ? (
-        <div className="card flex flex-col items-center text-center py-12 px-6 gap-6">
-          <div className="w-14 h-14 rounded-2xl bg-accent/15 text-accent grid place-items-center">
-            <Landmark className="w-7 h-7" />
-          </div>
-          <div className="space-y-1.5 max-w-md">
-            <h2 className="text-xl font-semibold text-ink">Connect your first bank</h2>
-            <p className="text-sm text-midnight-400">
-              Pick your bank and approve read-only access on its own page. FinKit then keeps your transactions up to
-              date.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
-            {['N26', 'Wise', 'Revolut'].map(name => (
-              <BankTile
-                key={name}
-                name={name}
-                selected={false}
-                onSelect={bank => navigate({ to: '/banks/connect', search: { bank } })}
-              />
-            ))}
-          </div>
-          <Link to="/banks/connect" className="text-sm text-accent hover:underline">
-            Another bank…
-          </Link>
+        <div className="space-y-1.5 max-w-md">
+          <h2 className="text-xl font-semibold text-ink">Connect your first bank</h2>
+          <p className="text-sm text-midnight-400">
+            Pick your bank and approve read-only access on its own page. FinKit then keeps your transactions up to date.
+          </p>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {connections.map(c => (
-            <ConnectionCard key={c.id} connection={c} actions={actions} mock={!!status?.mock} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
+          {['N26', 'Wise', 'Revolut'].map(name => (
+            <BankTile
+              key={name}
+              name={name}
+              selected={false}
+              onSelect={bank => navigate({ to: '/banks/connect', search: { bank } })}
+            />
           ))}
-          <DeleteStoredData />
         </div>
-      )}
+        <Link to="/banks/connect" className="text-sm text-accent hover:underline">
+          Another bank…
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {connections.map(c => (
+        <ConnectionCard key={c.id} connection={c} actions={actions} mock={mock} />
+      ))}
+      <DeleteStoredData />
     </div>
   )
 }

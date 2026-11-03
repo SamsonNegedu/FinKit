@@ -4,7 +4,7 @@ import { Check, MoreHorizontal, Repeat } from 'lucide-react'
 import Tooltip from '@/shared/components/Tooltip'
 import { formatCurrency } from '@/shared/utils/format'
 import CategoryIcon from '@/shared/components/CategoryIcon'
-import type { BudgetRow, HistoryMonth } from '../utils/budgetProgress'
+import { budgetLeftCaption, type BudgetRow, type HistoryMonth } from '../utils/budgetProgress'
 import BudgetBar from './BudgetBar'
 import BudgetHistoryDots from './BudgetHistoryDots'
 import { BUDGET_COLUMNS } from './budgetColumns'
@@ -47,12 +47,7 @@ export default function BudgetRowCard({
   }
   const percent = `${Math.round(row.used * 100)}%`
   const barState = row.goal ? 'goal' : row.state
-  const left =
-    row.left >= 0
-      ? { text: `${formatCurrency(row.left, row.currency)} ${row.goal ? 'to go' : 'left'}`, tone: 'text-midnight-300' }
-      : row.goal
-        ? { text: 'Goal reached', tone: 'text-cyan-400' }
-        : { text: `${formatCurrency(-row.left, row.currency)} over`, tone: 'text-negative' }
+  const left = budgetLeftCaption(row)
 
   return (
     <li

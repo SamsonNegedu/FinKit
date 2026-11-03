@@ -14,13 +14,11 @@ export type SettingsAsyncAction =
 export type SettingsAsyncState = {
   operation: SettingsAsyncOperation
   sheetError: string
-  syncMessage: string
 }
 
 export const initialSettingsAsyncState: SettingsAsyncState = {
   operation: { kind: 'idle' },
   sheetError: '',
-  syncMessage: '',
 }
 
 export function settingsAsyncReducer(state: SettingsAsyncState, action: SettingsAsyncAction): SettingsAsyncState {

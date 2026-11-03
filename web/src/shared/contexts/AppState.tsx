@@ -23,12 +23,14 @@ import { useWorkspaceMutations } from './workspace/useWorkspaceMutations'
 import { useTripLinks } from './workspace/useTripLinks'
 import { useRememberPreference } from './workspace/useRememberPreference'
 import { useWorkspacePhase } from './workspace/useWorkspacePhase'
+import { useSheetBootstrapPhase } from './workspace/useSheetBootstrapPhase'
 import {
   importErrorFromPhase,
   isImportingPhase,
   isRestoringPhase,
+  isSheetBootstrapPending,
   pendingImportFromPhase,
-  type SheetBootstrapPhase,
+  sheetBootstrapErrorMessage,
 } from './workspace/workspacePhase'
 
 const AppContext = createContext<AppState | null>(null)
@@ -37,7 +39,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const store = useTransactionStore()
   const { toasts, dismissToast, pushToast } = useToastStack()
   const [workspacePhase, dispatchPhase] = useWorkspacePhase()
-  const [sheetBootstrapPhase, setSheetBootstrapPhase] = useState<SheetBootstrapPhase>({ kind: 'idle' })
+  const [sheetBootstrapPhase, dispatchSheetBootstrap] = useSheetBootstrapPhase()
   const [dateRange, setDateRange] = useState<DateRange | null>(null)
   const [sheetConfig, setSheetConfig] = useState<SheetConfig | null>(null)
   const [anonymizationEnabled, setAnonymizationEnabled] = useState(false)
@@ -50,6 +52,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const isLoading = isImportingPhase(workspacePhase)
   const error = importErrorFromPhase(workspacePhase)
   const pendingImport = pendingImportFromPhase(workspacePhase)
+  const sheetBootstrapPending = isSheetBootstrapPending(sheetBootstrapPhase)
+  const sheetBootstrapError = sheetBootstrapErrorMessage(sheetBootstrapPhase)
+  const bootstrapErrorAnnounced = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!sheetBootstrapError || sheetBootstrapError === bootstrapErrorAnnounced.current) {
+      return
+    }
+    bootstrapErrorAnnounced.current = sheetBootstrapError
+    pushToast({
+      message: `Google Sheet: ${sheetBootstrapError}`,
+      tone: 'error',
+      actionLabel: 'Dismiss',
+      onAction: () => dispatchSheetBootstrap({ type: 'DISMISS_ERROR' }),
+    })
+  }, [sheetBootstrapError, pushToast, dispatchSheetBootstrap])
 
   useWorkspaceBootstrap({
     store,
@@ -57,7 +75,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setAnonymizationEnabled,
     setDateRange,
     setSheetConfig,
-    setSheetBootstrap: setSheetBootstrapPhase,
+    dispatchSheetBootstrap,
     remember,
     isRestoring,
     dateRange,
@@ -157,6 +175,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     error,
     workspacePhase,
     sheetBootstrapPhase,
+    sheetBootstrapPending,
+    sheetBootstrapError,
+    dismissSheetBootstrapError: () => dispatchSheetBootstrap({ type: 'DISMISS_ERROR' }),
     anonymizationEnabled,
     toggleAnonymization: mutations.toggleAnonymization,
     uploadFile: importActions.uploadFile,

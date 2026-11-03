@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { formatCurrency } from '@/shared/utils/format'
+import { currencyDeltaDisplay } from '@/shared/utils/spendDelta'
 import type { CategoryMonths, MonthKey } from '@/shared/utils/analysis/categoryMonths'
+import { formatCurrency } from '@/shared/utils/format'
 
 const label = (m: MonthKey) => new Date(m.year, m.month, 1).toLocaleDateString('en-US', { month: 'short' })
 
@@ -40,6 +41,17 @@ function FocusSummary({
   )
 }
 
+function deltaCellTone(deltaCell: ReturnType<typeof currencyDeltaDisplay>): string {
+  if (deltaCell.muted) {
+    return 'text-midnight-500'
+  }
+  if (deltaCell.positive) {
+    return 'text-warning'
+  }
+
+  return 'text-accent'
+}
+
 /** A change in the monthly total, traced to the category behind it. Shading is relative to each category's own peak. */
 export default function CategoryByMonth({
   data,
@@ -73,6 +85,7 @@ export default function CategoryByMonth({
   const row = (r: CategoryMonths['rows'][number]) => {
     const peak = Math.max(...r.cells, 1)
     const delta = r.usual !== null && r.usual > 0 ? r.cells[last] - r.usual : null
+    const deltaCell = currencyDeltaDisplay(delta, money)
 
     return (
       <tr
@@ -116,13 +129,7 @@ export default function CategoryByMonth({
             )}
           </td>
         ))}
-        <td
-          className={`py-1.5 pl-3 text-right text-xs tabular-nums ${
-            delta === null || Math.abs(delta) < 1 ? 'text-midnight-500' : delta > 0 ? 'text-warning' : 'text-accent'
-          }`}
-        >
-          {delta === null || Math.abs(delta) < 1 ? '–' : `${delta > 0 ? '▲' : '▼'} ${money(Math.abs(delta))}`}
-        </td>
+        <td className={`py-1.5 pl-3 text-right text-xs tabular-nums ${deltaCellTone(deltaCell)}`}>{deltaCell.text}</td>
       </tr>
     )
   }
