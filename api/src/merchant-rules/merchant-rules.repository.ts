@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common'
 import { DatabaseService } from '../shared/database/database.service'
-import { hasColumn } from '../shared/database/migrate'
+import { ensureColumn, hasColumn } from '../shared/database/migrate'
 import { UsersService } from '../users/users.service'
 
 interface MerchantRule {
   merchant: string
   merchantDisplay?: string
   category: string
+  detail?: string
   confidence: number
 }
 
@@ -50,18 +51,19 @@ export class MerchantRulesRepository {
     } else {
       this.createTable()
     }
+    ensureColumn(db, 'merchant_categories', 'detail', 'TEXT')
     this.createIndexes()
     users.onLegacyOwnerCreated(userId =>
       db.prepare('UPDATE merchant_categories SET user_id = ? WHERE user_id IS NULL').run(userId),
     )
     this.upsert = db.prepare(`
-      INSERT INTO merchant_categories (user_id, merchant_key, merchant_display, category, updated_at)
-      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT INTO merchant_categories (user_id, merchant_key, merchant_display, category, detail, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(user_id, merchant_key) DO UPDATE SET
-        category = excluded.category, confidence = confidence + 1, updated_at = CURRENT_TIMESTAMP
+        category = excluded.category, detail = excluded.detail, confidence = confidence + 1, updated_at = CURRENT_TIMESTAMP
     `)
     this.all = db.prepare(`
-      SELECT merchant_key as merchant, merchant_display, category, confidence
+      SELECT merchant_key as merchant, merchant_display, category, detail, confidence
       FROM merchant_categories WHERE user_id = ? ORDER BY confidence DESC, updated_at DESC
     `)
     this.remove = db.prepare('DELETE FROM merchant_categories WHERE user_id = ? AND merchant_key = ?')
@@ -97,18 +99,18 @@ export class MerchantRulesRepository {
     `)
   }
 
-  save(userId: string, merchant: string, category: string): void {
+  save(userId: string, merchant: string, category: string, detail?: string): void {
     const key = normalizeMerchant(merchant)
 
     if (!key || key.length < 2) {
       return
     } // skip empty/short merchants
-    this.upsert.run(userId, key, merchant, category)
+    this.upsert.run(userId, key, merchant, category, detail ?? null)
   }
 
-  saveMany(userId: string, rules: Array<{ merchant: string; category: string }>): void {
+  saveMany(userId: string, rules: Array<{ merchant: string; category: string; detail?: string }>): void {
     this.database.db.transaction((items: typeof rules) =>
-      items.forEach(r => this.save(userId, r.merchant, r.category)),
+      items.forEach(r => this.save(userId, r.merchant, r.category, r.detail)),
     )(rules)
   }
 
@@ -118,12 +120,14 @@ export class MerchantRulesRepository {
         merchant: string
         merchant_display: string
         category: string
+        detail: string | null
         confidence: number
       }>
     ).map(r => ({
       merchant: r.merchant,
       merchantDisplay: r.merchant_display,
       category: r.category,
+      detail: r.detail ?? undefined,
       confidence: r.confidence,
     }))
   }

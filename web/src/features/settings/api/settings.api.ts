@@ -7,6 +7,7 @@ export interface LearnedMapping {
   merchant: string
   merchantDisplay?: string
   category: string
+  detail?: string
   confidence: number
 }
 
@@ -58,7 +59,7 @@ export async function deleteLearnedMapping(merchant: string): Promise<boolean> {
 }
 
 export async function saveBatchLearnedMappings(
-  mappings: Array<{ merchant: string; category: string }>,
+  mappings: Array<{ merchant: string; category: string; detail?: string }>,
 ): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE}/learn/mappings/batch`, {

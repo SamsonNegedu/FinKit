@@ -17,11 +17,11 @@ export class MerchantRulesService {
     return this.rules.stats(userId)
   }
 
-  learn(userId: string, merchant: string, category: string) {
-    this.rules.save(userId, merchant, category)
+  learn(userId: string, merchant: string, category: string, detail?: string) {
+    this.rules.save(userId, merchant, category, detail)
   }
 
-  learnMany(userId: string, rules: Array<{ merchant: string; category: string }>) {
+  learnMany(userId: string, rules: Array<{ merchant: string; category: string; detail?: string }>) {
     this.rules.saveMany(userId, rules)
   }
 

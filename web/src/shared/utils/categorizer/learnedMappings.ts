@@ -1,10 +1,18 @@
 import type { Transaction } from '@/shared/types'
 import { merchantFromDescription, shopBehindProcessor } from '../merchantFromDescription'
 
-let learnedMappings: Map<string, string> = new Map()
+/** What a merchant was taught: its category, and the subcategory inside it when one was chosen. */
+export interface Learned {
+  category: string
+  detail?: string
+}
 
-export function setLearnedMappings(mappings: Array<{ merchant: string; category: string }>): void {
-  learnedMappings = new Map(mappings.map(m => [normalizeMerchant(m.merchant), m.category]))
+let learnedMappings: Map<string, Learned> = new Map()
+
+export function setLearnedMappings(mappings: Array<{ merchant: string; category: string; detail?: string }>): void {
+  learnedMappings = new Map(
+    mappings.map(m => [normalizeMerchant(m.merchant), { category: m.category, detail: m.detail || undefined }]),
+  )
   console.log(`Loaded ${learnedMappings.size} learned categorizations`)
 }
 
@@ -37,12 +45,12 @@ export function sameMerchant(a: string, b: string): boolean {
   return normalizeMerchant(a) === normalizeMerchant(b)
 }
 
-export function setLocalLearnedMapping(merchant: string, category: string | null): string | null {
+export function setLocalLearnedMapping(merchant: string, learned: Learned | null): Learned | null {
   const key = normalizeMerchant(merchant)
   const previous = learnedMappings.get(key) ?? null
 
-  if (category) {
-    learnedMappings.set(key, category)
+  if (learned) {
+    learnedMappings.set(key, learned)
   } else {
     learnedMappings.delete(key)
   }
@@ -83,7 +91,7 @@ function containsWords(haystack: string, needle: string): boolean {
   return ` ${haystack} `.includes(` ${needle} `)
 }
 
-export function findLearnedCategory(tx: Transaction): string | null {
+export function findLearned(tx: Transaction): Learned | null {
   if (learnedMappings.size === 0) {
     return null
   }
@@ -107,9 +115,9 @@ export function findLearnedCategory(tx: Transaction): string | null {
 
   const descNormalized = normalizeMerchant(tx.description)
 
-  for (const [merchant, category] of learnedMappings) {
+  for (const [merchant, found] of learnedMappings) {
     if (merchant.length > 3 && containsWords(descNormalized, merchant)) {
-      return category
+      return found
     }
   }
 
@@ -124,9 +132,9 @@ export function findLearnedCategory(tx: Transaction): string | null {
       if (learned) {
         return learned
       }
-      for (const [storedMerchant, category] of learnedMappings) {
+      for (const [storedMerchant, found] of learnedMappings) {
         if (storedMerchant.length > 3 && containsWords(variation, storedMerchant)) {
-          return category
+          return found
         }
       }
     }

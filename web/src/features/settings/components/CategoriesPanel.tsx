@@ -246,7 +246,7 @@ export default function CategoriesPanel() {
   }
 
   return (
-    <div className="card space-y-6">
+    <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-white">Categories</h2>
         <p className="mt-0.5 text-sm text-midnight-400">

@@ -24,7 +24,7 @@ export class MerchantRulesController {
   @Post('mapping')
   @HttpCode(200) // the previous API answered 200, not 201
   learn(@CurrentActor() actor: Actor, @Body(new ZodValidationPipe(SaveRuleSchema)) body: SaveRuleInput) {
-    this.service.learn(actor.userId, body.merchant, body.category)
+    this.service.learn(actor.userId, body.merchant, body.category, body.detail)
 
     return {
       success: true,

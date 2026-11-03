@@ -2,7 +2,7 @@ import type { Transaction } from '@/shared/types'
 import { MERCHANT_RULES, TRANSFER_PATTERNS } from './merchantRules'
 import { mapGermanCategory } from './germanCategoryMap'
 import { isCashWithdrawal } from '@/shared/utils/cashWithdrawal'
-import { findLearnedCategory } from './learnedMappings'
+import { findLearned } from './learnedMappings'
 import { findRuleCategory } from './transactionRules'
 
 function extractMerchant(text: string, pattern: RegExp): string | undefined {
@@ -34,10 +34,10 @@ export function categorizeWithRules(transactions: Transaction[]): Transaction[] 
       return { ...tx, category: ruleCategory, categorySource: 'learned' as const }
     }
 
-    const learnedCategory = findLearnedCategory(tx)
+    const learned = findLearned(tx)
 
-    if (learnedCategory) {
-      return { ...tx, category: learnedCategory, categorySource: 'learned' as const }
+    if (learned) {
+      return { ...tx, category: learned.category, categoryDetail: learned.detail, categorySource: 'learned' as const }
     }
 
     // Cash taken out: until you say what it was for, it is just Cash (a rule you set for withdrawals still wins above)

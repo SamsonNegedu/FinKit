@@ -1,4 +1,6 @@
 import { useSearch } from '@tanstack/react-router'
+import RulesManager from '@/features/settings/components/RulesManager'
+import type { RulesSearch } from '@/features/settings/constants/search.constants'
 import TabLinks from '@/shared/components/forms/TabLinks'
 import BackOfficePanel from '@/features/banking/components/banks/BackOfficePanel'
 import CategoriesPanel from '@/features/settings/components/CategoriesPanel'
@@ -17,7 +19,7 @@ export default function SettingsPage({ section }: { section: Section }) {
     ['sheet', 'Google Sheet'],
     ['categories', 'Categories'],
     ['columns', 'Columns'],
-    ['rules', 'Learned rules'],
+    ['rules', 'Rules'],
     ...(banking?.enabled ? ([['back-office', 'Back office']] as Array<[Section, string]>) : []),
   ]
 
@@ -31,6 +33,8 @@ export default function SettingsPage({ section }: { section: Section }) {
       />
       {section === 'back-office' ? (
         <BackOffice />
+      ) : section === 'rules' ? (
+        <Rules />
       ) : section === 'categories' ? (
         <CategoriesPanel />
       ) : (
@@ -44,4 +48,10 @@ function BackOffice() {
   const { section } = useSearch({ from: '/settings/back-office' }) as BackOfficeSearch
 
   return <BackOfficePanel section={section ?? 'overview'} />
+}
+
+function Rules() {
+  const { kind } = useSearch({ from: '/settings/rules' }) as RulesSearch
+
+  return <RulesManager kind={kind ?? 'merchant'} />
 }

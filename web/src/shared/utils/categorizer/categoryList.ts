@@ -6,6 +6,8 @@ export interface CategoryList {
   archived: string[]
   /** An icon and a color a category was given, by category name */
   style?: Record<string, CategoryStyle>
+  /** Finer labels inside a category, by category name. They never change what the category adds up to. */
+  details?: Record<string, string[]>
 }
 
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
@@ -17,7 +19,7 @@ const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
  */
 export function resolveCategories(fromSheet: string[], stored: CategoryList | null): CategoryList {
   if (!stored) {
-    return { active: [...fromSheet], archived: [], style: {} }
+    return { active: [...fromSheet], archived: [], style: {}, details: {} }
   }
   const known = [...stored.active, ...stored.archived]
 
@@ -25,6 +27,7 @@ export function resolveCategories(fromSheet: string[], stored: CategoryList | nu
     active: [...stored.active, ...fromSheet.filter(c => !known.some(k => same(k, c)))],
     archived: [...stored.archived],
     style: stored.style ?? {},
+    details: stored.details ?? {},
   }
 }
 
@@ -46,4 +49,16 @@ export function newCategoryProblem(name: string, list: CategoryList, reserved: s
   }
 
   return null
+}
+
+/** The list with a subcategory added to a category, or the same list when it is already there (any letter case). */
+export function withDetail(list: CategoryList, category: string, name: string): CategoryList {
+  const clean = name.trim()
+  const known = list.details?.[category] ?? []
+
+  if (!clean || known.some(d => same(d, clean))) {
+    return list
+  }
+
+  return { ...list, details: { ...list.details, [category]: [...known, clean] } }
 }

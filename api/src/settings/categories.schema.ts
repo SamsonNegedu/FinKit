@@ -31,6 +31,11 @@ export const CategoryListSchema = z
       .record(name, style)
       .refine(s => Object.keys(s).length <= 300, 'Too many styles')
       .optional(),
+    /** Subcategories inside a category, by category name: Shopping › Fashion, Gear. Never counted apart from the parent. */
+    details: z
+      .record(name, z.array(name).max(50))
+      .refine(d => Object.keys(d).length <= 100, 'Too many categories with details')
+      .optional(),
   })
   .superRefine((list, ctx) => {
     const seen = new Set(SYSTEM_CATEGORIES.map(key))
@@ -40,6 +45,12 @@ export const CategoryListSchema = z
         ctx.addIssue({ code: 'custom', message: `"${n}" is already taken or reserved` })
       }
       seen.add(key(n))
+    }
+
+    for (const [parent, subs] of Object.entries(list.details ?? {})) {
+      if (new Set(subs.map(key)).size !== subs.length) {
+        ctx.addIssue({ code: 'custom', message: `"${parent}" has a subcategory twice` })
+      }
     }
   })
 export type CategoryList = z.infer<typeof CategoryListSchema>

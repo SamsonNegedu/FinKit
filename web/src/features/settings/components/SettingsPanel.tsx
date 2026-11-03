@@ -1,6 +1,5 @@
 import { Loader2 } from 'lucide-react'
 import { SheetConfig } from '@/shared/types'
-import RulesManager from './RulesManager'
 import SettingsSheetTab from './SettingsSheetTab'
 import SettingsColumnsTab from './SettingsColumnsTab'
 import { useSettingsPanelState } from './useSettingsPanelState'
@@ -8,14 +7,14 @@ import { useSettingsPanelState } from './useSettingsPanelState'
 interface SettingsPanelProps {
   config: SheetConfig | null
   onSave: (config: SheetConfig) => void
-  section: 'sheet' | 'columns' | 'rules'
+  section: 'sheet' | 'columns'
 }
 
 export default function SettingsPanel({ config, onSave, section: tab }: SettingsPanelProps) {
   const { loading, saving, sheetTab, columnsTab, handleSave } = useSettingsPanelState(config, onSave)
 
   return (
-    <div className="card space-y-6">
+    <div className="space-y-6">
       <div className="space-y-6">
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -59,26 +58,22 @@ export default function SettingsPanel({ config, onSave, section: tab }: Settings
                 onConstantColumnsChange={columnsTab.setConstantColumns}
               />
             )}
-
-            {tab === 'rules' && <RulesManager />}
           </>
         )}
       </div>
 
-      {tab !== 'rules' && (
-        <div className="flex justify-end gap-3 pt-4 border-t border-midnight-700">
-          <button onClick={handleSave} className="btn-primary flex items-center gap-2" disabled={saving || loading}>
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Settings'
-            )}
-          </button>
-        </div>
-      )}
+      <div className="flex justify-end gap-3 pt-4 border-t border-midnight-700">
+        <button onClick={handleSave} className="btn-primary flex items-center gap-2" disabled={saving || loading}>
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Settings'
+          )}
+        </button>
+      </div>
     </div>
   )
 }

@@ -70,6 +70,17 @@ describe('own categories (/api/settings/categories)', () => {
     await save({ ...list, style: { Pets: { icon: 'paw-print', extra: 1 } } }).expect(200)
   })
 
+  it('keeps subcategories under their category, and refuses a repeat inside one', async () => {
+    const t = await make()
+    const save = (body: string | object) => request(t.server).post('/api/settings/categories').set(as('me')).send(body)
+    const list = { active: ['Shopping'], archived: [], details: { Shopping: ['Fashion', 'Gear'] } }
+
+    await save(list).expect(200)
+    expect((await request(t.server).get('/api/settings/categories').set(as('me'))).body.data).toEqual(list)
+    await save({ ...list, details: { Shopping: ['Fashion', 'fashion'] } }).expect(400)
+    await save({ ...list, details: { Shopping: [''] } }).expect(400)
+  })
+
   it('needs sign-in', async () => {
     const t = await make()
 

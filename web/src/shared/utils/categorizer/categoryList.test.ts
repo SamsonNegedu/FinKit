@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { getCategoryColor } from './categoryMeta'
 import { setCategoryStyles } from './categoryStyle'
-import { newCategoryProblem, resolveCategories } from './categoryList'
+import { newCategoryProblem, resolveCategories, withDetail } from './categoryList'
 
 describe('resolveCategories', () => {
   it('uses the sheet’s categories until the person has a list of their own', () => {
-    expect(resolveCategories(['Rent', 'Car'], null)).toEqual({ active: ['Rent', 'Car'], archived: [], style: {} })
+    expect(resolveCategories(['Rent', 'Car'], null)).toEqual({
+      active: ['Rent', 'Car'],
+      archived: [],
+      style: {},
+      details: {},
+    })
   })
 
   it('keeps their list, adds what the sheet gained, and does not bring back what they archived', () => {
@@ -15,6 +20,7 @@ describe('resolveCategories', () => {
       active: ['Rent', 'Gym', 'Pets'],
       archived: ['Radio Tax'],
       style: {},
+      details: {},
     })
   })
 
@@ -54,5 +60,21 @@ describe('category styles', () => {
     expect(getCategoryColor('Pets')).toBe('#a855f7')
     setCategoryStyles({})
     expect(getCategoryColor('Pets')).toBe(before)
+  })
+})
+
+describe('withDetail', () => {
+  const list = { active: ['Shopping'], archived: [], details: { Shopping: ['Fashion'] } }
+
+  it('adds a subcategory inside its category', () => {
+    expect(withDetail(list, 'Shopping', ' Gear ').details).toEqual({ Shopping: ['Fashion', 'Gear'] })
+    expect(withDetail({ active: ['Shopping'], archived: [] }, 'Shopping', 'Gear').details).toEqual({
+      Shopping: ['Gear'],
+    })
+  })
+
+  it('returns the same list for a repeat in any letter case, or an empty name', () => {
+    expect(withDetail(list, 'Shopping', 'fashion')).toBe(list)
+    expect(withDetail(list, 'Shopping', '  ')).toBe(list)
   })
 })

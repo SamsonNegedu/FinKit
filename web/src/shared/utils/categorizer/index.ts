@@ -19,5 +19,6 @@ export {
   getAvailableCategories,
   getCategoryColor,
 } from './categoryMeta'
+export { setCategoryDetails, getCategoryDetails } from './categoryDetails'
 export { setCategoryStyles, getCategoryStyle } from './categoryStyle'
 export type { CategoryStyle } from './categoryStyle'
