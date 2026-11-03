@@ -99,14 +99,14 @@ export default function ReviewQueuePanel({
                 aria-label="Search categories"
               />
             </div>
-            <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto">
+            <div className="flex flex-wrap gap-2">
               {options.map((category, i) => (
                 <button
                   key={category}
                   onClick={() => pick(category)}
                   className="flex items-center gap-2 rounded-lg bg-midnight-800 px-2.5 py-1.5 text-left transition-colors hover:bg-accent/10"
                 >
-                  {!query && (
+                  {!query && i < 9 && (
                     <kbd className="text-xs text-midnight-400 border border-line-strong rounded px-1.5">{i + 1}</kbd>
                   )}
                   <CategoryIcon category={category} size="sm" />
@@ -150,7 +150,7 @@ export default function ReviewQueuePanel({
         {upNext.length > 0 && (
           <aside className="min-w-0 border-t border-line pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
             <p className="mb-2 text-xs text-midnight-400">Up next, biggest first</p>
-            <ul className="max-h-72 space-y-0.5 overflow-y-auto lg:max-h-[28rem]">
+            <ul className="max-h-72 space-y-0.5 overflow-y-auto lg:max-h-[calc(100dvh-14rem)]">
               {upNext.map(g => (
                 <li key={g.key}>
                   <button
