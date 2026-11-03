@@ -1,7 +1,9 @@
+import { Link } from '@tanstack/react-router'
 import { Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { CategoryMapping, SheetColumn } from '@/shared/types'
 import { getAvailableCategories } from '@/shared/utils/categorizer'
 import { layoutCategories } from '@/shared/utils/sheetLayout'
+import { addMappingRow } from './settingsPanelMappings'
 import Select from '@/shared/components/forms/Select'
 
 export interface SettingsColumnsTabProps {
@@ -41,6 +43,9 @@ export default function SettingsColumnsTab({
   onMappingChange,
   onConstantColumnsChange,
 }: SettingsColumnsTabProps) {
+  // Adding a row picks a category that has none yet; with none left there is nothing to add
+  const canAdd = addMappingRow(mappings).length > mappings.length
+
   return (
     <>
       <section className="p-4 bg-midnight-800 rounded-lg space-y-3">
@@ -97,12 +102,22 @@ export default function SettingsColumnsTab({
           <h3 className="text-sm font-medium text-midnight-300">Category to Column Mapping</h3>
           <button
             onClick={onAddMapping}
-            className="flex items-center gap-1 text-sm text-accent hover:text-accent-light"
+            disabled={!canAdd}
+            className="flex items-center gap-1 text-sm text-accent hover:text-accent-light disabled:opacity-40 disabled:hover:text-accent"
           >
             <Plus className="w-4 h-4" />
             Add Mapping
           </button>
         </div>
+        {!canAdd && (
+          <p className="-mt-1 mb-3 text-xs text-midnight-400">
+            Every category already has a column. To map another, add it first under{' '}
+            <Link to="/settings/categories" className="underline hover:text-white">
+              Categories
+            </Link>
+            .
+          </p>
+        )}
 
         <div className="space-y-2">
           <div className="grid grid-cols-[minmax(0,1fr),80px,40px] gap-2 text-xs text-midnight-400 px-2">
