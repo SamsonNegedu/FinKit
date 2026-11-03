@@ -31,11 +31,12 @@ export function useConnectionActions() {
     busyId: operation.kind === 'disconnect' ? operation.connectionId : undefined,
     isConnectionBusy: (connectionId: string) => isConnectionBusy(operation, connectionId),
 
-    async sync(connection: BankConnection, from?: string) {
+    async sync(connection: BankConnection, from?: string, to?: string) {
       try {
         const result = await syncMutation.mutateAsync({
           id: connection.id,
           from,
+          to,
         })
 
         app.importBankTransactions(result.transactions, connection.bank)

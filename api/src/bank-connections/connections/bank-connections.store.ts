@@ -157,7 +157,10 @@ export class BankConnectionsStore {
       setStatus: db.prepare('UPDATE bank_connections SET status = ? WHERE id = ?'),
       wipeSecret: db.prepare("UPDATE bank_connections SET status = ?, secret_blob = '' WHERE id = ?"),
       syncStarted: db.prepare('UPDATE bank_connections SET last_sync_started_at = ? WHERE id = ?'),
-      syncDone: db.prepare('UPDATE bank_connections SET last_sync_at = ?, last_sync_to = ? WHERE id = ?'),
+      // Never moves back: a sync of an old range must not make the next one start from there
+      syncDone: db.prepare(
+        "UPDATE bank_connections SET last_sync_at = ?, last_sync_to = MAX(COALESCE(last_sync_to, ''), ?) WHERE id = ?",
+      ),
       setValidUntil: db.prepare('UPDATE bank_connections SET valid_until = ? WHERE id = ?'),
       setBackfill: db.prepare(
         `UPDATE bank_connections SET backfill_cursor = ?, backfill_status = ?, backfill_reason = ?,

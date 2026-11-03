@@ -80,7 +80,8 @@ export function useSyncConnection() {
   const client = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, from }: { id: string; from?: string }) => syncConnection(id, from ? { from } : {}),
+    mutationFn: ({ id, from, to }: { id: string; from?: string; to?: string }) =>
+      syncConnection(id, { ...(from ? { from } : {}), ...(to ? { to } : {}) }),
     // Whether it worked or not, the card's "last sync" and status may have changed
     onSettled: () => client.invalidateQueries({ queryKey: bankingKeys.all }),
   })

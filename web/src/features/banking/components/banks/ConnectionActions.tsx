@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import DatePicker from '@/shared/components/forms/DatePicker'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { BankConnection } from '@/features/banking/api/banking.api'
+import FetchPeriod from './FetchPeriod'
 import { useConnectionActions } from './useConnectionActions'
 
 type Actions = ReturnType<typeof useConnectionActions>
@@ -16,9 +16,7 @@ interface Props {
 /** Sync, reconnect and disconnect for one connection. The same buttons everywhere it's shown. */
 export default function ConnectionActions({ connection: c, actions, mock, onDisconnected }: Props) {
   const [showFrom, setShowFrom] = useState(false)
-  const [from, setFrom] = useState('')
   const [confirming, setConfirming] = useState(false)
-  const [todayMax] = useState(() => new Date().toISOString().slice(0, 10))
   const working = actions.syncingId === c.id || actions.busyId === c.id
 
   return (
@@ -51,7 +49,7 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
               className="btn-secondary text-sm"
               aria-expanded={showFrom}
             >
-              Sync from date…
+              Fetch a period…
             </button>
             {c.status === 'expiring' && (
               <button
@@ -111,24 +109,14 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
       </div>
 
       {showFrom && (
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="text-sm text-midnight-300" htmlFor={`from-${c.id}`}>
-            Fetch from
-          </label>
-          <div className="w-40">
-            <DatePicker id={`from-${c.id}`} value={from} onChange={setFrom} max={todayMax} withYear />
-          </div>
-          <button
-            className="btn-secondary text-sm"
-            disabled={!from || working}
-            onClick={() => {
-              setShowFrom(false)
-              actions.sync(c, from)
-            }}
-          >
-            Sync
-          </button>
-        </div>
+        <FetchPeriod
+          disabled={working}
+          onCancel={() => setShowFrom(false)}
+          onFetch={(from, to) => {
+            setShowFrom(false)
+            actions.sync(c, from, to)
+          }}
+        />
       )}
     </div>
   )

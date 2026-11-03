@@ -247,6 +247,25 @@ describe('connect flow with the test bank', () => {
     expect((await request(t.server).get('/api/banking/connections')).body.connections).toHaveLength(0)
   })
 
+  it('keeps the synced-up-to date when an older range is fetched by hand', async () => {
+    const clock = { now: () => current }
+    let current = new Date('2026-10-20T12:00:00Z')
+    const t = await make({ clock })
+    const id = idOf(await connectBank(t))
+
+    await request(t.server).post(`/api/banking/connections/${id}/sync`).set(H).send({}).expect(200)
+    current = new Date('2026-10-20T12:05:00Z')
+    await request(t.server)
+      .post(`/api/banking/connections/${id}/sync`)
+      .set(H)
+      .send({ from: '2025-01-01', to: '2025-06-30' })
+      .expect(200)
+
+    const list = (await request(t.server).get('/api/banking/connections')).body.connections
+
+    expect(list[0].lastSyncTo).toBe('2026-10-20')
+  })
+
   it('returns the same transaction ids on every fetch and continues where the last sync stopped', async () => {
     const clock = { now: () => current }
     let current = new Date('2026-10-20T12:00:00Z')

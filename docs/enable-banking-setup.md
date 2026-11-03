@@ -86,7 +86,9 @@ To fill in what the first sync missed, the scheduled catch-up also walks back th
 - `POST /api/banking/connections/:id/backfill` starts it again, for example after reconnecting. A connection's `history` field shows the oldest date reached and why it stopped.
 - The sync log shows each window with its date range and how many transactions it returned.
 
-Contracts (`/contracts`) are found in this stored history, so a longer history finds yearly payments too.
+**Fetch a period** on the banks page fetches any stretch up to a year wide yourself, with shortcuts for recent months and past years. It counts as you being present, so it doesn't use the background allowance above: repeat it for older years, one stretch at a time (a minute apart). Fetching an old stretch never moves the "synced up to" date back.
+
+Recurring payments (`/contracts`) are found in this stored history, so a longer history finds yearly payments too.
 
 ## 7. Account balances
 
