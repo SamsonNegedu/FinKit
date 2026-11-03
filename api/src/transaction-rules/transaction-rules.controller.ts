@@ -32,7 +32,7 @@ export class TransactionRulesController {
 
   @Post()
   create(@CurrentActor() actor: Actor, @Body(new ZodValidationPipe(CreateRuleSchema)) body: CreateRuleInput) {
-    return this.rules.add(actor.userId, body.match, body.category)
+    return this.rules.add(actor.userId, body.match, body.category, body.detail)
   }
 
   @Delete(':id')

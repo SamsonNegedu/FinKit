@@ -49,7 +49,7 @@ export interface AppState {
   updateTransaction: (id: string, updates: Partial<Transaction>, onlyThis?: boolean) => void
   bulkUpdate: (ids: string[], updates: Partial<Transaction>) => void
   /** A rule made from a transaction: rows that fit all its conditions get the category, now and on later syncs */
-  makeRule: (match: RuleMatch, category: string) => Promise<void>
+  makeRule: (match: RuleMatch, category: string, detail?: string) => Promise<void>
   split: (id: string, parts: SplitPart[]) => void
   unsplit: (parentId: string) => void
   renameMerchant: (merchantKey: string, name: string) => void

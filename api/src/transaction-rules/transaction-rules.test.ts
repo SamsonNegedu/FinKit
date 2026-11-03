@@ -20,6 +20,18 @@ describe('transaction rules', () => {
     await request(t.server).delete(`/api/transaction-rules/${made.body.id}`).set(H).expect(404)
   })
 
+  it('keeps the subcategory of a rule', async () => {
+    t = await createTestApp()
+    const made = await request(t.server)
+      .post('/api/transaction-rules')
+      .set(H)
+      .send({ ...rule, category: 'Car', detail: 'Miles' })
+      .expect(201)
+
+    expect(made.body.detail).toBe('Miles')
+    expect((await request(t.server).get('/api/transaction-rules').set(H)).body.rules[0].detail).toBe('Miles')
+  })
+
   it("never shows or removes another person's rules", async () => {
     t = await createTestApp({ env: { ALLOWED_USER_EMAILS: 'a@example.com,b@example.com' } })
     const made = await request(t.server).post('/api/transaction-rules').set(as('a@example.com')).send(rule)

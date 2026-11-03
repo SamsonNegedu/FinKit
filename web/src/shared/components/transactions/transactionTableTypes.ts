@@ -38,7 +38,7 @@ export interface TransactionTableProps {
   onUpdateTransaction: (id: string, updates: Partial<Transaction>, onlyThis?: boolean) => void
   onBulkCategoryChange: (category: string, detail?: string) => void
   onSetCategoryForIds: (ids: string[], category: string, detail?: string) => void
-  onMakeRule?: (match: RuleMatch, category: string) => void
+  onMakeRule?: (match: RuleMatch, category: string, detail?: string) => void
   onBulkExclude?: () => void
   onBulkInclude?: () => void
   onMoveToTrip?: () => void

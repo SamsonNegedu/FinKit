@@ -22,6 +22,7 @@ export type RuleMatch = z.infer<typeof RuleMatchSchema>
 export const CreateRuleSchema = z.object({
   match: RuleMatchSchema,
   category: z.string().trim().min(1).max(40),
+  detail: z.string().trim().min(1).max(40).optional(),
 })
 export type CreateRuleInput = z.infer<typeof CreateRuleSchema>
 

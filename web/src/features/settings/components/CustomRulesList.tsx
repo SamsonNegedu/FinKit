@@ -48,7 +48,9 @@ export default function CustomRulesList() {
             <span className="truncate text-sm text-ink" title={describe(rule)}>
               {describe(rule)}
             </span>
-            <span className="text-sm text-midnight-300">{rule.category}</span>
+            <span className="text-sm text-midnight-300">
+              {rule.detail ? `${rule.category} › ${rule.detail}` : rule.category}
+            </span>
             <button
               onClick={() => remove(rule)}
               className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-negative"

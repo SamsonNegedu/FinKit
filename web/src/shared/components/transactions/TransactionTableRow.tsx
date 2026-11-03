@@ -31,7 +31,7 @@ export interface TransactionTableRowProps {
   /** The list spans several years, so dates carry theirs */
   showYear?: boolean
   /** Makes a rule from a transaction. Without it the picker offers no rule */
-  onMakeRule?: (match: RuleMatch, category: string) => void
+  onMakeRule?: (match: RuleMatch, category: string, detail?: string) => void
   onUnsplit: (parentId: string) => void
   onStartSplit: (tx: Transaction) => void
   behaviour?: TableBehaviour
@@ -56,7 +56,7 @@ export default function TransactionTableRow({
 }: TransactionTableRowProps) {
   const colorOf = behaviour.colorOf ?? getCategoryColor
   const [noteOpen, setNoteOpen] = useState(false)
-  const [ruleFor, setRuleFor] = useState<string | null>(null)
+  const [ruleFor, setRuleFor] = useState<{ category: string; detail?: string } | null>(null)
   const scopes: PickScope[] | undefined = hasSiblings?.(tx)
     ? ['one', ...(onMakeRule ? (['rule'] as const) : [])]
     : undefined
@@ -128,7 +128,7 @@ export default function TransactionTableRow({
             {onMakeRule && (
               <Tooltip label="Make a rule from this row">
                 <button
-                  onClick={() => setRuleFor(tx.category || 'Other')}
+                  onClick={() => setRuleFor({ category: tx.category || 'Other', detail: tx.categoryDetail })}
                   className="p-1 rounded text-midnight-500 hover:text-ink hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                   aria-label={`Make a rule from ${displayNameOf(tx)}`}
                 >
@@ -194,7 +194,7 @@ export default function TransactionTableRow({
               scope !== 'all',
             )
             if (scope === 'rule') {
-              setRuleFor(category)
+              setRuleFor({ category, detail: detail || undefined })
             }
           }}
           scopes={scopes}
@@ -223,9 +223,10 @@ export default function TransactionTableRow({
         {ruleFor && onMakeRule && (
           <MakeRuleDialog
             tx={tx}
-            category={ruleFor}
+            category={ruleFor.category}
+            detail={ruleFor.detail}
             currency={currency}
-            onSave={match => onMakeRule(match, ruleFor)}
+            onSave={match => onMakeRule(match, ruleFor.category, ruleFor.detail)}
             onClose={() => setRuleFor(null)}
           />
         )}

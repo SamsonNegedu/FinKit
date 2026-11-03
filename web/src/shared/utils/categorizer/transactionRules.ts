@@ -12,6 +12,7 @@ export interface TransactionRule {
   id: string
   match: RuleMatch
   category: string
+  detail?: string
 }
 
 let rules: TransactionRule[] = []
@@ -45,10 +46,10 @@ function matches(m: RuleMatch, tx: Pick<Transaction, 'recipient' | 'description'
 }
 
 /**
- * The category of the most specific rule the transaction fits: more conditions beat fewer, and the newest wins a tie.
+ * The most specific rule the transaction fits: more conditions beat fewer, and the newest wins a tie.
  * "Aldi + Prepaid-Konto" therefore beats "Aldi", and the person's rules beat the built-in ones.
  */
-export function findRuleCategory(tx: Pick<Transaction, 'recipient' | 'description' | 'amount'>): string | null {
+export function findRule(tx: Pick<Transaction, 'recipient' | 'description' | 'amount'>): TransactionRule | null {
   let best: TransactionRule | null = null
 
   for (const rule of rules) {
@@ -57,7 +58,7 @@ export function findRuleCategory(tx: Pick<Transaction, 'recipient' | 'descriptio
     }
   }
 
-  return best ? best.category : null
+  return best
 }
 
 // Words that say nothing about what a payment was for

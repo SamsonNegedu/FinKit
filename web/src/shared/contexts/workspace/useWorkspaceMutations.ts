@@ -37,8 +37,8 @@ export function useWorkspaceMutations(deps: MutationDeps) {
   const persistMappings = useMappingPersistence(pushToast, setPendingSaves)
   const { updateTransaction, bulkUpdate } = createRecategorizeMutations(store, pushToast, persistMappings)
 
-  const makeRule = async (match: RuleMatch, category: string) => {
-    const rule = await createTransactionRule(match, category)
+  const makeRule = async (match: RuleMatch, category: string, detail?: string) => {
+    const rule = await createTransactionRule(match, category, detail)
 
     if (!rule) {
       pushToast({ message: "Couldn't save the rule", tone: 'error' })
@@ -50,7 +50,7 @@ export function useWorkspaceMutations(deps: MutationDeps) {
 
     store.commit(reprocess(store.rawTransactionsRef.current, anonymizationEnabled))
     pushToast({
-      message: `Rule saved: rows like this are ${category}`,
+      message: `Rule saved: rows like this are ${detail ? `${category} › ${detail}` : category}`,
       tone: 'success',
       actionLabel: 'Undo',
       onAction: () => {

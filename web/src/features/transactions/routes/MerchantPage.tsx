@@ -159,8 +159,9 @@ export default function MerchantPage() {
         <MakeRuleDialog
           tx={rows[0]}
           category={category ?? rows[0].category ?? 'Other'}
+          detail={detail || undefined}
           currency={app.baseCurrency}
-          onSave={match => app.makeRule(match, category ?? rows[0].category ?? 'Other')}
+          onSave={match => app.makeRule(match, category ?? rows[0].category ?? 'Other', detail || undefined)}
           onClose={() => setRuleOpen(false)}
         />
       )}

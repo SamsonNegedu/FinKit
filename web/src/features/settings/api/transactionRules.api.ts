@@ -12,12 +12,16 @@ export async function getTransactionRules(): Promise<TransactionRule[]> {
   }
 }
 
-export async function createTransactionRule(match: RuleMatch, category: string): Promise<TransactionRule | null> {
+export async function createTransactionRule(
+  match: RuleMatch,
+  category: string,
+  detail?: string,
+): Promise<TransactionRule | null> {
   try {
     const response = await fetch(`${API_BASE}/transaction-rules`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ match, category }),
+      body: JSON.stringify({ match, category, detail }),
     })
 
     return response.ok ? await response.json() : null

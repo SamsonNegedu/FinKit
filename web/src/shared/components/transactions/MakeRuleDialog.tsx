@@ -12,12 +12,14 @@ import type { Transaction } from '@/shared/types'
 export default function MakeRuleDialog({
   tx,
   category,
+  detail,
   currency,
   onSave,
   onClose,
 }: {
   tx: Transaction
   category: string
+  detail?: string
   currency: string
   onSave: (match: RuleMatch) => void
   onClose: () => void
@@ -34,7 +36,7 @@ export default function MakeRuleDialog({
   const valid = Object.keys(match).length > 0
 
   return (
-    <Modal title={`Rows like this are ${category}`} onClose={onClose}>
+    <Modal title={`Rows like this are ${detail ? `${category} › ${detail}` : category}`} onClose={onClose}>
       <p className="mb-4 text-sm text-midnight-400">Tick what makes a row "like this". Every tick must match.</p>
       <div className="space-y-3">
         {seen.payee && (

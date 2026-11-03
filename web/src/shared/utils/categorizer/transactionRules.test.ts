@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { categorizeWithRules } from './categorizeWithRules'
 import { setLearnedMappings } from './learnedMappings'
-import { findRuleCategory, setTransactionRules, suggestRule } from './transactionRules'
+import { findRule, setTransactionRules, suggestRule } from './transactionRules'
 
 afterEach(() => {
   setTransactionRules([])
@@ -21,8 +21,8 @@ describe('transaction rules', () => {
       { id: '1', category: 'Internet', match: { payee: 'Aldi', words: ['Prepaid-Konto'], amount: 8.99 } },
     ])
 
-    expect(findRuleCategory(plan)).toBe('Internet')
-    expect(findRuleCategory(groceries)).toBeNull()
+    expect(findRule(plan)?.category).toBe('Internet')
+    expect(findRule(groceries)).toBeNull()
   })
 
   it('prefers the rule with more conditions, then the newer one', () => {
@@ -32,15 +32,21 @@ describe('transaction rules', () => {
       { id: '3', category: 'Phone', match: { payee: 'Aldi', words: ['Prepaid-Konto'] } },
     ])
 
-    expect(findRuleCategory(plan)).toBe('Phone')
-    expect(findRuleCategory(groceries)).toBe('Groceries')
+    expect(findRule(plan)?.category).toBe('Phone')
+    expect(findRule(groceries)?.category).toBe('Groceries')
+  })
+
+  it('carries the subcategory of a rule', () => {
+    setTransactionRules([{ id: '1', category: 'Car', detail: 'Miles', match: { payee: 'Aldi' } }])
+
+    expect(findRule(plan)?.detail).toBe('Miles')
   })
 
   it('ignores the sign of the amount and rounding noise', () => {
     setTransactionRules([{ id: '1', category: 'Internet', match: { amount: 8.99 } }])
 
-    expect(findRuleCategory({ ...plan, amount: -8.990000001 })).toBe('Internet')
-    expect(findRuleCategory({ ...plan, amount: 9.99 })).toBeNull()
+    expect(findRule({ ...plan, amount: -8.990000001 })?.category).toBe('Internet')
+    expect(findRule({ ...plan, amount: 9.99 })).toBeNull()
   })
 
   it('beats the built-in Aldi rule when categorizing', () => {
