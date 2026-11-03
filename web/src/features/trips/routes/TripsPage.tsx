@@ -87,6 +87,36 @@ function TripGrid({ trips }: { trips: TripSummary[] }) {
   )
 }
 
+const NO_DATES = 'No dates'
+
+/** Trips grouped by the year they start in, newest year first and the newest trip first within it. Undated ones go last. */
+function TripsByYear({ trips }: { trips: TripSummary[] }) {
+  const groups = new Map<string, TripSummary[]>()
+
+  for (const t of [...trips].sort((a, b) => (b.startDate ?? '').localeCompare(a.startDate ?? ''))) {
+    const year = t.startDate?.slice(0, 4) ?? NO_DATES
+
+    groups.set(year, [...(groups.get(year) ?? []), t])
+  }
+  const years = [...groups.keys()].sort((a, b) => (a === NO_DATES ? 1 : b === NO_DATES ? -1 : b.localeCompare(a)))
+
+  // One year on its own needs no heading
+  if (years.length <= 1) {
+    return <TripGrid trips={trips} />
+  }
+
+  return (
+    <div className="space-y-6">
+      {years.map(y => (
+        <section key={y} className="space-y-3">
+          <h2 className="text-sm font-medium text-midnight-300">{y}</h2>
+          <TripGrid trips={groups.get(y)!} />
+        </section>
+      ))}
+    </div>
+  )
+}
+
 /** All trips. Their transactions are kept out of the monthly view. */
 export default function TripsPage() {
   const { baseCurrency, pushToast } = useApp()
@@ -174,11 +204,11 @@ export default function TripsPage() {
           No trips yet. Create one, or select bank transactions on the Transactions page and choose Trip.
         </div>
       )}
-      <TripGrid trips={trips.filter(t => !t.archived)} />
+      <TripsByYear trips={trips.filter(t => !t.archived)} />
       {trips.some(t => t.archived) && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-midnight-400">Archived</h2>
-          <TripGrid trips={trips.filter(t => t.archived)} />
+          <TripsByYear trips={trips.filter(t => t.archived)} />
         </section>
       )}
     </div>

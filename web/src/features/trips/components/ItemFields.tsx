@@ -13,6 +13,22 @@ export interface ItemDraft {
   paidBy: string
 }
 
+/**
+ * What the form below offers for this trip and cost, in words, for the edit button's hint. It mirrors the conditions
+ * in the form, so a hint never promises a field that is not there.
+ */
+export function editableFields(trip: Trip, manual: boolean): string {
+  const names = [
+    'category',
+    'detail',
+    ...(placesOf(trip.location).length > 1 ? ['place'] : []),
+    ...(manual && trip.travelers.length > 0 ? ['who paid'] : []),
+    ...(trip.travelers.length > 0 ? ['sharing'] : []),
+  ]
+
+  return `Change ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
+
 const NONE = ''
 const label = 'text-sm text-midnight-300'
 

@@ -6,11 +6,12 @@ import TransactionTable from '@/shared/components/transactions/TransactionTable'
 import type { TableBehaviour } from '@/shared/components/transactions/transactionTableTypes'
 import { useApp } from '@/shared/contexts/AppState'
 import type { Trip, TripTransaction } from '../api/trips.api'
-import { useTagItems, useTripCategories, useUntagItems } from '../hooks/trips-queries'
+import { useTagItems, useTripCategories, useTripSubcategories, useUntagItems } from '../hooks/trips-queries'
 import { FUNDING_COLOR, tripCategoryColor } from '../utils/tripCategoryColor'
 import { FUNDING, toTableRow } from '../utils/tripRows'
 import { NOT_SPECIFIED } from '../constants/search.constants'
 import EditItemDialog from './EditItemDialog'
+import { editableFields } from './ItemFields'
 
 const Chip = ({ children }: { children: string }) => (
   <span className="rounded-full bg-midnight-800 px-2 py-0.5 text-[11px] text-midnight-300">{children}</span>
@@ -34,6 +35,7 @@ export default function TripTransactions({
   const navigate = useNavigate()
   const { baseCurrency, pushToast } = useApp()
   const { data: categories = [] } = useTripCategories()
+  const { data: subcategories = {} } = useTripSubcategories()
   const tag = useTagItems()
   const untag = useUntagItems()
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -87,6 +89,18 @@ export default function TripTransactions({
     categories: [FUNDING, ...categories],
     colorOf: c => (c === FUNDING ? FUNDING_COLOR : tripCategoryColor(c)),
     noSplit: true,
+    // Picking a category with details goes straight on to the detail, so there is no need for the pencil
+    detailsOf: category => (category === FUNDING ? [] : (subcategories[category] ?? [])),
+    onPickDetail: (id, category, detail) => {
+      const r = byRef.get(id)
+
+      if (r) {
+        tag.mutate({
+          id: trip.id,
+          items: [{ ref: r.ref, kind: 'cost', category, subcategory: detail || null }],
+        })
+      }
+    },
     meta: tx => {
       const r = byRef.get(tx.id)
 
@@ -114,7 +128,7 @@ export default function TripTransactions({
       return r ? (
         <>
           {r.kind === 'cost' && (
-            <Tooltip label="Detail, place, sharing and who paid">
+            <Tooltip label={editableFields(trip, r.manual)}>
               <button className={iconButton} aria-label="Edit details" onClick={() => setEditing(r)}>
                 <Pencil className="h-3.5 w-3.5" />
               </button>

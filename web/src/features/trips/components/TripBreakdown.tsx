@@ -59,19 +59,39 @@ function Summary({ totals, trip }: { totals: TripTotals; trip: Trip }) {
   ]
   const view = views.includes(picked) ? picked : views[0]
   const outside = totals.byPhase.before + totals.byPhase.after
+  const hasDates = !!(trip.startDate || trip.endDate)
   const notes = [
-    days > 0 && `${money(totals.spent / days)} a day over ${days} day${days === 1 ? '' : 's'}`,
+    // A flight or stay paid weeks before would otherwise make the days away look far dearer than they were
+    days > 0 &&
+      `${money((hasDates ? totals.byPhase.during : totals.spent) / days)} a day over ${days} day${days === 1 ? '' : 's'}${hasDates ? ' away' : ''}`,
     Math.abs(totals.mine - totals.spent) > 0.005 && `your share ${money(totals.mine)}`,
-    (trip.startDate || trip.endDate) && outside > 0.005 && `${money(outside)} booked outside the travel dates`,
+    hasDates && outside > 0.005 && `${money(outside)} was paid before or after the travel dates`,
   ].filter(Boolean)
 
   return (
     <div className="card space-y-4">
-      <div className="grid grid-cols-3 gap-4">
-        <Stat label="Came in" value={money(totals.funded)} tone="text-income" />
-        <Stat label="Spent" value={money(totals.spent)} tone="text-expense" />
-        <Stat label="Left" value={money(totals.remaining)} tone={totals.remaining < 0 ? 'text-expense' : undefined} />
-      </div>
+      {/* What is left only means something against money put in, so without any the box would just repeat Spent */}
+      {totals.funded > 0 ? (
+        <div className="grid grid-cols-3 gap-4">
+          <Stat label="Money put in" value={money(totals.funded)} tone="text-income" />
+          <Stat label="Spent" value={money(totals.spent)} tone="text-expense" />
+          {totals.remaining < 0 ? (
+            <Stat label="Overspent by" value={money(-totals.remaining)} tone="text-expense" />
+          ) : (
+            <Stat label="Left of what was put in" value={money(totals.remaining)} />
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-4">
+          <Stat label="Spent" value={money(totals.spent)} tone="text-expense" />
+        </div>
+      )}
+      {totals.funded === 0 && totals.spent < 0 && (
+        <p className="text-sm text-midnight-400">
+          Spent is below zero because money that came in was added as a cost. Open Transactions and change it to money
+          put in.
+        </p>
+      )}
       {trip.budget && trip.budgetCurrency === totals.currency && (
         <Budget spent={totals.spent} budget={trip.budget} money={money} />
       )}

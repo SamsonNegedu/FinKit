@@ -45,7 +45,10 @@ export default function MoveToTripDialog({ transactions, onClose, onDone }: Prop
   const tag = useTagItems()
   const [chosen, setChosen] = useState<string | null>(null)
   const [draft, setDraft] = useState(EMPTY_TRIP)
-  const [kind, setKind] = useState<TripItemKind>('cost')
+  // Money coming in is what funds a trip. Added as costs it would show up as a refund and make the spending negative.
+  const [kind, setKind] = useState<TripItemKind>(
+    transactions.length > 0 && transactions.every(t => t.type === 'income') ? 'funding' : 'cost',
+  )
   // By default each payee gets its own guessed category; "one for all" overrides that
   const [sameCategory, setSameCategory] = useState(false)
   const [category, setCategory] = useState('Other')

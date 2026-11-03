@@ -181,7 +181,10 @@ export default function TripSuggestions({ trip }: { trip: Trip }) {
       {(inside.length > 0 || earlier.length > 0) && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-midnight-800 pt-3">
           {unticked > 0 && (
-            <button className="text-xs text-midnight-400 hover:text-white" onClick={hideUnticked}>
+            <button
+              className="text-xs text-accent underline underline-offset-2 hover:no-underline"
+              onClick={hideUnticked}
+            >
               Hide the {unticked} unticked for this trip
             </button>
           )}

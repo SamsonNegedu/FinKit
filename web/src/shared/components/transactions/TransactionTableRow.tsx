@@ -162,7 +162,13 @@ export default function TransactionTableRow({
           onOpenChange={o => (o ? onOpenPicker(tx.id) : onClosePicker())}
           categories={categories}
           current={tx.category}
-          onPick={(category, scope) => {
+          detailsOf={behaviour.onPickDetail ? behaviour.detailsOf : undefined}
+          onPick={(category, scope, detail) => {
+            if (detail !== undefined && behaviour.onPickDetail) {
+              behaviour.onPickDetail(tx.id, category, detail)
+
+              return
+            }
             onUpdateTransaction(tx.id, { category }, scope !== 'all')
             if (scope === 'rule') {
               setRuleFor(category)

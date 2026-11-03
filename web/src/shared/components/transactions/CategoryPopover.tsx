@@ -26,6 +26,7 @@ export default function CategoryPopover({
   onPick,
   colorOf,
   scopes,
+  detailsOf,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -34,11 +35,15 @@ export default function CategoryPopover({
   side?: 'top' | 'bottom'
   categories: string[]
   current?: string
-  onPick: (category: string, scope: PickScope) => void
+  onPick: (category: string, scope: PickScope, detail?: string) => void
   colorOf?: (category: string) => string
   /** Asks how far a picked category reaches, as a second step: for a shop whose purchases need different categories */
   scopes?: PickScope[]
+  /** Finer choices inside a category, asked as a second step so one pick sets both (a trip's Transport › Flight) */
+  detailsOf?: (category: string) => string[]
 }) {
+  // The category whose detail is being chosen
+  const [detailFor, setDetailFor] = useState<string | null>(null)
   // The category chosen while the reach is still being asked, so choosing it does nothing until the reach is chosen
   const [pending, setPending] = useState<string | null>(null)
 
@@ -48,6 +53,7 @@ export default function CategoryPopover({
       onOpenChange={o => {
         if (!o) {
           setPending(null)
+          setDetailFor(null)
         }
         onOpenChange(o)
       }}
@@ -61,7 +67,30 @@ export default function CategoryPopover({
           collisionPadding={8}
           className="z-[80] w-[240px] overflow-hidden rounded-lg border border-midnight-600 bg-midnight-800 shadow-xl"
         >
-          {pending && scopes ? (
+          {detailFor && detailsOf ? (
+            <div className="max-h-[280px] overflow-y-auto">
+              <button
+                onClick={() => setDetailFor(null)}
+                className="flex w-full items-center gap-2 border-b border-midnight-600 px-3 py-2 text-left text-sm text-midnight-300 hover:bg-midnight-700"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="font-medium text-white">{detailFor}</span> · pick a detail
+              </button>
+              {['', ...detailsOf(detailFor)].map(d => (
+                <button
+                  key={d}
+                  onClick={() => {
+                    onPick(detailFor, 'all', d)
+                    setDetailFor(null)
+                    onOpenChange(false)
+                  }}
+                  className={`block w-full px-3 py-2 text-left text-sm hover:bg-midnight-700 ${d ? 'text-white' : 'text-midnight-400'}`}
+                >
+                  {d || 'Not specified'}
+                </button>
+              ))}
+            </div>
+          ) : pending && scopes ? (
             <div>
               <button
                 onClick={() => setPending(null)}
@@ -91,6 +120,11 @@ export default function CategoryPopover({
               current={current}
               colorOf={colorOf}
               onPick={category => {
+                if (detailsOf?.(category).length) {
+                  setDetailFor(category)
+
+                  return
+                }
                 if (scopes) {
                   setPending(category)
 
