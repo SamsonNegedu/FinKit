@@ -2,6 +2,7 @@ import { useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { DayPicker, type DateRange } from 'react-day-picker'
 import { Calendar } from 'lucide-react'
+import { calendarJump } from './CalendarDropdown'
 import { DAY_CLASSES } from './dayPickerClasses'
 import { formatDay, parseLocalDate, toISODate } from '@/shared/utils/dates'
 
@@ -55,6 +56,7 @@ export default function DateRangePicker({ start, end, onChange, placeholder = 'P
             selected={selected}
             onDayClick={pick}
             classNames={DAY_CLASSES}
+            {...calendarJump()}
           />
           <div className="flex justify-between mt-1 text-sm">
             <button type="button" className="px-1 text-midnight-400 hover:text-white" onClick={() => onChange('', '')}>

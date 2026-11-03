@@ -3,6 +3,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { DayPicker } from 'react-day-picker'
 import { Calendar } from 'lucide-react'
 import { formatDay, parseLocalDate, toISODate } from '@/shared/utils/dates'
+import { calendarJump } from './CalendarDropdown'
 import { DAY_CLASSES } from './dayPickerClasses'
 
 interface Props {
@@ -52,6 +53,7 @@ export default function DatePicker({ value, onChange, placeholder = 'Pick a date
               setOpen(false)
             }}
             classNames={{ ...DAY_CLASSES, selected: '[&>button]:bg-accent [&>button]:text-white' }}
+            {...calendarJump()}
           />
         </Popover.Content>
       </Popover.Portal>
