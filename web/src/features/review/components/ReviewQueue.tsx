@@ -61,7 +61,7 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
     return (
       <div className="card text-center py-12">
         <CheckCircle2 className="w-10 h-10 text-income mx-auto mb-3" />
-        <p className="text-white font-medium">Everything is categorized</p>
+        <p className="text-ink font-medium">Everything is categorized</p>
         <p className="text-sm text-midnight-400 mt-1">Nothing needs your review.</p>
       </div>
     )
@@ -70,7 +70,7 @@ export default function ReviewQueue({ transactions, onBulkUpdate, currency }: Re
   if (derived.phase === 'all_skipped') {
     return (
       <div className="card text-center py-12">
-        <p className="text-white font-medium">{session.skipped.size} skipped</p>
+        <p className="text-ink font-medium">{session.skipped.size} skipped</p>
         <button className="btn-secondary mt-4" onClick={() => dispatchSession({ type: 'RESET_SKIPPED' })}>
           Review skipped again
         </button>
