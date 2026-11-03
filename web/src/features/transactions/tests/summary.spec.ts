@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { inPeriod, summarize } from '@/shared/utils/summary'
+import { isLeftOutTransfer } from '@/shared/utils/transfers'
 import { tx } from './testFixtures'
 
 describe('summary', () => {
@@ -23,5 +24,14 @@ describe('summary', () => {
     expect(s.totalExpense).toBe(22)
     expect(s.totalIncome).toBe(100)
     expect(s.categorySummary[0].category).toBe('Groceries')
+  })
+  it('shows an incoming own-account transfer once you included it, without counting it in the totals', () => {
+    const moved = { type: 'income' as const, amount: 300, category: 'Transfer' }
+    const auto = tx({ id: 'f', date: '2026-03-23', ...moved, isExcluded: true })
+    const chosen = tx({ id: 'g', date: '2026-03-23', ...moved, isExcluded: false, excludedManually: true })
+    const byRule = tx({ id: 'h', date: '2026-03-23', ...moved, isExcluded: false })
+
+    expect([auto, chosen, byRule].map(isLeftOutTransfer)).toEqual([true, false, true])
+    expect(summarize([...rows, chosen], null, 'EUR').totalIncome).toBe(100)
   })
 })

@@ -1,6 +1,6 @@
 import { Search, X, ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { getAvailableCategories } from '@/shared/utils/categorizer'
 import Checkbox from '@/shared/components/forms/Checkbox'
 import CategoryIcon from '@/shared/components/CategoryIcon'
@@ -21,6 +21,10 @@ export default function SearchFilter({
   onCategoryChange,
   extra,
 }: SearchFilterProps) {
+  const [categoryQuery, setCategoryQuery] = useState('')
+  const categories = getAvailableCategories()
+    .filter(c => c !== 'Transfer' && c.toLowerCase().includes(categoryQuery.trim().toLowerCase()))
+    .sort((a, b) => a.localeCompare(b))
   const handleCategoryToggle = (category: string) => {
     if (selectedCategories.includes(category)) {
       onCategoryChange(selectedCategories.filter(c => c !== category))
@@ -52,7 +56,7 @@ export default function SearchFilter({
       </div>
 
       {/* Category filter: a Radix popover, so Escape, outside clicks and focus are handled for us */}
-      <Popover.Root>
+      <Popover.Root onOpenChange={open => !open && setCategoryQuery('')}>
         <Popover.Trigger asChild>
           <button className="input flex w-full items-center justify-between gap-2 sm:w-auto" aria-label="Categories">
             <span className="text-sm">
@@ -67,28 +71,35 @@ export default function SearchFilter({
             sideOffset={8}
             className="z-[80] max-h-[min(20rem,var(--radix-popover-content-available-height))] min-w-[14rem] overflow-y-auto rounded-xl border border-midnight-600 bg-midnight-800 py-1 shadow-2xl"
           >
-            <button
-              onClick={() => onCategoryChange([])}
-              disabled={selectedCategories.length === 0}
-              className="sticky top-0 z-10 w-full border-b border-midnight-700 bg-midnight-800 px-4 py-2 text-left text-sm hover:bg-midnight-700 disabled:opacity-40"
-            >
-              Clear all
-            </button>
-            {getAvailableCategories()
-              .filter(c => c !== 'Transfer')
-              .map(category => (
-                <label
-                  key={category}
-                  className="flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-midnight-700"
-                >
-                  <Checkbox
-                    checked={selectedCategories.includes(category)}
-                    onChange={() => handleCategoryToggle(category)}
-                  />
-                  <CategoryIcon category={category} size="sm" />
-                  <span className="text-sm">{category}</span>
-                </label>
-              ))}
+            <div className="sticky top-0 z-10 border-b border-midnight-700 bg-midnight-800">
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search categories..."
+                aria-label="Search categories"
+                value={categoryQuery}
+                onChange={e => setCategoryQuery(e.target.value)}
+                className="w-full bg-transparent px-4 py-2 text-sm focus:outline-none"
+              />
+              <button
+                onClick={() => onCategoryChange([])}
+                disabled={selectedCategories.length === 0}
+                className="w-full border-t border-midnight-700 px-4 py-2 text-left text-sm text-midnight-300 hover:bg-midnight-700 disabled:opacity-40"
+              >
+                Clear all
+              </button>
+            </div>
+            {categories.length === 0 && <p className="px-4 py-3 text-sm text-midnight-400">No category matches.</p>}
+            {categories.map(category => (
+              <label key={category} className="flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-midnight-700">
+                <Checkbox
+                  checked={selectedCategories.includes(category)}
+                  onChange={() => handleCategoryToggle(category)}
+                />
+                <CategoryIcon category={category} size="sm" />
+                <span className="text-sm">{category}</span>
+              </label>
+            ))}
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>

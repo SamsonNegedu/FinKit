@@ -11,6 +11,7 @@ import { useApp } from '@/shared/contexts/AppState'
 import PageHeader from '@/shared/components/layout/PageHeader'
 import { FILES, TransactionsSearch } from '@/features/transactions/constants/search.constants'
 import { inPeriod } from '@/shared/utils/summary'
+import { isLeftOutTransfer } from '@/shared/utils/transfers'
 import TransactionList from './TransactionList'
 
 export default function TransactionsPage() {
@@ -56,7 +57,7 @@ export default function TransactionsPage() {
       if (search.account && tx.accountRef !== search.account) {
         return false
       }
-      if (!search.transfers && tx.category === 'Transfer') {
+      if (!search.transfers && isLeftOutTransfer(tx)) {
         return false
       }
       if (
