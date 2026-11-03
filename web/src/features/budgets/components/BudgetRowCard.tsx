@@ -6,9 +6,10 @@ import { formatCurrency } from '@/shared/utils/format'
 import CategoryIcon from '@/shared/components/CategoryIcon'
 import type { BudgetRow, HistoryMonth } from '../utils/budgetProgress'
 import BudgetBar from './BudgetBar'
+import BudgetHistoryDots from './BudgetHistoryDots'
+import { BUDGET_COLUMNS } from './budgetColumns'
 
-/** The columns, shared with the list's heading so they line up: category, used, spent, limit, left, history, menu */
-export const BUDGET_COLUMNS = 'sm:grid-cols-[11rem_minmax(7rem,1fr)_6rem_6.5rem_7.5rem_5.5rem_2rem]'
+export { BUDGET_COLUMNS }
 
 const ITEM =
   'flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm outline-none data-[highlighted]:bg-midnight-700'
@@ -122,7 +123,7 @@ export default function BudgetRowCard({
       >
         {left.text}
       </span>
-      {history && <HistoryDots months={history} currency={row.currency} goal={row.goal} />}
+      {history && <BudgetHistoryDots months={history} currency={row.currency} goal={row.goal} />}
       <div className="col-start-2 row-start-1 flex justify-end sm:col-start-7">
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
@@ -173,55 +174,5 @@ export default function BudgetRowCard({
         </p>
       )}
     </li>
-  )
-}
-
-const DOT: Record<NonNullable<HistoryMonth['state']>, string> = {
-  ok: 'bg-positive',
-  watch: 'bg-warning',
-  over: 'bg-negative',
-  met: 'bg-cyan-500',
-  short: 'bg-cyan-500/30',
-}
-
-/** What a dot says when hovered: the month, how it went, and the figures. */
-function dotLabel(m: HistoryMonth, currency: string, goal: boolean): string {
-  if (m.state === null) {
-    return `${m.label}: nothing to compare`
-  }
-  const figures = `${formatCurrency(m.spent, currency)} of ${formatCurrency(m.limit, currency)}`
-  const verdict = {
-    ok: 'within the limit',
-    watch: 'close to the limit',
-    over: 'over the limit',
-    met: 'goal reached',
-    short: 'goal not reached',
-  }[m.state]
-
-  return `${m.label}: ${figures}, ${goal && m.state === 'short' ? 'goal not reached' : verdict}`
-}
-
-/** The last few months at a glance: which budgets keep going over. Hidden on a phone, where there is no room. */
-function HistoryDots({ months, currency, goal }: { months: HistoryMonth[]; currency: string; goal: boolean }) {
-  const bad = months.filter(m => m.state === 'over').length
-  const summary = goal
-    ? `${months.filter(m => m.state === 'met').length} of the last ${months.length} months reached`
-    : `${bad} of the last ${months.length} months over`
-
-  return (
-    <span
-      className="hidden items-center justify-end gap-1 sm:col-start-6 sm:row-start-1 sm:flex"
-      role="img"
-      aria-label={summary}
-    >
-      {months.map(m => (
-        <Tooltip key={m.label} label={dotLabel(m, currency, goal)}>
-          <span
-            className={`h-2.5 w-2.5 rounded-full ${m.state ? DOT[m.state] : 'border border-line-strong'}`}
-            aria-hidden="true"
-          />
-        </Tooltip>
-      ))}
-    </span>
   )
 }
