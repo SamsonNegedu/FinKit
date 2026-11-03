@@ -24,7 +24,7 @@ export default function AppShellSidebar({ nav, onNavigate }: AppShellSidebarProp
       <div className="px-4 py-5 flex items-center gap-3">
         <Logo />
         <div>
-          <p className="font-bold text-white leading-tight">FinKit</p>
+          <p className="font-bold text-ink leading-tight">FinKit</p>
           <p className="text-[11px] text-midnight-400">Transaction insights</p>
         </div>
       </div>
@@ -42,14 +42,14 @@ export default function AppShellSidebar({ nav, onNavigate }: AppShellSidebarProp
                 to={item.to}
                 activeOptions={{ exact: item.exact }}
                 onClick={onNavigate}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-midnight-300 hover:bg-midnight-800 hover:text-white transition-colors"
-                activeProps={{ className: 'bg-accent/15 !text-white font-medium' }}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-midnight-300 hover:bg-midnight-800 hover:text-ink transition-colors"
+                activeProps={{ className: 'bg-accent/15 !text-ink font-medium' }}
               >
                 <item.icon className="w-4 h-4 shrink-0" />
                 <span className="flex-1">{item.label}</span>
                 {!!item.badge && (
                   <span
-                    className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${item.to === '/banks' ? 'bg-amber-500/20 text-amber-300' : 'bg-midnight-700 text-midnight-200'}`}
+                    className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${item.to === '/banks' ? 'bg-warning/20 text-warning' : 'bg-midnight-700 text-midnight-200'}`}
                     aria-label={`${item.badge} need attention`}
                   >
                     {item.badge > 99 ? '99+' : item.badge}

@@ -22,7 +22,7 @@ export default function BankBanners({
         return (
           <div
             key={c.id}
-            className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm border ${expired ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'}`}
+            className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm border ${expired ? 'bg-negative/10 border-negative/30 text-negative' : 'bg-warning/10 border-warning/30 text-warning'}`}
             role="status"
           >
             <span>
@@ -33,7 +33,7 @@ export default function BankBanners({
             </span>
             <button
               onClick={() => onReconnect(c)}
-              className={`text-sm px-3 py-1.5 rounded-lg border ${expired ? 'bg-midnight-800 border-midnight-600 text-white' : 'bg-amber-500/15 border-amber-500/40'}`}
+              className={`text-sm px-3 py-1.5 rounded-lg border ${expired ? 'bg-midnight-800 border-line-strong text-ink' : 'bg-warning/15 border-warning/40'}`}
             >
               Reconnect {c.bank}
             </button>

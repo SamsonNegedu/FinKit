@@ -30,10 +30,10 @@ function FocusSummary({
   return (
     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-midnight-800 px-3 py-2 text-sm">
       <p className="text-midnight-200">
-        <span className="font-medium text-white">{row.category}</span>: about {money(average)} a month, highest in{' '}
+        <span className="font-medium text-ink">{row.category}</span>: about {money(average)} a month, highest in{' '}
         {label(months[high])} ({money(row.cells[high])}), lowest in {label(months[low])} ({money(row.cells[low])}).
       </p>
-      <button onClick={onClear} className="text-xs text-midnight-400 hover:text-white">
+      <button onClick={onClear} className="text-xs text-midnight-400 hover:text-ink">
         Clear (Esc)
       </button>
     </div>
@@ -77,11 +77,11 @@ export default function CategoryByMonth({
     return (
       <tr
         key={r.category}
-        className={`border-t border-midnight-800 transition-opacity duration-150 ${
+        className={`border-t border-line transition-opacity duration-150 ${
           focus && focus !== r.category ? 'opacity-25' : ''
         }`}
       >
-        <th scope="row" className="sticky left-0 bg-midnight-900 py-1.5 pr-3 text-left font-normal text-white">
+        <th scope="row" className="sticky left-0 bg-surface py-1.5 pr-3 text-left font-normal text-ink">
           <button
             onClick={() => setFocus(focus === r.category ? null : r.category)}
             aria-pressed={focus === r.category}
@@ -104,7 +104,7 @@ export default function CategoryByMonth({
               <button
                 onClick={() => onSelect(r.category, data.months[i])}
                 aria-label={`${r.category}, ${label(data.months[i])}: ${money(n)}`}
-                className="w-full rounded px-1.5 py-1 text-white hover:ring-1 hover:ring-midnight-500"
+                className="w-full rounded px-1.5 py-1 text-ink hover:ring-1 hover:ring-midnight-500"
                 style={{
                   backgroundColor: `color-mix(in srgb, ${r.color} ${Math.round((n / peak) * 45)}%, transparent)`,
                 }}
@@ -118,7 +118,7 @@ export default function CategoryByMonth({
         ))}
         <td
           className={`py-1.5 pl-3 text-right text-xs tabular-nums ${
-            delta === null || Math.abs(delta) < 1 ? 'text-midnight-500' : delta > 0 ? 'text-amber-300' : 'text-accent'
+            delta === null || Math.abs(delta) < 1 ? 'text-midnight-500' : delta > 0 ? 'text-warning' : 'text-accent'
           }`}
         >
           {delta === null || Math.abs(delta) < 1 ? '–' : `${delta > 0 ? '▲' : '▼'} ${money(Math.abs(delta))}`}
@@ -129,7 +129,7 @@ export default function CategoryByMonth({
 
   return (
     <section className="card !p-4 sm:!p-6">
-      <h2 className="text-lg font-semibold text-white">Category by month</h2>
+      <h2 className="text-lg font-semibold text-ink">Category by month</h2>
       <p className="mt-0.5 text-sm text-midnight-400">
         The last {data.months.length} months. The final column compares with the average of the months before it.
       </p>
@@ -146,7 +146,7 @@ export default function CategoryByMonth({
         <table className="w-full min-w-[34rem] text-sm">
           <thead>
             <tr className="text-xs uppercase tracking-wide text-midnight-500">
-              <th className="sticky left-0 bg-midnight-900 py-1.5 pr-3 text-left font-normal">Category</th>
+              <th className="sticky left-0 bg-surface py-1.5 pr-3 text-left font-normal">Category</th>
               {data.months.map(m => (
                 <th key={`${m.year}-${m.month}`} className="px-1 py-1.5 text-center font-normal">
                   {label(m)}

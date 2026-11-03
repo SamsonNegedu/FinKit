@@ -54,7 +54,7 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
             {c.status === 'expiring' && (
               <button
                 onClick={() => actions.reconnect(c)}
-                className="text-sm px-3 py-2 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                className="text-sm px-3 py-2 rounded-lg bg-warning/15 text-warning border border-warning/30"
               >
                 Reconnect
               </button>
@@ -88,11 +88,11 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
                     onDisconnected?.()
                   }
                 }}
-                className="text-sm px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 border border-red-500/40"
+                className="text-sm px-3 py-1.5 rounded-lg bg-negative/20 text-negative border border-negative/40"
               >
                 Yes, disconnect
               </button>
-              <button onClick={() => setConfirming(false)} className="text-sm text-midnight-400 hover:text-white">
+              <button onClick={() => setConfirming(false)} className="text-sm text-midnight-400 hover:text-ink">
                 Cancel
               </button>
             </>
@@ -100,7 +100,7 @@ export default function ConnectionActions({ connection: c, actions, mock, onDisc
             <button
               onClick={() => setConfirming(true)}
               disabled={working}
-              className="text-sm text-red-300/80 hover:text-red-300"
+              className="text-sm text-negative/80 hover:text-negative"
             >
               {c.status === 'expired' ? 'Remove' : 'Disconnect'}
             </button>

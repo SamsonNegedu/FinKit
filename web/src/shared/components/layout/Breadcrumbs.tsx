@@ -105,12 +105,12 @@ export default function Breadcrumbs() {
           <li key={i} className="flex items-center gap-1.5 min-w-0">
             {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-midnight-600 shrink-0" aria-hidden="true" />}
             {c.to && i < crumbs.length - 1 ? (
-              <Link to={c.to} search={c.search as never} className="text-midnight-400 hover:text-white truncate">
+              <Link to={c.to} search={c.search as never} className="text-midnight-400 hover:text-ink truncate">
                 {c.label}
               </Link>
             ) : (
               <span
-                className="text-white font-medium truncate"
+                className="text-ink font-medium truncate"
                 aria-current={i === crumbs.length - 1 ? 'page' : undefined}
               >
                 {c.label}

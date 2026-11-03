@@ -121,16 +121,16 @@ export default function MoveToTripDialog({ transactions, onClose, onDone }: Prop
           Untick any that were not part of it.
         </p>
         {skipped > 0 && (
-          <p className="text-sm text-orange-400">
+          <p className="text-sm text-warning">
             {skipped} not from a bank sync will stay where they are: imported files never leave this browser.
           </p>
         )}
-        <ul className="max-h-56 divide-y divide-midnight-800 overflow-y-auto rounded-lg border border-midnight-800 px-3">
+        <ul className="max-h-56 divide-y divide-line overflow-y-auto rounded-lg border border-line px-3">
           {rows.map(({ t, ref, guess }) => (
             <li key={ref} className="flex items-center gap-3 py-2">
               <Checkbox checked={!off.has(ref)} onChange={() => flip(ref)} ariaLabel={`Move ${displayNameOf(t)}`} />
               <span className="w-14 shrink-0 text-sm text-midnight-400">{formatDay(t.date)}</span>
-              <span className="min-w-0 flex-1 truncate text-sm text-white">{displayNameOf(t)}</span>
+              <span className="min-w-0 flex-1 truncate text-sm text-ink">{displayNameOf(t)}</span>
               {kind === 'cost' && !sameCategory && (
                 <span className="hidden text-xs text-midnight-400 sm:block">
                   {guess ? [guess.category, guess.subcategory].filter(Boolean).join(' · ') : 'Other'}

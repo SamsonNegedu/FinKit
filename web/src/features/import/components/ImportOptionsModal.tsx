@@ -26,7 +26,7 @@ export default function ImportOptionsModal({
         <div className="flex items-center gap-3">
           <FileSpreadsheet className="w-8 h-8 text-accent" />
           <div className="flex-1 min-w-0">
-            <p className="text-white font-medium truncate">{pendingFile.name}</p>
+            <p className="text-ink font-medium truncate">{pendingFile.name}</p>
             <p className="text-midnight-400 text-sm">{(pendingFile.size / 1024).toFixed(1)} KB</p>
           </div>
         </div>
@@ -46,7 +46,7 @@ export default function ImportOptionsModal({
                       px-4 py-3 rounded-lg text-sm font-medium transition-all
                       ${
                         dateFilter === option.value
-                          ? 'bg-accent text-white'
+                          ? 'bg-accent text-midnight-950'
                           : 'bg-midnight-800 text-midnight-300 hover:bg-midnight-700'
                       }
                     `}

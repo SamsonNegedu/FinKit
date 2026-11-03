@@ -13,7 +13,7 @@
     scrollbar-gutter: stable;
   }
   body {
-    @apply bg-midnight-950 text-midnight-100 antialiased;
+    @apply bg-surface-page text-ink antialiased;
   }
   ::selection {
     @apply bg-accent/40 text-white;
@@ -22,19 +22,44 @@
   input {
     accent-color: theme('colors.accent.DEFAULT');
   }
+  /* Buttons carry their own ring; links only get the browser's, which clashes with the theme */
+  a:focus-visible {
+    outline: 2px solid theme('colors.accent.DEFAULT');
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }
 
 @layer components {
+  /* Sections sit flat on the page: a hairline is all the separation they need. */
   .card {
-    @apply bg-midnight-900 border border-midnight-700 rounded-xl p-6 shadow-lg;
+    @apply bg-surface border border-line rounded-xl p-6;
   }
 
+  /* The few cards that carry the page's headline figures get one step more surface. */
+  .card-raised {
+    @apply bg-surface-raised border border-line rounded-xl p-6;
+  }
+
+  /* Green is too light for white text (2.6:1). Dark ink on green reads at 5.6:1. */
   .btn-primary {
-    @apply bg-accent hover:bg-accent-dark text-white font-medium px-4 py-2 rounded-lg transition-colors duration-200;
+    @apply bg-accent hover:bg-accent-dark active:bg-accent-dark text-midnight-950 font-medium px-4 py-2 rounded-lg transition-colors duration-200;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page;
+  }
+
+  /* The headline figures on summary cards, so the same role looks the same on every page */
+  .figure {
+    @apply text-2xl font-bold tabular-nums tracking-tight text-ink;
+  }
+
+  /* Secondary figures: the same tabular rhythm one size down */
+  .figure-sm {
+    @apply text-xl font-semibold tabular-nums tracking-tight text-ink;
   }
 
   .btn-secondary {
-    @apply bg-midnight-800 hover:bg-midnight-700 text-midnight-100 font-medium px-4 py-2 rounded-lg border border-midnight-600 transition-colors duration-200;
+    @apply bg-midnight-800 hover:bg-midnight-700 active:bg-midnight-600 text-ink font-medium px-4 py-2 rounded-lg border border-line-strong transition-colors duration-200;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page;
   }
 
   /* Native selects draw their arrow flush to the edge. Draw our own with breathing room. */
@@ -47,7 +72,7 @@
   }
 
   .input {
-    @apply bg-midnight-800 border border-midnight-600 rounded-lg px-4 py-2 text-midnight-100 placeholder-midnight-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-200;
+    @apply bg-midnight-800 border border-line-strong rounded-lg px-4 py-2 text-ink placeholder-midnight-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all duration-200;
   }
 }
 
@@ -87,5 +112,17 @@ html body[data-scroll-locked] {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Motion is a hint here, never the only signal; respect people who ask for less of it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

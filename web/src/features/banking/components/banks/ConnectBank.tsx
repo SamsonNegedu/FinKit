@@ -45,7 +45,7 @@ export default function ConnectBank({ initialBank }: { initialBank?: string }) {
   if (banksQuery.isError || !banks) {
     return (
       <div
-        className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-300"
+        className="flex items-start gap-2 p-3 rounded-lg bg-negative/10 border border-negative/30 text-sm text-negative"
         role="alert"
       >
         <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> {errorMessage(banksQuery.error, "Couldn't load banks.")}
@@ -91,12 +91,12 @@ export default function ConnectBank({ initialBank }: { initialBank?: string }) {
 
       {bank && (
         <div className="rounded-xl border border-accent/25 bg-accent/5 p-4 space-y-2 text-sm">
-          <p className="font-medium text-white">What FinKit will read from {bank.name}</p>
+          <p className="font-medium text-ink">What FinKit will read from {bank.name}</p>
           <ul className="space-y-1 text-midnight-200">
             <li>✓ Your account names and last 4 digits</li>
             <li>✓ Balances and transactions</li>
             <li>
-              <span className="text-red-300">✕</span> It cannot move money or make payments
+              <span className="text-negative">✕</span> It cannot move money or make payments
             </li>
           </ul>
           <p className="text-midnight-400 text-xs">
@@ -107,14 +107,14 @@ export default function ConnectBank({ initialBank }: { initialBank?: string }) {
       )}
 
       {bank && have.length > 0 && (
-        <p className="rounded-lg border border-midnight-600 bg-midnight-800/60 p-3 text-sm text-midnight-200">
+        <p className="rounded-lg border border-line-strong bg-midnight-800/60 p-3 text-sm text-midnight-200">
           You already have {bank.name} connected ({have.join(', ')}). On {bank.name}'s page, tick every account you want
           read: new ones are added, and an account you leave out keeps syncing through its current link.
         </p>
       )}
 
       {connect.isError && (
-        <p className="text-sm text-red-300" role="alert">
+        <p className="text-sm text-negative" role="alert">
           {errorMessage(connect.error, "Couldn't start the connection.")}
         </p>
       )}

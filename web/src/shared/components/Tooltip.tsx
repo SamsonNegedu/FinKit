@@ -22,7 +22,7 @@ export default function Tooltip({ label, children }: { label: ReactNode; childre
         <RadixTooltip.Content
           sideOffset={6}
           collisionPadding={8}
-          className="z-[90] max-w-xs rounded-md border border-midnight-600 bg-midnight-800 px-2.5 py-1.5 text-xs text-midnight-100 shadow-xl"
+          className="z-[90] max-w-xs rounded-md border border-line-strong bg-midnight-800 px-2.5 py-1.5 text-xs text-midnight-100 shadow-xl"
         >
           {label}
         </RadixTooltip.Content>

@@ -46,7 +46,7 @@ export default function ContractRow({ contract: c, max, onOpen }: Props) {
           {c.name.charAt(0).toUpperCase()}
         </span>
         <span className="min-w-0 flex-1">
-          <span className={`flex items-center gap-2 ${c.active ? 'text-white' : 'text-midnight-400'}`}>
+          <span className={`flex items-center gap-2 ${c.active ? 'text-ink' : 'text-midnight-400'}`}>
             <span className="truncate text-sm font-medium">{c.name}</span>
             {c.state === 'confirmed' && <Check className="h-3.5 w-3.5 shrink-0 text-accent" aria-label="Confirmed" />}
             {c.kind === 'variable' && (
@@ -60,7 +60,7 @@ export default function ContractRow({ contract: c, max, onOpen }: Props) {
               >
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
-                    rise > 0 ? 'bg-amber-400/15 text-amber-300' : 'bg-accent/15 text-accent'
+                    rise > 0 ? 'bg-warning/15 text-warning' : 'bg-accent/15 text-accent'
                   }`}
                 >
                   {rise > 0 ? '▲' : '▼'} {formatCurrency(Math.abs(rise), c.currency)}
@@ -81,7 +81,7 @@ export default function ContractRow({ contract: c, max, onOpen }: Props) {
           />
         </span>
         <span className="shrink-0 whitespace-nowrap text-right sm:min-w-36">
-          <span className={`block text-sm font-medium tabular-nums ${c.active ? 'text-white' : 'text-midnight-400'}`}>
+          <span className={`block text-sm font-medium tabular-nums ${c.active ? 'text-ink' : 'text-midnight-400'}`}>
             {formatCurrency(c.amount, c.currency)}
           </span>
           <span className="block text-xs text-midnight-500">

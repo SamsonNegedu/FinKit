@@ -31,8 +31,8 @@ function MonthTooltip({
   ]
 
   return (
-    <div className="rounded-lg border border-midnight-600 bg-midnight-800 px-3 py-2 shadow-xl">
-      <p className="mb-1 font-medium text-white">{m.label}</p>
+    <div className="rounded-lg border border-line-strong bg-midnight-800 px-3 py-2 shadow-xl">
+      <p className="mb-1 font-medium text-ink">{m.label}</p>
       {rows.map(([name, color, value]) => (
         <p key={name} className="text-sm" style={{ color }}>
           {name}: {money(value)}

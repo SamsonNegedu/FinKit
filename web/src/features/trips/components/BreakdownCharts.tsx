@@ -61,7 +61,7 @@ export function SliceBars<T extends Slice>({
                   <CategoryIcon category={name} color={colorOf(name)} size="sm" />
                   {onSelect ? (
                     <Tooltip label={`Show ${name} transactions`}>
-                      <button className="truncate hover:text-white hover:underline" onClick={() => onSelect(i)}>
+                      <button className="truncate hover:text-ink hover:underline" onClick={() => onSelect(i)}>
                         {name}
                       </button>
                     </Tooltip>
@@ -70,7 +70,7 @@ export function SliceBars<T extends Slice>({
                   )}
                   {more && (
                     <button
-                      className="flex items-center rounded p-0.5 text-midnight-500 hover:bg-midnight-800 hover:text-white"
+                      className="flex items-center rounded p-0.5 text-midnight-500 hover:bg-midnight-800 hover:text-ink"
                       aria-expanded={expanded}
                       aria-label={`${expanded ? 'Hide' : 'Show'} the details of ${name}`}
                       onClick={() => toggle(name)}
@@ -127,11 +127,11 @@ export function SubSlices({
   ]
 
   return (
-    <ul className="mt-1.5 space-y-0.5 border-l border-midnight-700 pl-3">
+    <ul className="mt-1.5 space-y-0.5 border-l border-line-strong pl-3">
       {rows.map(r => (
         <li key={r.name} className="flex justify-between text-xs text-midnight-400">
           <Tooltip label={`Show ${r.name} transactions`}>
-            <button className="hover:text-white hover:underline" onClick={() => onSelect(r.name)}>
+            <button className="hover:text-ink hover:underline" onClick={() => onSelect(r.name)}>
               {r.name}
             </button>
           </Tooltip>

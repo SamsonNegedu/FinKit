@@ -23,16 +23,16 @@ export default function ContractsFromUploads({
       <p className="mt-1 text-xs text-midnight-400">
         These files stay in your browser. Adding one saves only its name, amount and how often it is paid.
       </p>
-      <ul className="mt-2 divide-y divide-midnight-800">
+      <ul className="mt-2 divide-y divide-line">
         {candidates.map(c => (
           <li key={c.key} className="flex items-center gap-3 py-2">
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-white">{c.name}</span>
+              <span className="block truncate text-sm font-medium text-ink">{c.name}</span>
               <span className="block text-xs text-midnight-400">
                 {c.count} payments · {c.category}
               </span>
             </span>
-            <span className="whitespace-nowrap text-sm tabular-nums text-white">
+            <span className="whitespace-nowrap text-sm tabular-nums text-ink">
               {formatCurrency(c.amount, c.currency)}
               <span className="text-xs text-midnight-400"> / {EVERY[c.frequency]}</span>
             </span>

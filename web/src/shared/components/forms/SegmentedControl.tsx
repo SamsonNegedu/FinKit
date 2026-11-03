@@ -49,8 +49,8 @@ export default function SegmentedControl<T extends string>({
           value={o.value}
           className={
             track
-              ? 'flex items-center gap-1.5 rounded-md px-3 py-1 text-sm text-midnight-300 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-accent data-[state=checked]:bg-midnight-600 data-[state=checked]:text-white'
-              : `${PILL} bg-midnight-800 text-midnight-300 hover:bg-midnight-700 data-[state=checked]:bg-accent data-[state=checked]:text-white`
+              ? 'flex items-center gap-1.5 rounded-md px-3 py-1 text-sm text-midnight-300 outline-none transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-accent data-[state=checked]:bg-midnight-600 data-[state=checked]:text-ink'
+              : `${PILL} bg-midnight-800 text-midnight-300 hover:bg-midnight-700 data-[state=checked]:bg-accent data-[state=checked]:text-midnight-950`
           }
         >
           {o.icon}

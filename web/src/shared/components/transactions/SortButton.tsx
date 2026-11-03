@@ -14,7 +14,7 @@ export default function SortButton({
   children: ReactNode
 }) {
   return (
-    <button onClick={() => onSort(field)} className="flex items-center gap-1 hover:text-white transition-colors">
+    <button onClick={() => onSort(field)} className="flex items-center gap-1 hover:text-ink transition-colors">
       {children}
       <ArrowUpDown className={`w-3 h-3 ${active ? 'text-accent' : 'text-midnight-500'}`} />
     </button>

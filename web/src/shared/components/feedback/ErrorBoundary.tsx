@@ -19,9 +19,9 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
     }
 
     return (
-      <div className="min-h-screen bg-midnight-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-surface-page flex items-center justify-center p-6">
         <div className="card max-w-md text-center space-y-4">
-          <h1 className="text-xl font-semibold text-white">Something went wrong</h1>
+          <h1 className="text-xl font-semibold text-ink">Something went wrong</h1>
           <p className="text-sm text-midnight-300">{this.state.error.message}</p>
           <div className="flex gap-3 justify-center">
             <button className="btn-secondary" onClick={() => window.location.reload()}>

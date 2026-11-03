@@ -22,15 +22,15 @@ export default function TabLinks({
   return (
     <nav
       aria-label={ariaLabel}
-      className={`flex gap-1 overflow-x-auto overflow-y-hidden border-b border-midnight-700 ${className}`}
+      className={`flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line-strong ${className}`}
     >
       {links.map(l => (
         <Link
           key={l.label}
           {...l.link}
           aria-current={l.active ? 'page' : undefined}
-          className={`-mb-px shrink-0 border-b-2 px-4 py-2 text-sm font-medium outline-none transition-colors focus-visible:text-white ${
-            l.active ? 'border-accent text-white' : 'border-transparent text-midnight-400 hover:text-white'
+          className={`-mb-px shrink-0 border-b-2 px-4 py-2 text-sm font-medium outline-none transition-colors focus-visible:text-ink ${
+            l.active ? 'border-accent text-ink' : 'border-transparent text-midnight-400 hover:text-ink'
           }`}
         >
           {l.label}

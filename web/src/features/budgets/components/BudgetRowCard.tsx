@@ -51,14 +51,14 @@ export default function BudgetRowCard({
       ? { text: `${formatCurrency(row.left, row.currency)} ${row.goal ? 'to go' : 'left'}`, tone: 'text-midnight-300' }
       : row.goal
         ? { text: 'Goal reached', tone: 'text-cyan-400' }
-        : { text: `${formatCurrency(-row.left, row.currency)} over`, tone: 'text-rose-400' }
+        : { text: `${formatCurrency(-row.left, row.currency)} over`, tone: 'text-negative' }
 
   return (
     <li
       className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-2.5 text-sm ${BUDGET_COLUMNS}`}
     >
       <button
-        className="col-start-1 row-start-1 flex min-w-0 items-center gap-2.5 font-medium text-white hover:underline"
+        className="col-start-1 row-start-1 flex min-w-0 items-center gap-2.5 font-medium text-ink hover:underline"
         onClick={onOpen}
       >
         <CategoryIcon category={row.category} size="sm" />
@@ -90,7 +90,7 @@ export default function BudgetRowCard({
           {draft === null ? (
             <Tooltip label="Click to change the limit">
               <button
-                className="rounded px-1 text-white underline decoration-midnight-500 decoration-dotted underline-offset-4 hover:bg-midnight-800"
+                className="rounded px-1 text-ink underline decoration-midnight-500 decoration-dotted underline-offset-4 hover:bg-midnight-800"
                 aria-label={`Change the ${row.category} limit, now ${formatCurrency(row.amount, row.currency)}`}
                 onClick={() => setDraft(String(row.base))}
               >
@@ -118,7 +118,7 @@ export default function BudgetRowCard({
         </span>
       </span>
       <span
-        className={`col-start-2 row-start-3 text-right tabular-nums sm:col-start-5 sm:row-start-1 ${left.tone} ${row.state === 'watch' ? 'sm:!text-amber-400' : ''}`}
+        className={`col-start-2 row-start-3 text-right tabular-nums sm:col-start-5 sm:row-start-1 ${left.tone} ${row.state === 'watch' ? 'sm:!text-warning' : ''}`}
       >
         {left.text}
       </span>
@@ -127,7 +127,7 @@ export default function BudgetRowCard({
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button
-              className="rounded-md p-1.5 text-midnight-400 hover:bg-midnight-800 hover:text-white"
+              className="rounded-md p-1.5 text-midnight-400 hover:bg-midnight-800 hover:text-ink"
               aria-label={`Options for the ${row.category} budget`}
             >
               <MoreHorizontal className="h-4 w-4" />
@@ -138,7 +138,7 @@ export default function BudgetRowCard({
               align="end"
               sideOffset={4}
               collisionPadding={8}
-              className="z-[80] w-64 rounded-xl border border-midnight-600 bg-midnight-800 p-1 shadow-2xl"
+              className="z-[80] w-64 rounded-xl border border-line-strong bg-midnight-800 p-1 shadow-2xl"
             >
               <DropdownMenu.Item className={ITEM} onSelect={onOpen}>
                 <span className="w-4" />
@@ -154,7 +154,7 @@ export default function BudgetRowCard({
                   Carry unspent money to next month
                 </DropdownMenu.CheckboxItem>
               )}
-              <DropdownMenu.Item className={`${ITEM} text-rose-400`} disabled={busy} onSelect={onRemove}>
+              <DropdownMenu.Item className={`${ITEM} text-negative`} disabled={busy} onSelect={onRemove}>
                 <span className="w-4" />
                 Remove budget
               </DropdownMenu.Item>
@@ -168,7 +168,7 @@ export default function BudgetRowCard({
         </p>
       )}
       {!row.goal && row.projected !== null && row.projected > row.amount && row.state !== 'over' && (
-        <p className="col-span-full row-start-4 text-xs text-amber-400 sm:col-start-1 sm:row-start-2">
+        <p className="col-span-full row-start-4 text-xs text-warning sm:col-start-1 sm:row-start-2">
           At this pace you'll reach about {formatCurrency(row.projected, row.currency)} by month end.
         </p>
       )}
@@ -177,9 +177,9 @@ export default function BudgetRowCard({
 }
 
 const DOT: Record<NonNullable<HistoryMonth['state']>, string> = {
-  ok: 'bg-emerald-500',
-  watch: 'bg-amber-500',
-  over: 'bg-rose-500',
+  ok: 'bg-positive',
+  watch: 'bg-warning',
+  over: 'bg-negative',
   met: 'bg-cyan-500',
   short: 'bg-cyan-500/30',
 }
@@ -217,7 +217,7 @@ function HistoryDots({ months, currency, goal }: { months: HistoryMonth[]; curre
       {months.map(m => (
         <Tooltip key={m.label} label={dotLabel(m, currency, goal)}>
           <span
-            className={`h-2.5 w-2.5 rounded-full ${m.state ? DOT[m.state] : 'border border-midnight-600'}`}
+            className={`h-2.5 w-2.5 rounded-full ${m.state ? DOT[m.state] : 'border border-line-strong'}`}
             aria-hidden="true"
           />
         </Tooltip>

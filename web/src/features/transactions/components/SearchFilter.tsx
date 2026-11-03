@@ -52,7 +52,7 @@ export default function SearchFilter({
         {searchQuery && (
           <button
             onClick={() => onSearchChange('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-midnight-400 hover:text-white"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-midnight-400 hover:text-ink"
           >
             <X className="w-4 h-4" />
           </button>
@@ -73,9 +73,9 @@ export default function SearchFilter({
           <Popover.Content
             align="start"
             sideOffset={8}
-            className="z-[80] max-h-[min(20rem,var(--radix-popover-content-available-height))] min-w-[14rem] overflow-y-auto rounded-xl border border-midnight-600 bg-midnight-800 py-1 shadow-2xl"
+            className="z-[80] max-h-[min(20rem,var(--radix-popover-content-available-height))] min-w-[14rem] overflow-y-auto rounded-xl border border-line-strong bg-midnight-800 py-1 shadow-2xl"
           >
-            <div className="sticky top-0 z-10 border-b border-midnight-700 bg-midnight-800">
+            <div className="sticky top-0 z-10 border-b border-line-strong bg-midnight-800">
               <input
                 type="text"
                 autoFocus
@@ -88,7 +88,7 @@ export default function SearchFilter({
               <button
                 onClick={() => onCategoryChange([])}
                 disabled={selectedCategories.length === 0}
-                className="w-full border-t border-midnight-700 px-4 py-2 text-left text-sm text-midnight-300 hover:bg-midnight-700 disabled:opacity-40"
+                className="w-full border-t border-line-strong px-4 py-2 text-left text-sm text-midnight-300 hover:bg-midnight-700 disabled:opacity-40"
               >
                 Clear all
               </button>

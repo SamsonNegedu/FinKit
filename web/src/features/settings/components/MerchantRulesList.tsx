@@ -74,7 +74,7 @@ export default function MerchantRulesList() {
               {visible.map(rule => (
                 <div key={rule.merchant} className="grid grid-cols-[1fr,180px,40px] gap-2 items-center">
                   <span className="min-w-0" title={rule.merchantDisplay || rule.merchant}>
-                    <span className="block truncate text-sm text-white">{rule.merchantDisplay || rule.merchant}</span>
+                    <span className="block truncate text-sm text-ink">{rule.merchantDisplay || rule.merchant}</span>
                     {rule.detail && <span className="block truncate text-xs text-midnight-400">{rule.detail}</span>}
                   </span>
                   <Select
@@ -89,7 +89,7 @@ export default function MerchantRulesList() {
                   />
                   <button
                     onClick={() => remove(rule)}
-                    className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-red-400"
+                    className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-negative"
                     aria-label={`Delete rule for ${rule.merchantDisplay || rule.merchant}`}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -100,7 +100,7 @@ export default function MerchantRulesList() {
             </div>
           </>
         )}
-        {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+        {error && <p className="text-xs text-negative mt-2">{error}</p>}
       </section>
     </>
   )

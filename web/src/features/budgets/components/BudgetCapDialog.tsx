@@ -49,12 +49,12 @@ export default function BudgetCapDialog({
             onKeyDown={e => e.key === 'Enter' && value > 0 && submit()}
           />
           {suggested > 0 && (
-            <button className="text-xs text-emerald-400 hover:underline" onClick={() => setAmount(String(suggested))}>
+            <button className="text-xs text-positive hover:underline" onClick={() => setAmount(String(suggested))}>
               Use {formatCurrency(suggested, currency)}, the total of your category budgets
             </button>
           )}
         </div>
-        {error && <p className="text-sm text-rose-400">{error}</p>}
+        {error && <p className="text-sm text-negative">{error}</p>}
         <div className="flex justify-end gap-2">
           <button className="btn-secondary" onClick={onClose}>
             Cancel

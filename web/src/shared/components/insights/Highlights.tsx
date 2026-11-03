@@ -4,7 +4,7 @@ import { ArrowDownRight, ArrowUpRight, ChevronDown, Lightbulb, X } from 'lucide-
 import type { Highlight } from '@/shared/utils/analysis/highlights'
 
 const ICON = { up: ArrowUpRight, down: ArrowDownRight, neutral: Lightbulb } as const
-const COLOR = { up: 'text-amber-300', down: 'text-accent', neutral: 'text-midnight-400' } as const
+const COLOR = { up: 'text-warning', down: 'text-positive', neutral: 'text-ink-faint' } as const
 
 const COLLAPSED_KEY = 'finkit.highlights.collapsed'
 
@@ -50,7 +50,7 @@ export default function Highlights({
   }
 
   return (
-    <section className="card !p-4">
+    <section className="card">
       <h2 className="text-xs uppercase tracking-wide text-midnight-500">
         {collapsible ? (
           <button
@@ -59,7 +59,7 @@ export default function Highlights({
             className="flex w-full items-center justify-between gap-2 uppercase hover:text-midnight-300"
           >
             <span>
-              What stands out <span className="normal-case text-midnight-600">({items.length})</span>
+              What stands out <span className="normal-case text-midnight-400">({items.length})</span>
             </span>
             <ChevronDown className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-180'}`} />
           </button>
@@ -94,7 +94,7 @@ export default function Highlights({
                   <button
                     onClick={() => onDismiss(h)}
                     aria-label="Don't flag this again"
-                    className="ml-1 mt-1 shrink-0 rounded p-1 text-midnight-500 hover:bg-midnight-800 hover:text-white"
+                    className="ml-1 mt-1 shrink-0 rounded p-1 text-midnight-500 hover:bg-midnight-800 hover:text-ink"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>

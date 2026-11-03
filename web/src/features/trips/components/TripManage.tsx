@@ -19,10 +19,10 @@ const Section = ({
   action?: ReactNode
   children?: ReactNode
 }) => (
-  <section className="space-y-3 border-t border-midnight-700 pt-6 first:border-t-0 first:pt-0">
+  <section className="space-y-3 border-t border-line-strong pt-6 first:border-t-0 first:pt-0">
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div className="min-w-0 flex-1 basis-64">
-        <h3 className="font-medium text-white">{title}</h3>
+        <h3 className="font-medium text-ink">{title}</h3>
         {hint && <p className="mt-0.5 text-sm text-midnight-400">{hint}</p>}
       </div>
       {action}

@@ -4,7 +4,7 @@ export default function DashboardSkeleton() {
     <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="Loading transactions">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[0, 1, 2, 3].map(i => (
-          <div key={i} className="card h-24 bg-midnight-900" />
+          <div key={i} className="card h-24 bg-surface" />
         ))}
       </div>
       <div className="card h-14" />

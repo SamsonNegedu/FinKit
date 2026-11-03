@@ -17,7 +17,7 @@ const Chip = ({ children }: { children: string }) => (
   <span className="rounded-full bg-midnight-800 px-2 py-0.5 text-[11px] text-midnight-300">{children}</span>
 )
 
-const iconButton = 'rounded p-1 text-midnight-400 hover:bg-midnight-700 hover:text-white'
+const iconButton = 'rounded p-1 text-midnight-400 hover:bg-midnight-700 hover:text-ink'
 
 /** A trip's transactions in the same table as the monthly ones, with the trip's categories and actions. */
 export default function TripTransactions({
@@ -161,9 +161,9 @@ export default function TripTransactions({
       {cat && (
         <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-midnight-300">
           <span>Showing</span>
-          <span className="rounded-full bg-midnight-800 px-3 py-1 text-white">{sub ? `${cat} · ${sub}` : cat}</span>
+          <span className="rounded-full bg-midnight-800 px-3 py-1 text-ink">{sub ? `${cat} · ${sub}` : cat}</span>
           <button
-            className="flex items-center gap-1 text-midnight-400 hover:text-white"
+            className="flex items-center gap-1 text-midnight-400 hover:text-ink"
             onClick={() =>
               navigate({ to: '/trips/$tripId', params: { tripId: trip.id }, search: { tab: 'transactions' } })
             }

@@ -21,7 +21,7 @@ function PutAwayList({
   const max = Math.max(...rows.map(r => r.total), 1)
 
   return (
-    <div className="mt-4 shrink-0 border-t border-midnight-800 pt-3">
+    <div className="mt-4 shrink-0 border-t border-line pt-3">
       <h3 className="px-2 text-xs font-normal uppercase tracking-wide text-midnight-500">
         Put away, not counted as spent
       </h3>
@@ -37,10 +37,10 @@ function PutAwayList({
                   <CategoryIcon category={r.category} color={r.color} />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2 text-sm">
-                      <span className="truncate font-medium text-white">
+                      <span className="truncate font-medium text-ink">
                         {r.category === 'Investment' ? 'Invested' : 'Saved'}
                       </span>
-                      <span className="whitespace-nowrap tabular-nums text-white">
+                      <span className="whitespace-nowrap tabular-nums text-ink">
                         {formatCurrency(r.total, currency)}
                       </span>
                     </span>
@@ -62,7 +62,7 @@ function PutAwayList({
                   onClick={() => setOpen(open === r.category ? null : r.category)}
                   aria-expanded={open === r.category}
                   aria-label={`Where ${r.category} went`}
-                  className="ml-1 rounded-lg p-2 text-midnight-400 hover:bg-accent/10 hover:text-white"
+                  className="ml-1 rounded-lg p-2 text-midnight-400 hover:bg-accent/10 hover:text-ink"
                 >
                   <ChevronDown className={`h-4 w-4 transition-transform ${open === r.category ? 'rotate-180' : ''}`} />
                 </button>
@@ -124,7 +124,7 @@ function CategoryDrilldown({
     <ul>
       {row.details.map(d => (
         <li key={d.detail ?? 'none'}>
-          <p className="flex items-baseline justify-between gap-2 py-1 pl-14 pr-2 text-sm text-white">
+          <p className="flex items-baseline justify-between gap-2 py-1 pl-14 pr-2 text-sm text-ink">
             <span className="truncate">{d.detail ?? 'No subcategory yet'}</span>
             <span className="whitespace-nowrap tabular-nums">
               {formatCurrency(d.total, currency)}{' '}
@@ -160,7 +160,7 @@ export default function CategoryBreakdown({
   if (rows.length === 0 && putAway.length === 0) {
     return (
       <section className="card">
-        <h2 className="text-lg font-semibold text-white">Where it went</h2>
+        <h2 className="text-lg font-semibold text-ink">Where it went</h2>
         <p className="mt-3 text-midnight-400">No spending in this period.</p>
       </section>
     )
@@ -169,7 +169,7 @@ export default function CategoryBreakdown({
 
   return (
     <section className="card flex flex-col !p-4 sm:!p-6 lg:h-full lg:min-h-0">
-      <h2 className="text-lg font-semibold text-white">Where it went</h2>
+      <h2 className="text-lg font-semibold text-ink">Where it went</h2>
       <div
         className="mt-3 flex h-2.5 shrink-0 gap-0.5 overflow-hidden rounded-full"
         role="img"
@@ -194,8 +194,8 @@ export default function CategoryBreakdown({
                     <CategoryIcon category={r.category} color={r.color} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2 text-sm">
-                        <span className="truncate font-medium text-white">{r.category}</span>
-                        <span className="whitespace-nowrap tabular-nums text-white">
+                        <span className="truncate font-medium text-ink">{r.category}</span>
+                        <span className="whitespace-nowrap tabular-nums text-ink">
                           {formatCurrency(r.total, currency)}
                         </span>
                       </span>
@@ -214,7 +214,7 @@ export default function CategoryBreakdown({
                         {Math.round(r.share)}% · {r.count}×
                       </span>
                       {delta !== null && Math.abs(delta) >= 1 && (
-                        <span className={`tabular-nums sm:w-24 ${delta > 0 ? 'text-amber-300' : 'text-accent'}`}>
+                        <span className={`tabular-nums sm:w-24 ${delta > 0 ? 'text-warning' : 'text-accent'}`}>
                           {delta > 0 ? '▲' : '▼'} {formatCurrency(Math.abs(delta), currency)}
                         </span>
                       )}
@@ -226,7 +226,7 @@ export default function CategoryBreakdown({
                     onClick={() => setOpen(open === r.category ? null : r.category)}
                     aria-expanded={open === r.category}
                     aria-label={`Where ${r.category} went`}
-                    className="ml-1 rounded-lg p-2 text-midnight-400 hover:bg-accent/10 hover:text-white"
+                    className="ml-1 rounded-lg p-2 text-midnight-400 hover:bg-accent/10 hover:text-ink"
                   >
                     <ChevronDown
                       className={`h-4 w-4 transition-transform ${open === r.category ? 'rotate-180' : ''}`}

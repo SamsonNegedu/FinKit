@@ -47,7 +47,7 @@ export default function MerchantGroupRow({
 
   return (
     <Fragment key={group.key}>
-      <tr className="border-b border-midnight-700 bg-midnight-800/40 max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto] max-md:items-center">
+      <tr className="border-b border-line-strong bg-midnight-800/40 max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto] max-md:items-center">
         {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label -- a table cell, not a control */}
         <td className="py-3 px-4 max-md:hidden" />
         <td colSpan={2} className="py-3 px-4 max-md:col-start-1 max-md:row-start-1 max-md:py-2 max-md:px-3">
@@ -91,13 +91,13 @@ export default function MerchantGroupRow({
                 ) : (
                   <ChevronDown className="w-4 h-4 text-midnight-400" />
                 )}
-                <span className="text-sm font-medium text-white truncate">{shownName}</span>
+                <span className="text-sm font-medium text-ink truncate">{shownName}</span>
                 <span className="text-xs text-midnight-400">{group.items.length}×</span>
               </button>
               <Tooltip label="Rename (only changes how it's shown)">
                 <button
                   onClick={() => setRenamingKey(group.key)}
-                  className="p-1 text-midnight-500 hover:text-white"
+                  className="p-1 text-midnight-500 hover:text-ink"
                   aria-label={`Rename ${shownName}`}
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -107,7 +107,7 @@ export default function MerchantGroupRow({
                 <Link
                   to="/transactions/merchants/$merchantKey"
                   params={{ merchantKey: group.key }}
-                  className="p-1 text-midnight-500 hover:text-white"
+                  className="p-1 text-midnight-500 hover:text-ink"
                   aria-label={`Open ${shownName}`}
                 >
                   <ArrowUpRight className="w-3.5 h-3.5" />

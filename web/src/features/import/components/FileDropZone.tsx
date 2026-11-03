@@ -55,7 +55,7 @@ export default function FileDropZone({ isLoading, onFileSelect }: FileDropZonePr
           ${
             isDragging
               ? 'border-accent bg-accent/10 scale-[1.02]'
-              : 'border-midnight-600 hover:border-midnight-500 bg-midnight-900/50'
+              : 'border-line-strong hover:border-midnight-500 bg-surface/50'
           }
           ${isLoading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}
         `}
@@ -75,7 +75,7 @@ export default function FileDropZone({ isLoading, onFileSelect }: FileDropZonePr
               <Loader2 className="w-8 h-8 text-accent animate-spin" />
             </div>
             <div>
-              <p className="text-lg font-medium text-white">Processing transactions...</p>
+              <p className="text-lg font-medium text-ink">Processing transactions...</p>
               <p className="text-sm text-midnight-400 mt-1">Filtering and categorizing</p>
             </div>
           </>
@@ -94,7 +94,7 @@ export default function FileDropZone({ isLoading, onFileSelect }: FileDropZonePr
               )}
             </div>
             <div>
-              <p className="text-lg font-medium text-white">
+              <p className="text-lg font-medium text-ink">
                 {isDragging ? 'Drop your file here' : 'Drop your file here or click to browse'}
               </p>
               <p className="text-sm text-midnight-400 mt-1">CSV, Excel (.xlsx), and OFX formats supported</p>

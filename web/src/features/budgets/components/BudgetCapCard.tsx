@@ -24,15 +24,11 @@ export default function BudgetCapCard({
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium text-midnight-300">Monthly cap on all spending</h2>
         <span className="flex items-center">
-          <button
-            className="p-1.5 text-midnight-400 hover:text-white"
-            aria-label="Edit the monthly cap"
-            onClick={onEdit}
-          >
+          <button className="p-1.5 text-midnight-400 hover:text-ink" aria-label="Edit the monthly cap" onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <button
-            className="p-1.5 text-midnight-400 hover:text-white"
+            className="p-1.5 text-midnight-400 hover:text-ink"
             aria-label="Remove the monthly cap"
             onClick={onRemove}
           >
@@ -54,7 +50,7 @@ export default function BudgetCapCard({
         <span className="text-midnight-300">
           {formatCurrency(cap.spent, currency)} of {formatCurrency(cap.cap, currency)} ({Math.round(cap.used * 100)}%)
         </span>
-        <span className={over ? 'text-rose-400' : 'text-midnight-300'}>
+        <span className={over ? 'text-negative' : 'text-midnight-300'}>
           {over ? `${formatCurrency(-cap.left, currency)} over` : `${formatCurrency(cap.left, currency)} left`}
         </span>
       </div>

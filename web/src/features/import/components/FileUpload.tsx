@@ -48,7 +48,7 @@ export default function FileUpload({ onFileUpload, isLoading, error, bankingEnab
   return (
     <div className="max-w-2xl mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-semibold text-white mb-2">
+        <h2 className="text-2xl font-semibold text-ink mb-2">
           {bankingEnabled ? 'Bring in your transactions' : 'Add transactions'}
         </h2>
         <p className="text-midnight-400 text-sm">
@@ -79,11 +79,11 @@ export default function FileUpload({ onFileUpload, isLoading, error, bankingEnab
       {showFileDropZone() && <FileDropZone isLoading={isLoading} onFileSelect={handleFileSelect} />}
 
       {error && (
-        <div className="mt-4 flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+        <div className="mt-4 flex items-start gap-3 p-4 bg-negative/10 border border-negative/30 rounded-xl">
+          <AlertCircle className="w-5 h-5 text-negative flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-red-400 font-medium">Failed to parse file</p>
-            <p className="text-red-400/70 text-sm mt-1">{error}</p>
+            <p className="text-negative font-medium">Failed to parse file</p>
+            <p className="text-negative/70 text-sm mt-1">{error}</p>
           </div>
         </div>
       )}
@@ -93,7 +93,7 @@ export default function FileUpload({ onFileUpload, isLoading, error, bankingEnab
           <p className="text-xs text-midnight-500">No export handy?</p>
           <button
             onClick={() => onFileUpload(createSampleFile(), { dateFilter: 'all' })}
-            className="mt-2 text-sm text-midnight-300 hover:text-white underline underline-offset-2"
+            className="mt-2 text-sm text-midnight-300 hover:text-ink underline underline-offset-2"
           >
             Try with sample data
           </button>

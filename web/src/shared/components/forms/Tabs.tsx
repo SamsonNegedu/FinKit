@@ -18,12 +18,12 @@ interface Props<T extends string> {
 export default function Tabs<T extends string>({ value, onChange, tabs }: Props<T>) {
   return (
     <RadixTabs.Root value={value} onValueChange={v => onChange(v as T)}>
-      <RadixTabs.List className="mb-4 flex gap-1 border-b border-midnight-700">
+      <RadixTabs.List className="mb-4 flex gap-1 border-b border-line-strong">
         {tabs.map(t => (
           <RadixTabs.Trigger
             key={t.value}
             value={t.value}
-            className="-mb-px border-b-2 border-transparent px-4 py-2 text-sm font-medium text-midnight-400 outline-none transition-colors hover:text-white focus-visible:text-white data-[state=active]:border-accent data-[state=active]:text-white"
+            className="-mb-px border-b-2 border-transparent px-4 py-2 text-sm font-medium text-midnight-400 outline-none transition-colors hover:text-ink focus-visible:text-ink data-[state=active]:border-accent data-[state=active]:text-ink"
           >
             {t.label}
             {t.count !== undefined && <span className="ml-2 text-xs text-midnight-500">{t.count}</span>}

@@ -157,7 +157,7 @@ export default function BudgetsPage() {
   const failure = (save.error ?? remove.error ?? saveCap.error ?? removeCap.error ?? error)?.message
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Budgets"
         description="A monthly limit per category. Spending is counted from your transactions, the same way as in Analytics."
@@ -170,7 +170,7 @@ export default function BudgetsPage() {
           </div>
         }
       />
-      {failure && !adding && !capOpen && <p className="text-sm text-rose-400">{failure}</p>}
+      {failure && !adding && !capOpen && <p className="text-sm text-negative">{failure}</p>}
       {spendRows.length > 0 && (
         <BudgetSummary
           totals={totals}
@@ -202,7 +202,7 @@ export default function BudgetsPage() {
         </div>
       ) : (
         <>
-          <section className="card space-y-1 divide-y divide-midnight-800">
+          <section className="card space-y-1 divide-y divide-line">
             {many && (
               <div className="flex flex-wrap items-center gap-2 pb-3">
                 <div className="relative">
@@ -233,18 +233,18 @@ export default function BudgetsPage() {
               <p className="py-2 text-sm text-midnight-400">No budgets match.</p>
             )}
             <ListHead labels={['Used', 'Spent', 'Limit', 'Left', 'Last 6 months']} />
-            <ul className="divide-y divide-midnight-800">{(fold ? attention : shown).map(card)}</ul>
+            <ul className="divide-y divide-line">{(fold ? attention : shown).map(card)}</ul>
             {fold && onTrack.length > 0 && (
               <div>
                 <button
-                  className="flex items-center gap-1 pt-3 text-sm text-midnight-300 hover:text-white"
+                  className="flex items-center gap-1 pt-3 text-sm text-midnight-300 hover:text-ink"
                   aria-expanded={showOk}
                   onClick={() => setShowOk(v => !v)}
                 >
                   {showOk ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   {onTrack.length} on track
                 </button>
-                {showOk && <ul className="divide-y divide-midnight-800">{onTrack.map(card)}</ul>}
+                {showOk && <ul className="divide-y divide-line">{onTrack.map(card)}</ul>}
               </div>
             )}
             {goalRows.length > 0 && (
@@ -252,7 +252,7 @@ export default function BudgetsPage() {
                 <h2 className="pb-1 text-xs uppercase tracking-wide text-midnight-500">
                   Put away <span className="normal-case">· a goal to reach, not counted as spent</span>
                 </h2>
-                <ul className="divide-y divide-midnight-800">{goalRows.map(card)}</ul>
+                <ul className="divide-y divide-line">{goalRows.map(card)}</ul>
               </div>
             )}
           </section>
@@ -265,21 +265,21 @@ export default function BudgetsPage() {
               Spent {isCurrent ? 'this month' : `in ${monthLabel}`} with no budget
             </h2>
             {suggestions.length > 0 && rows.length > 0 && (
-              <button className="text-sm text-emerald-400 hover:underline" onClick={() => setSetup(true)}>
+              <button className="text-sm text-positive hover:underline" onClick={() => setSetup(true)}>
                 Suggest limits for these
               </button>
             )}
           </div>
-          <ul className="divide-y divide-midnight-800">
+          <ul className="divide-y divide-line">
             {open.map(o => (
               <li key={o.category} className="flex items-center justify-between gap-3 py-1.5 text-sm">
-                <span className="flex items-center gap-2 text-white">
+                <span className="flex items-center gap-2 text-ink">
                   <CategoryIcon category={o.category} size="sm" />
                   {o.category}
                 </span>
                 <span className="flex items-center gap-3 tabular-nums text-midnight-300">
                   {formatCurrency(o.spent, baseCurrency)}
-                  <button className="text-emerald-400 hover:underline" onClick={() => setAdding(o.category)}>
+                  <button className="text-positive hover:underline" onClick={() => setAdding(o.category)}>
                     Set budget
                   </button>
                 </span>

@@ -12,7 +12,7 @@ import { placeColor } from '../utils/placeColor'
 const Stat = ({ label, value, tone }: { label: string; value: string; tone?: string }) => (
   <div>
     <p className="text-xs uppercase tracking-wide text-midnight-400">{label}</p>
-    <p className={`text-xl font-semibold ${tone ?? 'text-white'}`}>{value}</p>
+    <p className={`figure-sm ${tone ?? ''}`}>{value}</p>
   </div>
 )
 
@@ -30,7 +30,7 @@ function Budget({ spent, budget, money }: { spent: number; budget: number; money
       </div>
       <div className="mt-1 h-2 rounded bg-midnight-800">
         <div
-          className={`h-2 rounded ${over ? 'bg-expense' : spent / budget > 0.8 ? 'bg-orange-400' : 'bg-income'}`}
+          className={`h-2 rounded ${over ? 'bg-expense' : spent / budget > 0.8 ? 'bg-warning' : 'bg-income'}`}
           style={{ width: `${used}%` }}
         />
       </div>
@@ -97,7 +97,7 @@ function Summary({ totals, trip }: { totals: TripTotals; trip: Trip }) {
       )}
       {notes.length > 0 && <p className="text-sm text-midnight-400">{notes.join(' · ')}</p>}
       {view && (
-        <div className="space-y-3 border-t border-midnight-800 pt-4">
+        <div className="space-y-3 border-t border-line pt-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-midnight-400">By</span>
             <SegmentedControl
@@ -130,7 +130,7 @@ function Summary({ totals, trip }: { totals: TripTotals; trip: Trip }) {
         </div>
       )}
       {totals.settlement.length > 0 && (
-        <div className="border-t border-midnight-800 pt-4">
+        <div className="border-t border-line pt-4">
           <Settlement rows={totals.settlement} money={money} />
         </div>
       )}

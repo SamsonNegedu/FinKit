@@ -43,7 +43,7 @@ export default function CountsToMonth({
             className={
               moved
                 ? 'flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent hover:bg-accent/25'
-                : 'rounded p-0.5 text-midnight-500 opacity-0 hover:bg-midnight-700 hover:text-white focus:opacity-100 group-hover:opacity-100 max-md:hidden'
+                : 'rounded p-0.5 text-midnight-500 opacity-0 hover:bg-midnight-700 hover:text-ink focus:opacity-100 group-hover:opacity-100 max-md:hidden'
             }
           >
             <CalendarClock className="h-3 w-3" />
@@ -56,9 +56,9 @@ export default function CountsToMonth({
           align="start"
           sideOffset={4}
           collisionPadding={8}
-          className="z-[80] w-[220px] overflow-hidden rounded-lg border border-midnight-600 bg-midnight-800 shadow-xl"
+          className="z-[80] w-[220px] overflow-hidden rounded-lg border border-line-strong bg-midnight-800 shadow-xl"
         >
-          <p className="border-b border-midnight-600 px-3 py-3 text-xs text-midnight-400">Count this payment in</p>
+          <p className="border-b border-line-strong px-3 py-3 text-xs text-midnight-400">Count this payment in</p>
           {options.map(month => (
             <button
               key={month}
@@ -69,7 +69,7 @@ export default function CountsToMonth({
                 })
                 setOpen(false)
               }}
-              className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm text-white hover:bg-midnight-700"
+              className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm text-ink hover:bg-midnight-700"
             >
               <span>
                 {label(month)}

@@ -12,14 +12,12 @@ function Tile({
   note?: string
   tone?: 'up' | 'down' | 'bad'
 }) {
-  const color = tone === 'up' ? 'text-amber-300' : tone === 'down' ? 'text-accent' : 'text-midnight-400'
+  const color = tone === 'up' ? 'text-warning' : tone === 'down' ? 'text-positive' : 'text-ink-faint'
 
   return (
-    <div className="card !p-4">
-      <p className="text-sm font-medium text-midnight-400">{label}</p>
-      <p className={`mt-1 text-2xl font-bold tabular-nums ${tone === 'bad' ? 'text-expense' : 'text-white'}`}>
-        {value}
-      </p>
+    <div className="card-raised !p-4">
+      <p className="text-sm font-medium text-ink-faint">{label}</p>
+      <p className={`figure mt-1 ${tone === 'bad' ? 'text-negative' : ''}`}>{value}</p>
       {note && <p className={`mt-1 text-xs ${color}`}>{note}</p>}
     </div>
   )
@@ -33,7 +31,7 @@ export default function OverviewTiles({ a, currency }: { a: Analysis; currency: 
     a.previousSpent !== null && a.previousSpent > 0 ? ((a.spent - a.previousSpent) / a.previousSpent) * 100 : null
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <Tile label="Income" value={money(a.income)} />
       <Tile
         label="Spent"

@@ -83,7 +83,7 @@ export default function BanksPage() {
             <Landmark className="w-7 h-7" />
           </div>
           <div className="space-y-1.5 max-w-md">
-            <h2 className="text-xl font-semibold text-white">Connect your first bank</h2>
+            <h2 className="text-xl font-semibold text-ink">Connect your first bank</h2>
             <p className="text-sm text-midnight-400">
               Pick your bank and approve read-only access on its own page. FinKit then keeps your transactions up to
               date.

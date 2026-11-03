@@ -48,14 +48,14 @@ export default function SavedViews({
       {views.map(v => (
         <span
           key={v.name}
-          className="inline-flex items-center rounded-full bg-midnight-800 border border-midnight-700 text-sm"
+          className="inline-flex items-center rounded-full bg-midnight-800 border border-line-strong text-sm"
         >
-          <button onClick={() => onApply(v.search)} className="pl-3 pr-2 py-1 text-midnight-100 hover:text-white">
+          <button onClick={() => onApply(v.search)} className="pl-3 pr-2 py-1 text-midnight-100 hover:text-ink">
             {v.name}
           </button>
           <button
             onClick={() => update(views.filter(x => x.name !== v.name))}
-            className="pr-2 py-1 text-midnight-500 hover:text-red-400"
+            className="pr-2 py-1 text-midnight-500 hover:text-negative"
             aria-label={`Delete view ${v.name}`}
           >
             <X className="w-3.5 h-3.5" />
@@ -92,7 +92,7 @@ export default function SavedViews({
         hasFilters && (
           <button
             onClick={() => setNaming(true)}
-            className="inline-flex items-center gap-1.5 text-sm text-midnight-300 hover:text-white"
+            className="inline-flex items-center gap-1.5 text-sm text-midnight-300 hover:text-ink"
           >
             <Bookmark className="w-3.5 h-3.5" /> Save view
           </button>

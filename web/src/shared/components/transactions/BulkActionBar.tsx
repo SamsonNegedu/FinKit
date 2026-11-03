@@ -52,13 +52,13 @@ export default function BulkActionBar({
         </span>
       )}
       {rangeHint && selectedCount === 1 && rangeArmed && (
-        <span className="hidden rounded-full bg-accent px-3 py-1 text-xs font-medium text-white shadow-lg [@media(pointer:coarse)]:inline">
+        <span className="hidden rounded-full bg-accent px-3 py-1 text-xs font-medium text-midnight-950 shadow-lg [@media(pointer:coarse)]:inline">
           Tap the last row of the range
         </span>
       )}
-      <div className="bg-midnight-800 border border-midnight-600 rounded-xl shadow-2xl px-4 py-3 flex max-w-full items-center gap-4 overflow-x-auto whitespace-nowrap">
+      <div className="bg-midnight-800 border border-line-strong rounded-xl shadow-2xl px-4 py-3 flex max-w-full items-center gap-4 overflow-x-auto whitespace-nowrap">
         <span className="text-sm text-midnight-300">
-          <span className="font-medium text-white">{selectedCount}</span> selected
+          <span className="font-medium text-ink">{selectedCount}</span> selected
         </span>
         {totals.map(total => (
           <Tooltip
@@ -106,7 +106,7 @@ export default function BulkActionBar({
           <Tooltip label="Exclude from totals">
             <button
               onClick={onExclude}
-              className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 bg-warning/20 hover:bg-warning/30 text-warning rounded-lg transition-colors"
             >
               <EyeOff className="w-4 h-4" />
               <span className="text-sm">Exclude</span>

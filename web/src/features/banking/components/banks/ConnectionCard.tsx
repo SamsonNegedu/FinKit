@@ -27,18 +27,18 @@ export default function ConnectionCard({
   const left = Math.max(0, Math.min(consentDays, c.daysLeft))
 
   return (
-    <div className="border border-midnight-700 rounded-xl p-4 sm:p-5 bg-midnight-900 space-y-4">
+    <div className="border border-line-strong rounded-xl p-4 sm:p-5 bg-surface space-y-4">
       <div className="flex items-center justify-between gap-3">
         <Link
           to="/banks/$connectionId"
           params={{ connectionId: c.id }}
           className="flex items-center gap-3 min-w-0 group"
         >
-          <div className="w-10 h-10 rounded-lg bg-midnight-700 border border-midnight-600 grid place-items-center font-bold text-midnight-100 shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-midnight-700 border border-line-strong grid place-items-center font-bold text-midnight-100 shrink-0">
             {c.bank[0]}
           </div>
           <div className="min-w-0">
-            <p className="font-medium text-white truncate group-hover:underline">{c.bank}</p>
+            <p className="font-medium text-ink truncate group-hover:underline">{c.bank}</p>
             <p className="text-xs text-midnight-400">{c.country === 'DE' ? 'Germany' : c.country} · personal</p>
           </div>
         </Link>
@@ -74,7 +74,7 @@ export default function ConnectionCard({
         <div>
           <div className="h-1 rounded-full bg-midnight-800 overflow-hidden" aria-hidden>
             <div
-              className={`h-full ${c.status === 'expiring' ? 'bg-amber-400' : 'bg-accent'}`}
+              className={`h-full ${c.status === 'expiring' ? 'bg-warning' : 'bg-accent'}`}
               style={{ width: `${(left / consentDays) * 100}%` }}
             />
           </div>

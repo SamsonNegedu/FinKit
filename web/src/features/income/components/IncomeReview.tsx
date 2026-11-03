@@ -57,7 +57,7 @@ export default function IncomeReview({ transactions, onUpdateTransaction, curren
             <TrendingUp className="w-5 h-5 text-income" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Income Review</h3>
+            <h3 className="text-lg font-semibold text-ink">Income Review</h3>
             <p className="text-sm text-midnight-400">Review and adjust which income is counted in totals</p>
           </div>
         </div>
@@ -66,21 +66,21 @@ export default function IncomeReview({ transactions, onUpdateTransaction, curren
       <div className="grid grid-cols-3 gap-4">
         <div className="card !p-4">
           <p className="text-sm text-midnight-400 mb-1">Counted Income</p>
-          <p className="text-xl font-bold text-income">{formatCurrency(totalIncome, currency)}</p>
+          <p className="figure-sm text-income">{formatCurrency(totalIncome, currency)}</p>
           <p className="text-xs text-midnight-500 mt-1">
             {incomeTransactions.filter(tx => !tx.isExcluded).length} transactions
           </p>
         </div>
         <div className="card !p-4">
           <p className="text-sm text-midnight-400 mb-1">Excluded Income</p>
-          <p className="text-xl font-bold text-orange-400">{formatCurrency(excludedIncome, currency)}</p>
+          <p className="figure-sm text-warning">{formatCurrency(excludedIncome, currency)}</p>
           <p className="text-xs text-midnight-500 mt-1">
             {autoExcludedCount} auto + {manualExcludedCount} manual
           </p>
         </div>
         <div className="card !p-4">
           <p className="text-sm text-midnight-400 mb-1">Total Entries</p>
-          <p className="text-xl font-bold text-white">{incomeTransactions.length}</p>
+          <p className="figure-sm">{incomeTransactions.length}</p>
           <p className="text-xs text-midnight-500 mt-1">income transactions</p>
         </div>
       </div>
@@ -103,13 +103,13 @@ export default function IncomeReview({ transactions, onUpdateTransaction, curren
           )}
         </div>
 
-        <div className="flex flex-wrap gap-4 pt-4 border-t border-midnight-700 text-xs text-midnight-400">
+        <div className="flex flex-wrap gap-4 pt-4 border-t border-line-strong text-xs text-midnight-400">
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded bg-blue-500/30"></span>
+            <span className="w-3 h-3 rounded bg-info/30"></span>
             <span>Auto-excluded (internal transfer detected)</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded bg-orange-500/30"></span>
+            <span className="w-3 h-3 rounded bg-warning/30"></span>
             <span>Manually excluded</span>
           </div>
           <div className="flex items-center gap-2">

@@ -59,7 +59,7 @@ export default function TransactionNote({
           setDraft(note)
           onOpen()
         }}
-        className="mt-0.5 block max-w-full truncate text-left text-xs italic text-amber-300/80 hover:text-amber-200"
+        className="mt-0.5 block max-w-full truncate text-left text-xs italic text-warning/80 hover:text-warning"
       >
         {note}
       </button>

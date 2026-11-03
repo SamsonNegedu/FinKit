@@ -37,7 +37,7 @@ export default function TrendView() {
     <section className="card !p-4 sm:!p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-white">Where each month’s income went</h2>
+          <h2 className="text-lg font-semibold text-ink">Where each month’s income went</h2>
           <p className="mt-0.5 text-sm text-midnight-400">
             An average month: {money(average(m => m.spent))} spent, {money(average(m => m.putAway))} put away,{' '}
             {money(average(m => m.leftOver))} left over. The dashed line is income.

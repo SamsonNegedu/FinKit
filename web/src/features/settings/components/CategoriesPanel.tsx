@@ -20,7 +20,7 @@ import { useSaveCategories } from '../hooks/category-queries'
 const KEEP = 'Other'
 
 const iconButton =
-  'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-midnight-300 hover:bg-midnight-700 hover:text-white disabled:opacity-40'
+  'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-midnight-300 hover:bg-midnight-700 hover:text-ink disabled:opacity-40'
 
 const IconPicker = lazy(() => import('./IconPicker'))
 
@@ -92,7 +92,7 @@ function StylePicker({
           align="start"
           sideOffset={6}
           collisionPadding={8}
-          className="z-[80] w-80 space-y-3 rounded-xl border border-midnight-600 bg-midnight-800 p-3 shadow-2xl"
+          className="z-[80] w-80 space-y-3 rounded-xl border border-line-strong bg-midnight-800 p-3 shadow-2xl"
         >
           <div>
             <p className="mb-1.5 text-xs text-midnight-400">Icon</p>
@@ -117,7 +117,7 @@ function StylePicker({
             <HexField color={color} onPick={c => onChange({ color: c })} />
           </div>
           {style && (
-            <button className="text-xs text-midnight-400 underline hover:text-white" onClick={() => onChange(null)}>
+            <button className="text-xs text-midnight-400 underline hover:text-ink" onClick={() => onChange(null)}>
               Back to the default
             </button>
           )}
@@ -212,7 +212,7 @@ export default function CategoriesPanel() {
     const canDelete = known && c !== KEEP && isUnused(use)
 
     return (
-      <li key={c} className="flex items-center gap-3 border-t border-midnight-800 py-2 first:border-t-0">
+      <li key={c} className="flex items-center gap-3 border-t border-line py-2 first:border-t-0">
         <StylePicker
           label={`Change icon and color of ${c}`}
           style={getCategoryStyle(c)}
@@ -222,7 +222,7 @@ export default function CategoriesPanel() {
           onChange={change => restyle(c, change)}
         />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm text-white">{c}</span>
+          <span className="block truncate text-sm text-ink">{c}</span>
           {other && <span className="block truncate text-xs text-midnight-500">{other}</span>}
         </span>
         <span className="text-xs tabular-nums text-midnight-500">
@@ -248,7 +248,7 @@ export default function CategoriesPanel() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-white">Categories</h2>
+        <h2 className="text-lg font-semibold text-ink">Categories</h2>
         <p className="mt-0.5 text-sm text-midnight-400">
           Archive one you no longer use. It stops being offered when you categorise, but stays in filters, charts and
           past years. One that nothing uses can be deleted. A new category has no column in your sheet until you map it

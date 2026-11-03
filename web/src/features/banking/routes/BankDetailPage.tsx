@@ -29,7 +29,7 @@ export default function BankDetailPage() {
   if (!c) {
     return (
       <div className="card text-center py-10 space-y-3">
-        <p className="text-white font-medium">That bank isn't connected.</p>
+        <p className="text-ink font-medium">That bank isn't connected.</p>
         <Link to="/banks" className="btn-secondary inline-block">
           All banks
         </Link>
@@ -55,8 +55,8 @@ export default function BankDetailPage() {
         />
       </div>
       <section className="card" aria-label="Accounts">
-        <h2 className="text-lg font-semibold text-white mb-3">Accounts</h2>
-        <ul className="divide-y divide-midnight-800">
+        <h2 className="text-lg font-semibold text-ink mb-3">Accounts</h2>
+        <ul className="divide-y divide-line">
           {c.accounts.map(a => {
             const rows = mine.filter(t => t.accountLabel === a.label)
             const net = rows.reduce((s, t) => s + (t.isExcluded ? 0 : t.type === 'income' ? t.amount : -t.amount), 0)
@@ -69,7 +69,7 @@ export default function BankDetailPage() {
                   className="flex items-center justify-between gap-3 py-3 hover:bg-midnight-800/40 px-2 rounded-lg"
                 >
                   <div className="min-w-0">
-                    <p className="text-white truncate">{a.label}</p>
+                    <p className="text-ink truncate">{a.label}</p>
                     <p className="text-xs text-midnight-400">
                       {a.currency ?? ''} · {rows.length} transactions
                     </p>

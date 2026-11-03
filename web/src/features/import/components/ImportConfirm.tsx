@@ -21,8 +21,8 @@ export default function ImportConfirm({
   return (
     <Modal title="Some rows are already loaded" onClose={onCancel}>
       <p className="text-sm text-midnight-300 mt-2">
-        <span className="text-white">{duplicates}</span> of the {total} rows in{' '}
-        <span className="text-white">{fileName}</span> match transactions you already have (same date, amount and
+        <span className="text-ink">{duplicates}</span> of the {total} rows in{' '}
+        <span className="text-ink">{fileName}</span> match transactions you already have (same date, amount and
         description).
       </p>
       <div className="mt-6 flex flex-col gap-2">
@@ -32,7 +32,7 @@ export default function ImportConfirm({
         <button className="btn-secondary" onClick={onKeepAll}>
           Import everything anyway
         </button>
-        <button className="text-sm text-midnight-400 hover:text-white py-2" onClick={onCancel}>
+        <button className="text-sm text-midnight-400 hover:text-ink py-2" onClick={onCancel}>
           Cancel
         </button>
       </div>

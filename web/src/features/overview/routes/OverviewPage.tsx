@@ -110,12 +110,41 @@ export default function OverviewPage() {
       />
       <OverviewTiles a={analysis} currency={app.baseCurrency} />
 
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start xl:grid-cols-2 gap-6">
-        <div className="space-y-6">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <div className="order-2 space-y-6 xl:order-1">
+          <AccountsCard balances={balances} baseCurrency={app.baseCurrency} rates={app.rates} now={now} />
+          <section className="card" aria-label="Latest transactions">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-ink">Latest transactions</h2>
+              <Link to="/transactions" className="text-sm text-accent hover:underline">
+                View all →
+              </Link>
+            </div>
+            <ul className="divide-y divide-line">
+              {latest.map(t => (
+                <li key={t.id} className="flex items-center gap-3 py-2.5 text-sm">
+                  <span className="text-midnight-400 w-14 shrink-0">{formatDay(t.date)}</span>
+                  <span className="flex-1 min-w-0 truncate text-ink">{displayNameOf(t)}</span>
+                  <span className="hidden sm:flex items-center gap-1.5 text-xs text-midnight-300">
+                    <CategoryIcon category={t.category} size="sm" />
+                    {t.category || 'Other'}
+                  </span>
+                  <span className={`tabular-nums font-medium ${t.type === 'income' ? 'text-income' : 'text-expense'}`}>
+                    {t.type === 'income' ? '+' : '-'}
+                    {formatCurrency(t.amount, app.baseCurrency)}
+                  </span>
+                </li>
+              ))}
+              {latest.length === 0 && <li className="py-6 text-center text-midnight-400">Nothing in this period.</li>}
+            </ul>
+          </section>
+        </div>
+
+        <div className="order-1 space-y-6 xl:order-2">
           {hasAttention && (
             <section className="card space-y-3" aria-label="Needs attention">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-400" /> Needs attention
+              <h2 className="text-lg font-semibold text-ink flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-warning" /> Needs attention
               </h2>
               <ul className="space-y-2 text-sm">
                 {budgetLine && (
@@ -156,35 +185,6 @@ export default function OverviewPage() {
                 : h.target && navigate({ to: '/transactions', search: { q: h.target.merchant } })
             }
           />
-        </div>
-
-        <div className="space-y-6">
-          <AccountsCard balances={balances} baseCurrency={app.baseCurrency} rates={app.rates} now={now} />
-          <section className="card" aria-label="Latest transactions">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-white">Latest transactions</h2>
-              <Link to="/transactions" className="text-sm text-accent hover:underline">
-                View all →
-              </Link>
-            </div>
-            <ul className="divide-y divide-midnight-800">
-              {latest.map(t => (
-                <li key={t.id} className="flex items-center gap-3 py-2.5 text-sm">
-                  <span className="text-midnight-400 w-14 shrink-0">{formatDay(t.date)}</span>
-                  <span className="flex-1 min-w-0 truncate text-white">{displayNameOf(t)}</span>
-                  <span className="hidden sm:flex items-center gap-1.5 text-xs text-midnight-300">
-                    <CategoryIcon category={t.category} size="sm" />
-                    {t.category || 'Other'}
-                  </span>
-                  <span className={`tabular-nums font-medium ${t.type === 'income' ? 'text-income' : 'text-expense'}`}>
-                    {t.type === 'income' ? '+' : '-'}
-                    {formatCurrency(t.amount, app.baseCurrency)}
-                  </span>
-                </li>
-              ))}
-              {latest.length === 0 && <li className="py-6 text-center text-midnight-400">Nothing in this period.</li>}
-            </ul>
-          </section>
         </div>
       </div>
     </div>

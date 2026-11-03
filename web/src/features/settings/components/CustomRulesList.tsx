@@ -45,13 +45,13 @@ export default function CustomRulesList() {
       <div className="grid gap-1">
         {rules.map(rule => (
           <div key={rule.id} className="grid grid-cols-[1fr,auto,40px] items-center gap-3">
-            <span className="truncate text-sm text-white" title={describe(rule)}>
+            <span className="truncate text-sm text-ink" title={describe(rule)}>
               {describe(rule)}
             </span>
             <span className="text-sm text-midnight-300">{rule.category}</span>
             <button
               onClick={() => remove(rule)}
-              className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-red-400"
+              className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-negative"
               aria-label={`Delete rule: ${describe(rule)}`}
             >
               <Trash2 className="w-4 h-4" />
@@ -59,7 +59,7 @@ export default function CustomRulesList() {
           </div>
         ))}
       </div>
-      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+      {error && <p className="text-xs text-negative mt-2">{error}</p>}
     </section>
   )
 }

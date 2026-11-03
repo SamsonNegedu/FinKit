@@ -53,11 +53,11 @@ export default function TripStarters({ onStart }: { onStart: (seed: Candidate) =
         <Plane className="h-4 w-4 text-accent" aria-hidden="true" /> Flights and stays not in a trip yet. Start one from
         a booking?
       </p>
-      <ul className="mt-2 divide-y divide-midnight-800">
+      <ul className="mt-2 divide-y divide-line">
         {rows.map(c => (
           <li key={c.ref} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
             <span className="w-14 shrink-0 text-sm text-midnight-400">{formatDay(c.t.date)}</span>
-            <span className="min-w-0 flex-1 truncate text-sm text-white">{displayNameOf(c.t)}</span>
+            <span className="min-w-0 flex-1 truncate text-sm text-ink">{displayNameOf(c.t)}</span>
             <span className="text-sm tabular-nums text-midnight-200">{formatCurrency(c.t.amount, c.t.currency)}</span>
             <span className="flex gap-2">
               <button className="btn-secondary !px-3 !py-1 text-sm" onClick={() => onStart(c)}>

@@ -102,7 +102,7 @@ export default function ContractHistory({ payments, currency, color }: Props) {
         </svg>
         {h && (
           <div
-            className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-md border border-midnight-600 bg-midnight-800 px-2 py-1 text-xs text-white shadow-lg"
+            className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-md border border-line-strong bg-midnight-800 px-2 py-1 text-xs text-ink shadow-lg"
             style={{ left: `${Math.min(88, Math.max(12, (x(h.date) / W) * 100))}%` }}
           >
             {formatCurrency(h.amount, currency)} <span className="text-midnight-400">· {niceDate(h.date)}</span>
@@ -113,12 +113,12 @@ export default function ContractHistory({ payments, currency, color }: Props) {
         <caption className="sr-only">Payments</caption>
         <tbody>
           {shown.map(p => (
-            <tr key={p.ref} className="border-t border-midnight-800">
+            <tr key={p.ref} className="border-t border-line">
               <td className="whitespace-nowrap py-1.5 pr-3 text-midnight-400">{niceDate(p.date)}</td>
               <td className="w-full max-w-0 truncate py-1.5 pr-3 text-midnight-500" title={p.description}>
                 {p.description}
               </td>
-              <td className="whitespace-nowrap py-1.5 text-right tabular-nums text-white">
+              <td className="whitespace-nowrap py-1.5 text-right tabular-nums text-ink">
                 {formatCurrency(p.amount, currency)}
               </td>
             </tr>

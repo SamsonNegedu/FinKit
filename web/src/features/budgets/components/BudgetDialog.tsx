@@ -74,7 +74,7 @@ export default function BudgetDialog({
             onKeyDown={e => e.key === 'Enter' && canSave && submit()}
           />
           {suggested !== null && (
-            <button className="text-xs text-emerald-400 hover:underline" onClick={() => setAmount(String(suggested))}>
+            <button className="text-xs text-positive hover:underline" onClick={() => setAmount(String(suggested))}>
               Use {formatCurrency(suggested, currency)}, about what you spent per month lately
             </button>
           )}
@@ -83,7 +83,7 @@ export default function BudgetDialog({
           <Checkbox checked={rollover} onChange={setRollover} />
           Carry unspent money into the next month
         </label>
-        {error && <p className="text-sm text-rose-400">{error}</p>}
+        {error && <p className="text-sm text-negative">{error}</p>}
         {added.length > 0 && (
           <ul className="flex flex-wrap gap-1.5" aria-label="Added so far">
             {added.map(a => (
@@ -91,7 +91,7 @@ export default function BudgetDialog({
                 key={a.category}
                 className="flex items-center gap-1 rounded-full bg-midnight-800 px-2.5 py-1 text-xs text-midnight-200"
               >
-                <Check className="h-3 w-3 text-emerald-400" aria-hidden="true" />
+                <Check className="h-3 w-3 text-positive" aria-hidden="true" />
                 {a.category} {formatCurrency(a.amount, currency)}
               </li>
             ))}

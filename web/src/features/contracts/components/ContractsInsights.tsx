@@ -48,9 +48,9 @@ export default function ContractsInsights({
               <Item
                 key={`r${c.id}`}
                 onOpen={() => onOpen(c)}
-                icon={<ArrowUpRight className={`${icon} text-amber-300`} />}
+                icon={<ArrowUpRight className={`${icon} text-warning`} />}
               >
-                <span className="text-white">{c.name}</span>{' '}
+                <span className="text-ink">{c.name}</span>{' '}
                 <span className="text-midnight-400">
                   now {formatCurrency(c.priceChange!.to, c.currency)}, was{' '}
                   {formatCurrency(c.priceChange!.from, c.currency)}
@@ -59,7 +59,7 @@ export default function ContractsInsights({
             ))}
             {fresh.map(c => (
               <Item key={`n${c.id}`} onOpen={() => onOpen(c)} icon={<Sparkles className={`${icon} text-accent`} />}>
-                <span className="text-white">{c.name}</span>{' '}
+                <span className="text-ink">{c.name}</span>{' '}
                 <span className="text-midnight-400">is new: confirm it?</span>
               </Item>
             ))}
@@ -69,7 +69,7 @@ export default function ContractsInsights({
                 onOpen={() => onOpen(c)}
                 icon={<StopCircle className={`${icon} text-midnight-400`} />}
               >
-                <span className="text-white">{c.name}</span>{' '}
+                <span className="text-ink">{c.name}</span>{' '}
                 <span className="text-midnight-400">stopped{c.lastDate ? `, last paid ${day(c.lastDate)}` : ''}</span>
               </Item>
             ))}
@@ -89,7 +89,7 @@ export default function ContractsInsights({
                 onOpen={() => onOpen(c)}
                 icon={<CalendarClock className={`${icon} text-midnight-400`} />}
               >
-                <span className="text-white">{c.name}</span>{' '}
+                <span className="text-ink">{c.name}</span>{' '}
                 <span className="text-midnight-400">
                   {day(date)} · {formatCurrency(c.amount, c.currency)}
                 </span>

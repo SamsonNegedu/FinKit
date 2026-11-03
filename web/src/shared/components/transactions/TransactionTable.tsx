@@ -170,7 +170,7 @@ export default function TransactionTable({
         </div>
 
         {state.hasMore && (
-          <div className="p-4 text-center border-t border-midnight-800">
+          <div className="p-4 text-center border-t border-line">
             <button className="btn-secondary text-sm" onClick={() => state.setLimit(l => l + state.PAGE)}>
               Show more ({transactions.length - state.shownRows} remaining)
             </button>

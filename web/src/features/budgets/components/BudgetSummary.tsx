@@ -36,14 +36,14 @@ export default function BudgetSummary({
     <section className="card space-y-3" aria-label="Month summary">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
         <div>
-          <p className={`text-2xl font-bold tabular-nums ${over ? 'text-rose-400' : 'text-white'}`}>
+          <p className={`figure ${over ? 'text-negative' : ''}`}>
             {formatCurrency(Math.abs(totals.left), currency)} {over ? 'over' : 'left'}
             <span className="ml-2 text-sm font-normal text-midnight-400">
               of {formatCurrency(totals.budgeted, currency)} budgeted
             </span>
           </p>
         </div>
-        <p className={`pb-1 text-sm ${totals.over ? 'text-rose-400' : 'text-midnight-300'}`}>{note}</p>
+        <p className={`pb-1 text-sm ${totals.over ? 'text-negative' : 'text-midnight-300'}`}>{note}</p>
       </div>
       <BudgetBar
         used={used}
@@ -60,7 +60,7 @@ export default function BudgetSummary({
           {formatCurrency(totals.spent, currency)} spent{previous ? ` · ${previous}` : ''}
         </span>
         {onSetCap && (
-          <button className="hover:text-white hover:underline" onClick={onSetCap}>
+          <button className="hover:text-ink hover:underline" onClick={onSetCap}>
             Set an overall cap
           </button>
         )}

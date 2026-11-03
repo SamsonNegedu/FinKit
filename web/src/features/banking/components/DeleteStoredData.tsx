@@ -38,8 +38,8 @@ export default function DeleteStoredData() {
   return (
     <section className="card max-sm:p-4 flex flex-wrap items-center justify-between gap-4">
       <div className="min-w-0 flex-1 basis-72">
-        <h3 className="font-medium text-white">Your data</h3>
-        <p className="mt-0.5 text-sm text-white">
+        <h3 className="font-medium text-ink">Your data</h3>
+        <p className="mt-0.5 text-sm text-ink">
           {plural(stored, 'transaction')} stored on FinKit's server
           {inTrips > 0 && <span className="text-midnight-400"> · {inTrips} in trips</span>}
         </p>

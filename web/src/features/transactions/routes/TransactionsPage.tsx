@@ -112,8 +112,8 @@ export default function TransactionsPage() {
         description={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>
-              <span className="text-white font-medium">{filtered.length}</span> of{' '}
-              <span className="text-white font-medium">{period.length}</span> in this period
+              <span className="text-ink font-medium">{filtered.length}</span> of{' '}
+              <span className="text-ink font-medium">{period.length}</span> in this period
             </span>
             <TripsMovedNote />
           </span>
@@ -173,14 +173,14 @@ export default function TransactionsPage() {
             ))}
             <button
               onClick={() => navigate({ to: '/transactions', search: {}, replace: true })}
-              className="text-sm text-midnight-400 hover:text-white underline underline-offset-2"
+              className="text-sm text-midnight-400 hover:text-ink underline underline-offset-2"
             >
               Clear all
             </button>
             {search.bank && search.bank !== FILES && (
               <Link
                 to="/banks"
-                className="ml-auto text-sm text-midnight-400 hover:text-white underline underline-offset-2"
+                className="ml-auto text-sm text-midnight-400 hover:text-ink underline underline-offset-2"
               >
                 Manage banks
               </Link>

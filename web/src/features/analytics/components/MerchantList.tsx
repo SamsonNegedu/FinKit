@@ -16,7 +16,7 @@ export default function MerchantList({
 
   return (
     <section className="card flex flex-col !p-4 sm:!p-6 lg:h-full lg:min-h-0">
-      <h2 className="text-lg font-semibold text-white">Top merchants</h2>
+      <h2 className="text-lg font-semibold text-ink">Top merchants</h2>
       {rows.length === 0 ? (
         <p className="mt-3 text-midnight-400">No spending in this period.</p>
       ) : (
@@ -32,8 +32,8 @@ export default function MerchantList({
                   <span className="w-5 shrink-0 text-xs tabular-nums text-midnight-500">{i + 1}</span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2 text-sm">
-                      <span className="truncate font-medium text-white">{m.merchant}</span>
-                      <span className="whitespace-nowrap tabular-nums text-white">
+                      <span className="truncate font-medium text-ink">{m.merchant}</span>
+                      <span className="whitespace-nowrap tabular-nums text-ink">
                         {formatCurrency(m.total, currency)}{' '}
                         <span className="text-xs text-midnight-500">{m.count}×</span>
                       </span>

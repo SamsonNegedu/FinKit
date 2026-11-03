@@ -35,7 +35,7 @@ export default function MoreFilters({
           <SlidersHorizontal className="h-4 w-4 text-midnight-400" aria-hidden="true" />
           Filters
           {active > 0 && (
-            <span className="rounded-full bg-accent px-1.5 text-xs font-semibold text-white">{active}</span>
+            <span className="rounded-full bg-accent px-1.5 text-xs font-semibold text-midnight-950">{active}</span>
           )}
         </button>
       </Popover.Trigger>
@@ -43,7 +43,7 @@ export default function MoreFilters({
         <Popover.Content
           align="start"
           sideOffset={8}
-          className="z-[80] w-72 space-y-4 rounded-xl border border-midnight-600 bg-midnight-800 p-4 shadow-2xl"
+          className="z-[80] w-72 space-y-4 rounded-xl border border-line-strong bg-midnight-800 p-4 shadow-2xl"
         >
           {sources.length > 0 && (
             <div className="space-y-1">
@@ -78,10 +78,7 @@ export default function MoreFilters({
             Include transfers between your own accounts
           </label>
           {active > 0 && (
-            <button
-              className="text-xs text-midnight-400 underline underline-offset-2 hover:text-white"
-              onClick={onClear}
-            >
+            <button className="text-xs text-midnight-400 underline underline-offset-2 hover:text-ink" onClick={onClear}>
               Clear these filters
             </button>
           )}

@@ -49,7 +49,7 @@ export default function CategoryList({
             onPick(shown[activeIndex])
           }
         }}
-        className="w-full px-3 py-2 bg-midnight-700 border-b border-midnight-600 text-sm focus:outline-none"
+        className="w-full px-3 py-2 bg-midnight-700 border-b border-line-strong text-sm focus:outline-none"
         autoFocus
       />
       <div className="max-h-[240px] overflow-y-auto" role="listbox" aria-label="Categories">
@@ -77,7 +77,7 @@ export default function CategoryList({
               <button
                 onClick={() => onDetails(category)}
                 aria-label={`Subcategories of ${category}`}
-                className="mr-1 rounded p-1.5 text-midnight-500 hover:bg-midnight-600 hover:text-white focus:text-white"
+                className="mr-1 rounded p-1.5 text-midnight-500 hover:bg-midnight-600 hover:text-ink focus:text-ink"
               >
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>

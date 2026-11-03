@@ -62,7 +62,7 @@ export default function SplitDialog({ transaction, initialParts, onSave, onCance
             <button
               onClick={() => setParts(parts.filter((_, idx) => idx !== i))}
               disabled={parts.length <= 2}
-              className="p-2 text-midnight-400 hover:text-red-400 disabled:opacity-30"
+              className="p-2 text-midnight-400 hover:text-negative disabled:opacity-30"
               aria-label={`Remove part ${i + 1}`}
             >
               <Trash2 className="w-4 h-4" />
@@ -78,7 +78,7 @@ export default function SplitDialog({ transaction, initialParts, onSave, onCance
         >
           <Plus className="w-4 h-4" /> Add part
         </button>
-        <span className={`text-sm ${Math.abs(left) < 0.005 ? 'text-income' : 'text-orange-400'}`} aria-live="polite">
+        <span className={`text-sm ${Math.abs(left) < 0.005 ? 'text-income' : 'text-warning'}`} aria-live="polite">
           {Math.abs(left) < 0.005 ? 'Adds up' : `${formatCurrency(left, currency)} left to assign`}
         </span>
       </div>

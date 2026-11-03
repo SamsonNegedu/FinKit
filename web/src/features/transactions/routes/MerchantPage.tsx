@@ -27,7 +27,7 @@ export default function MerchantPage() {
   if (rows.length === 0) {
     return (
       <div className="card text-center space-y-3 py-10">
-        <p className="text-white font-medium">No transactions for this merchant in the chosen period.</p>
+        <p className="text-ink font-medium">No transactions for this merchant in the chosen period.</p>
         <p className="text-sm text-midnight-400">Change the period at the top, or go back to all merchants.</p>
         <Link to="/transactions" search={{ view: 'merchants' }} className="btn-secondary inline-block">
           All merchants
@@ -126,7 +126,7 @@ function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="card !p-4">
       <p className="text-xs text-midnight-400">{label}</p>
-      <p className="text-lg font-semibold text-white truncate" title={value}>
+      <p className="text-lg font-semibold text-ink truncate" title={value}>
         {value}
       </p>
     </div>

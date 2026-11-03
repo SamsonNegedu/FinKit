@@ -85,23 +85,23 @@ export default function CategoryPopover({
           align="start"
           sideOffset={4}
           collisionPadding={8}
-          className="z-[80] w-[240px] overflow-hidden rounded-lg border border-midnight-600 bg-midnight-800 shadow-xl"
+          className="z-[80] w-[240px] overflow-hidden rounded-lg border border-line-strong bg-midnight-800 shadow-xl"
         >
           {detailFor && detailsOf ? (
             <div className="max-h-[280px] overflow-y-auto">
               <button
                 onClick={() => setDetailFor(null)}
-                className="flex w-full items-center gap-2 border-b border-midnight-600 px-3 py-3 text-left text-sm text-midnight-300 hover:bg-midnight-700"
+                className="flex w-full items-center gap-2 border-b border-line-strong px-3 py-3 text-left text-sm text-midnight-300 hover:bg-midnight-700"
               >
                 <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
-                <span className="min-w-0 flex-1 truncate font-medium text-white">{detailFor}</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-ink">{detailFor}</span>
                 <span className="shrink-0 text-xs text-midnight-400">Subcategory</span>
               </button>
               {['', ...detailsOf(detailFor)].map(d => (
                 <button
                   key={d}
                   onClick={() => chooseDetail(detailFor, d)}
-                  className={`block w-full px-3 py-2.5 text-left text-sm hover:bg-midnight-700 ${d ? 'text-white' : 'text-midnight-400'}`}
+                  className={`block w-full px-3 py-2.5 text-left text-sm hover:bg-midnight-700 ${d ? 'text-ink' : 'text-midnight-400'}`}
                 >
                   {d || 'No subcategory'}
                 </button>
@@ -118,7 +118,7 @@ export default function CategoryPopover({
                       chooseDetail(detailFor, name)
                     }
                   }}
-                  className="border-t border-midnight-600 p-3"
+                  className="border-t border-line-strong p-3"
                 >
                   <input
                     value={newDetail}
@@ -138,10 +138,10 @@ export default function CategoryPopover({
                   setPending(null)
                   setPendingDetail(undefined)
                 }}
-                className="flex w-full items-center gap-2 border-b border-midnight-600 px-3 py-2 text-left text-sm text-midnight-300 hover:bg-midnight-700"
+                className="flex w-full items-center gap-2 border-b border-line-strong px-3 py-2 text-left text-sm text-midnight-300 hover:bg-midnight-700"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                Set to <span className="font-medium text-white">{pending}</span> for…
+                Set to <span className="font-medium text-ink">{pending}</span> for…
               </button>
               {SCOPE_OPTIONS.filter(o => o.value === 'all' || scopes.includes(o.value)).map(o => (
                 <button
@@ -154,7 +154,7 @@ export default function CategoryPopover({
                   }}
                   className="block w-full px-3 py-2 text-left hover:bg-midnight-700"
                 >
-                  <span className="block text-sm text-white">{o.label}</span>
+                  <span className="block text-sm text-ink">{o.label}</span>
                   <span className="block text-xs text-midnight-400">{o.hint}</span>
                 </button>
               ))}

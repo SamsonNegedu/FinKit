@@ -28,13 +28,13 @@ export default function MonthSwitcher({
     onChange({ year: Math.floor(i / 12), month: i % 12 })
   }
   const arrow =
-    'p-2.5 text-midnight-300 hover:bg-midnight-700 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent'
+    'p-2.5 text-midnight-300 hover:bg-midnight-700 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent'
   const current = index(value) >= index(max)
 
   return (
     <div className="flex items-center gap-2">
       {/* One bordered control, like the period picker in the header, so it reads as a control and not loose text */}
-      <div className="flex items-center overflow-hidden rounded-lg border border-midnight-600 bg-midnight-800">
+      <div className="flex items-center overflow-hidden rounded-lg border border-line-strong bg-midnight-800">
         <Tooltip label="Earlier month">
           <button
             className={arrow}
@@ -46,7 +46,7 @@ export default function MonthSwitcher({
           </button>
         </Tooltip>
         <span
-          className="min-w-[9.5rem] border-x border-midnight-600 px-3 py-2 text-center text-sm font-medium text-white"
+          className="min-w-[9.5rem] border-x border-line-strong px-3 py-2 text-center text-sm font-medium text-ink"
           aria-live="polite"
         >
           {label(value)}

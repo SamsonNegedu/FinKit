@@ -75,9 +75,9 @@ export default function PeriodPicker({ dateRange, onChange, transactions }: Peri
           align="end"
           sideOffset={8}
           collisionPadding={16}
-          className="z-[80] w-64 max-w-[calc(100vw-2rem)] max-h-[min(70vh,var(--radix-popover-content-available-height))] overflow-y-auto rounded-lg border border-midnight-600 bg-midnight-800 shadow-xl"
+          className="z-[80] w-64 max-w-[calc(100vw-2rem)] max-h-[min(70vh,var(--radix-popover-content-available-height))] overflow-y-auto rounded-lg border border-line-strong bg-midnight-800 shadow-xl"
         >
-          <button onClick={() => choose(null)} className={`${item(!dateRange)} border-b border-midnight-700`}>
+          <button onClick={() => choose(null)} className={`${item(!dateRange)} border-b border-line-strong`}>
             All time
           </button>
 
@@ -90,7 +90,7 @@ export default function PeriodPicker({ dateRange, onChange, transactions }: Peri
 
           {years.length > 0 && (
             <>
-              <div className="px-4 py-2 text-xs text-midnight-500 uppercase tracking-wide border-t border-midnight-700">
+              <div className="px-4 py-2 text-xs text-midnight-500 uppercase tracking-wide border-t border-line-strong">
                 From your data
               </div>
               {years.map(({ year, months }) => {

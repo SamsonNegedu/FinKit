@@ -13,9 +13,9 @@ export default function AnalyticsHeadline({ a, currency }: { a: Analysis; curren
     <div className="card flex flex-col gap-3 !p-4 sm:flex-row sm:items-center sm:gap-8">
       <div className="shrink-0">
         <p className="text-sm font-medium text-midnight-400">Spent</p>
-        <p className="text-2xl font-bold text-white tabular-nums">{money(a.spent)}</p>
+        <p className="figure">{money(a.spent)}</p>
         {delta !== null && (
-          <p className={`text-xs ${delta > 0 ? 'text-amber-300' : 'text-accent'}`}>
+          <p className={`text-xs ${delta > 0 ? 'text-warning' : 'text-positive'}`}>
             {delta > 0 ? '▲' : '▼'} {Math.abs(Math.round(delta))}% vs the period before ({money(a.previousSpent!)})
           </p>
         )}
@@ -34,14 +34,14 @@ export default function AnalyticsHeadline({ a, currency }: { a: Analysis; curren
             <Tooltip label="Rent, bills and the like, paid on a schedule">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-accent" aria-hidden />
-                Fixed <span className="tabular-nums text-white">{money(a.repeating)}</span>
+                Fixed <span className="tabular-nums text-ink">{money(a.repeating)}</span>
                 <span className="text-midnight-500">{Math.round(fixedShare)}%</span>
               </span>
             </Tooltip>
             <Tooltip label={`Groceries, going out, one-offs: about ${money(a.everydayPerDay)} a day`}>
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-midnight-600" aria-hidden />
-                Not scheduled <span className="tabular-nums text-white">{money(a.everyday)}</span>
+                Not scheduled <span className="tabular-nums text-ink">{money(a.everyday)}</span>
               </span>
             </Tooltip>
           </div>

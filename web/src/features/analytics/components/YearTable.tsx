@@ -76,7 +76,7 @@ export default function YearTable({
   const firstTotal = shown.findIndex(({ c }) => c.kind !== 'category')
 
   const columnClass = (index: number, isTotal: boolean) =>
-    `${index === firstTotal ? 'border-l border-midnight-600' : ''} ${isTotal ? 'bg-midnight-900/70' : ''} ${
+    `${index === firstTotal ? 'border-l border-line-strong' : ''} ${isTotal ? 'bg-surface/70' : ''} ${
       hoverColumn === index ? 'bg-white/[0.04]' : ''
     }`
 
@@ -93,7 +93,7 @@ export default function YearTable({
             <tr className="align-bottom text-xs">
               <th
                 scope="col"
-                className="sticky left-0 z-10 bg-midnight-950 py-2 pr-4 text-left font-normal text-midnight-400"
+                className="sticky left-0 z-10 bg-surface-page py-2 pr-4 text-left font-normal text-midnight-400"
               >
                 {year}
               </th>
@@ -112,18 +112,15 @@ export default function YearTable({
           </thead>
           <tbody>
             {grid.rows.map(r => (
-              <tr key={r.month.key} className="group border-t border-midnight-800 hover:bg-white/[0.03]">
-                <th
-                  scope="row"
-                  className="sticky left-0 z-10 bg-midnight-950 py-2 pr-4 text-left font-normal text-white"
-                >
+              <tr key={r.month.key} className="group border-t border-line hover:bg-white/[0.03]">
+                <th scope="row" className="sticky left-0 z-10 bg-surface-page py-2 pr-4 text-left font-normal text-ink">
                   <span className="flex items-center gap-1">
                     {monthName(r.month)}
                     <Tooltip label={`Copy ${monthName(r.month)} as a row for your sheet`}>
                       <button
                         onClick={() => copyMonth(r.month)}
                         aria-label={`Copy ${monthName(r.month)} as a sheet row`}
-                        className="rounded p-1 text-midnight-500 hover:bg-midnight-800 hover:text-white focus:text-white focus:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        className="rounded p-1 text-midnight-500 hover:bg-midnight-800 hover:text-ink focus:text-ink focus:opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       >
                         {copied === r.month.key ? (
                           <Check className="h-3.5 w-3.5 text-accent" />
@@ -153,7 +150,7 @@ export default function YearTable({
                     <td
                       key={c.column}
                       onMouseEnter={() => setHoverColumn(i)}
-                      className={`whitespace-nowrap px-3 py-2 text-right tabular-nums ${negative ? 'text-expense' : isTotal ? 'font-medium text-white' : 'text-midnight-100'} ${columnClass(i, isTotal)}`}
+                      className={`whitespace-nowrap px-3 py-2 text-right tabular-nums ${negative ? 'text-expense' : isTotal ? 'font-medium text-ink' : 'text-midnight-100'} ${columnClass(i, isTotal)}`}
                       style={{ backgroundColor: background }}
                     >
                       {cell(n)}
@@ -164,15 +161,15 @@ export default function YearTable({
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t border-midnight-600 font-medium">
-              <th scope="row" className="sticky left-0 z-10 bg-midnight-950 py-2 pr-4 text-left text-white">
+            <tr className="border-t border-line-strong font-medium">
+              <th scope="row" className="sticky left-0 z-10 bg-surface-page py-2 pr-4 text-left text-ink">
                 Year
               </th>
               {shown.map(({ c, j }, i) => (
                 <td
                   key={c.column}
                   onMouseEnter={() => setHoverColumn(i)}
-                  className={`whitespace-nowrap px-3 py-2 text-right tabular-nums text-white ${columnClass(i, c.kind !== 'category')}`}
+                  className={`whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink ${columnClass(i, c.kind !== 'category')}`}
                 >
                   {cell(grid.totals[j])}
                 </td>

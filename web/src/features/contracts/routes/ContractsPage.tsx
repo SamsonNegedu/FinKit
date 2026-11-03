@@ -113,7 +113,7 @@ export default function ContractsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Recurring payments"
         description="Payments that repeat every month, quarter or year for at least three payments."

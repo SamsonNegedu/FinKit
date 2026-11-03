@@ -47,7 +47,7 @@ export default function DateRangePicker({ start, end, onChange, placeholder = 'P
         <Popover.Content
           align="start"
           sideOffset={8}
-          className="z-[80] rounded-xl border border-midnight-600 bg-midnight-800 p-3 shadow-2xl"
+          className="z-[80] rounded-xl border border-line-strong bg-midnight-800 p-3 shadow-2xl"
         >
           <DayPicker
             mode="range"
@@ -59,7 +59,7 @@ export default function DateRangePicker({ start, end, onChange, placeholder = 'P
             {...calendarJump()}
           />
           <div className="flex justify-between mt-1 text-sm">
-            <button type="button" className="px-1 text-midnight-400 hover:text-white" onClick={() => onChange('', '')}>
+            <button type="button" className="px-1 text-midnight-400 hover:text-ink" onClick={() => onChange('', '')}>
               Clear
             </button>
           </div>

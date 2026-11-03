@@ -40,7 +40,7 @@ export function AnalyticsPage({ section }: { section: AnalyticsSection }) {
   // cards instead of the page. 7rem is the sticky header plus the page padding.
   return (
     <div
-      className={section === 'where' ? 'flex flex-col gap-4 lg:h-[calc(100dvh-7rem)] lg:min-h-[32rem]' : 'space-y-4'}
+      className={section === 'where' ? 'flex flex-col gap-4 lg:h-[calc(100dvh-7rem)] lg:min-h-[32rem]' : 'space-y-6'}
     >
       <TabLinks
         ariaLabel="Analytics views"

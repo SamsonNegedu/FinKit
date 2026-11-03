@@ -17,8 +17,8 @@ export default function IncomeTransactionRow({ tx, currency, onToggleExclude }: 
                 flex items-center gap-4 p-4 rounded-lg border transition-all
                 ${
                   tx.isExcluded
-                    ? 'bg-midnight-800/50 border-midnight-700 opacity-60'
-                    : 'bg-midnight-800 border-midnight-600'
+                    ? 'bg-midnight-800/50 border-line-strong opacity-60'
+                    : 'bg-midnight-800 border-line-strong'
                 }
               `}
     >
@@ -29,7 +29,7 @@ export default function IncomeTransactionRow({ tx, currency, onToggleExclude }: 
                   w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0
                   ${
                     tx.isExcluded
-                      ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'
+                      ? 'bg-warning/20 text-warning hover:bg-warning/30'
                       : 'bg-income/20 text-income hover:bg-income/30'
                   }
                 `}
@@ -43,19 +43,19 @@ export default function IncomeTransactionRow({ tx, currency, onToggleExclude }: 
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white truncate">{tx.merchant || tx.recipient || tx.description.slice(0, 40)}</p>
+        <p className="text-sm text-ink truncate">{tx.merchant || tx.recipient || tx.description.slice(0, 40)}</p>
         <p className="text-xs text-midnight-500 truncate">{tx.description}</p>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
         {tx.doubleBookingMatch && (
-          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-400">
+          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-info/20 text-info">
             <ArrowLeftRight className="w-3 h-3" />
             Auto
           </span>
         )}
         {tx.isExcluded && !tx.doubleBookingMatch && (
-          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-orange-500/20 text-orange-400">
+          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-warning/20 text-warning">
             <X className="w-3 h-3" />
             Manual
           </span>

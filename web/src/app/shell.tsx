@@ -1,9 +1,8 @@
 import Tooltip from '@/shared/components/Tooltip'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import {
-  FilePlus,
   Inbox,
   Landmark,
   LayoutDashboard,
@@ -17,7 +16,6 @@ import {
   BookOpen,
   Settings,
   Shield,
-  ShieldOff,
   Wallet,
   X,
 } from 'lucide-react'
@@ -38,6 +36,7 @@ export default function AppShell() {
   const { data: connections = [] } = useConnections()
   const reconnect = useStartConnect()
   const [navOpen, setNavOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const hasData = app.transactions.length > 0
   const attention = connections.filter(c => c.status !== 'active').length
   const path = useRouterState({ select: s => s.location.pathname }).replace(/^\/app/, '') || '/'
@@ -101,9 +100,9 @@ export default function AppShell() {
   const closeNav = () => setNavOpen(false)
 
   return (
-    <div className="min-h-screen bg-midnight-950 md:flex">
+    <div className="min-h-screen bg-surface-page md:flex">
       <StoredBankTransactions />
-      <aside className="hidden md:block w-60 shrink-0 border-r border-midnight-800 bg-midnight-900/60 sticky top-0 h-screen">
+      <aside className="hidden md:block w-60 shrink-0 border-r border-line bg-surface/60 sticky top-0 h-screen">
         <AppShellSidebar nav={nav} />
       </aside>
       {/* The phone menu: a Radix dialog slid in from the left, so focus stays inside it and Escape closes it */}
@@ -112,11 +111,11 @@ export default function AppShell() {
           <Dialog.Overlay className="md:hidden fixed inset-0 z-50 bg-black/60" />
           <Dialog.Content
             aria-describedby={undefined}
-            className="md:hidden fixed inset-y-0 left-0 z-50 w-64 border-r border-midnight-800 bg-midnight-900 outline-none"
+            className="md:hidden fixed inset-y-0 left-0 z-50 w-64 border-r border-line bg-surface outline-none"
           >
             <Dialog.Title className="sr-only">Navigation</Dialog.Title>
             <Dialog.Close
-              className="absolute top-4 right-3 p-1.5 text-midnight-400 hover:text-white"
+              className="absolute top-4 right-3 p-1.5 text-midnight-400 hover:text-ink"
               aria-label="Close navigation"
             >
               <X className="w-5 h-5" />
@@ -127,7 +126,7 @@ export default function AppShell() {
       </Dialog.Root>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="md:sticky top-0 z-40 border-b border-midnight-800 bg-midnight-900/80 backdrop-blur-sm">
+        <header className="md:sticky top-0 z-40 border-b border-line bg-surface/80 backdrop-blur-sm">
           <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
             <button
               className="md:hidden p-2 -ml-2 text-midnight-300"
@@ -152,44 +151,38 @@ export default function AppShell() {
                   transactions={app.displayTransactions}
                 />
               )}
-              {hasData && (
-                <Tooltip label={app.anonymizationEnabled ? 'Click to show original data' : 'Click to anonymize data'}>
+              {/* Anonymized values must stay obvious; turning it on again lives in the menu */}
+              {hasData && app.anonymizationEnabled && (
+                <Tooltip label="Show the original amounts">
                   <button
                     onClick={app.toggleAnonymization}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                      app.anonymizationEnabled
-                        ? 'bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30'
-                        : 'bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30'
-                    }`}
+                    className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/15 px-3 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/25"
+                    aria-pressed
                   >
-                    {app.anonymizationEnabled ? <Shield className="w-4 h-4" /> : <ShieldOff className="w-4 h-4" />}
-                    <span className="hidden lg:inline">{app.anonymizationEnabled ? 'Anonymized' : 'Original'}</span>
+                    <Shield className="w-4 h-4" />
+                    <span className="hidden sm:inline">Anonymized</span>
                   </button>
                 </Tooltip>
               )}
-              {hasData && (
-                <Tooltip label="Add another file">
-                  <label className="btn-secondary text-sm flex items-center gap-2 cursor-pointer">
-                    <FilePlus className="w-4 h-4" />
-                    <span className="hidden lg:inline">Add file</span>
-                    <input
-                      type="file"
-                      accept=".csv,.xlsx,.xls,.ofx,.qfx"
-                      className="hidden"
-                      onChange={e => {
-                        const file = e.target.files?.[0]
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls,.ofx,.qfx"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0]
 
-                        if (file) {
-                          app.addFile(file)
-                        }
-                        e.target.value = ''
-                      }}
-                    />
-                  </label>
-                </Tooltip>
-              )}
+                  if (file) {
+                    app.addFile(file)
+                  }
+                  e.target.value = ''
+                }}
+              />
               <HeaderMenu
                 hasData={hasData}
+                anonymized={app.anonymizationEnabled}
+                onToggleAnonymization={app.toggleAnonymization}
+                onAddFile={() => fileInputRef.current?.click()}
                 numberFormatLabel={app.numberFormat === 'point' ? '1,234.56' : '1.234,56'}
                 onToggleNumberFormat={app.toggleNumberFormat}
                 remember={app.remember}
@@ -219,7 +212,7 @@ export default function AppShell() {
 
         <nav
           aria-label="Quick"
-          className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-midnight-800 bg-midnight-900/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)]"
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-line bg-surface/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)]"
         >
           <ul className="flex">
             {nav
@@ -236,7 +229,7 @@ export default function AppShell() {
                     <item.icon className="w-5 h-5" />
                     {item.label}
                     {!!item.badge && (
-                      <span className="absolute top-1 left-1/2 ml-2 min-w-4 px-1 rounded-full bg-amber-500 text-[10px] font-semibold text-midnight-950 text-center">
+                      <span className="absolute top-1 left-1/2 ml-2 min-w-4 px-1 rounded-full bg-warning text-[10px] font-semibold text-midnight-950 text-center">
                         {item.badge > 99 ? '99+' : item.badge}
                       </span>
                     )}

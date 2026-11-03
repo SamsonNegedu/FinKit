@@ -18,9 +18,7 @@ export default function ContractsSummary({
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
         <div>
           <p className="text-sm font-medium text-midnight-400">Fixed costs per month</p>
-          <p className="text-2xl font-bold text-white tabular-nums">
-            {formatCurrency(totals.monthly, totals.currency)}
-          </p>
+          <p className="figure">{formatCurrency(totals.monthly, totals.currency)}</p>
         </div>
         <p className="pb-1 text-xs text-midnight-400">
           {formatCurrency(totals.monthly * 12, totals.currency)} a year ·{' '}
@@ -49,7 +47,7 @@ export default function ContractsSummary({
           <li key={group} className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: getCategoryColor(group) }} aria-hidden />
             <span className="text-midnight-300">{group}</span>
-            <span className="text-white tabular-nums">{formatCurrency(amount, totals.currency)}</span>
+            <span className="text-ink tabular-nums">{formatCurrency(amount, totals.currency)}</span>
           </li>
         ))}
       </ul>

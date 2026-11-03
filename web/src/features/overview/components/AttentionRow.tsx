@@ -3,9 +3,9 @@ import { Link, type LinkProps } from '@tanstack/react-router'
 import { ArrowRight, type LucideIcon } from 'lucide-react'
 
 const TONE = {
-  danger: 'bg-rose-500/15 text-rose-400',
-  warn: 'bg-amber-500/15 text-amber-400',
-  info: 'bg-sky-500/15 text-sky-400',
+  danger: 'bg-negative/15 text-negative',
+  warn: 'bg-warning/15 text-warning',
+  info: 'bg-info/15 text-info',
 } as const
 
 /** One line in "Needs attention". The icon is the same one the sidebar uses for that page, so the kind reads at a glance. */

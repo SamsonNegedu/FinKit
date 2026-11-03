@@ -51,7 +51,7 @@ export default function YearView() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => copy('all', monthsTsv(inYear, layout))}
-            className="text-sm text-midnight-400 underline-offset-2 hover:text-white hover:underline"
+            className="text-sm text-midnight-400 underline-offset-2 hover:text-ink hover:underline"
           >
             {copied === 'all' ? 'Copied!' : `Copy all ${inYear.length} rows`}
           </button>
@@ -79,7 +79,7 @@ export default function YearView() {
         </div>
       </div>
       {gaps.length > 0 && (
-        <ul className="mb-4 space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+        <ul className="mb-4 space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
           {gaps.map(g => (
             <li key={g.key} className="flex flex-wrap items-center justify-between gap-2">
               <span>

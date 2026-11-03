@@ -29,7 +29,7 @@ function TripMoneyLine({ trip }: { trip: TripSummary }) {
   return (
     <span className="mt-auto block pt-3">
       <span className="flex items-baseline justify-between gap-3">
-        <span className="text-lg font-semibold text-white tabular-nums">
+        <span className="text-lg font-semibold text-ink tabular-nums">
           {fmt(money.spent)} <span className="text-sm font-normal text-midnight-400">spent</span>
         </span>
         <span className={`text-sm tabular-nums ${over ? 'text-expense' : 'text-midnight-300'}`}>
@@ -45,7 +45,7 @@ function TripMoneyLine({ trip }: { trip: TripSummary }) {
       {budget !== undefined && budget > 0 && (
         <span className="mt-1.5 block h-1.5 rounded bg-midnight-800" aria-hidden>
           <span
-            className={`block h-1.5 rounded ${over ? 'bg-expense' : money.spent / budget > 0.8 ? 'bg-orange-400' : 'bg-income'}`}
+            className={`block h-1.5 rounded ${over ? 'bg-expense' : money.spent / budget > 0.8 ? 'bg-warning' : 'bg-income'}`}
             style={{ width: `${Math.min(100, (money.spent / budget) * 100)}%` }}
           />
         </span>
@@ -71,7 +71,7 @@ function TripGrid({ trips }: { trips: TripSummary[] }) {
           >
             <Plane className="w-5 h-5 text-accent mt-0.5 shrink-0 self-start" />
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="block text-white font-medium truncate">{t.name}</span>
+              <span className="block text-ink font-medium truncate">{t.name}</span>
               <span className="block text-sm text-midnight-400 truncate">
                 {t.location} · {tripDates(t)}
               </span>
@@ -149,7 +149,7 @@ export default function TripsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Trips"
         description="Spending paid from a separate balance. It stays out of your months."

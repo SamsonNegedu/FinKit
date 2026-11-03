@@ -53,7 +53,7 @@ function Overview({ mock }: { mock: boolean }) {
     return <Loading />
   }
   if (!data) {
-    return <p className="text-sm text-red-300">{errorMessage(error, "Couldn't load.")}</p>
+    return <p className="text-sm text-negative">{errorMessage(error, "Couldn't load.")}</p>
   }
 
   return (
@@ -76,11 +76,11 @@ function Overview({ mock }: { mock: boolean }) {
         />
       </div>
       <div className="space-y-2">
-        <p className="text-sm font-medium text-white">Setup checks</p>
+        <p className="text-sm font-medium text-ink">Setup checks</p>
         {data.checks.map(c => (
           <div key={c.id} className="flex items-center gap-3 text-sm bg-midnight-800/50 rounded-lg px-3 py-2">
             <span
-              className={`w-5 h-5 rounded-full grid place-items-center text-xs font-bold shrink-0 ${c.ok && !c.warn ? 'bg-income/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}
+              className={`w-5 h-5 rounded-full grid place-items-center text-xs font-bold shrink-0 ${c.ok && !c.warn ? 'bg-income/20 text-positive' : 'bg-warning/20 text-warning'}`}
             >
               {c.ok && !c.warn ? '✓' : '!'}
             </span>
@@ -101,7 +101,7 @@ function Table({ heads, children, empty }: { heads: string[]; children: React.Re
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs text-midnight-400 border-b border-midnight-700">
+          <tr className="text-left text-xs text-midnight-400 border-b border-line-strong">
             {heads.map(h => (
               <th key={h} className="py-2 pr-4 font-medium">
                 {h}
@@ -132,13 +132,13 @@ function SyncLog() {
     return <Loading />
   }
   if (!data) {
-    return <p className="text-sm text-red-300">{errorMessage(error, "Couldn't load.")}</p>
+    return <p className="text-sm text-negative">{errorMessage(error, "Couldn't load.")}</p>
   }
 
   return (
     <Table heads={['When', 'Bank', 'Range', 'Fetched', 'Result']} empty={data.length === 0}>
       {data.map((r, i) => (
-        <tr key={i} className="border-b border-midnight-800">
+        <tr key={i} className="border-b border-line">
           <td className="py-2 pr-4 whitespace-nowrap text-midnight-300">{timeAgo(String(r.started_at))}</td>
           <td className="py-2 pr-4">{r.bank ?? '-'}</td>
           <td className="py-2 pr-4 whitespace-nowrap text-midnight-300">
@@ -147,7 +147,7 @@ function SyncLog() {
           <td className="py-2 pr-4 tabular-nums">{r.fetched}</td>
           <td className="py-2 pr-4">
             <span
-              className={`text-xs px-2 py-0.5 rounded-full ${r.status === 'ok' ? 'bg-income/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}
+              className={`text-xs px-2 py-0.5 rounded-full ${r.status === 'ok' ? 'bg-income/15 text-positive' : 'bg-negative/15 text-negative'}`}
             >
               {r.status}
             </span>
@@ -166,7 +166,7 @@ function Audit() {
     return <Loading />
   }
   if (!data) {
-    return <p className="text-sm text-red-300">{errorMessage(error, "Couldn't load.")}</p>
+    return <p className="text-sm text-negative">{errorMessage(error, "Couldn't load.")}</p>
   }
 
   return (
@@ -175,12 +175,12 @@ function Audit() {
         const bad = String(r.action).includes('refused') || String(r.action).includes('failed')
 
         return (
-          <tr key={i} className="border-b border-midnight-800">
+          <tr key={i} className="border-b border-line">
             <td className="py-2 pr-4 whitespace-nowrap text-midnight-300">{timeAgo(String(r.ts))}</td>
             <td className="py-2 pr-4">{r.actor}</td>
             <td className="py-2 pr-4">
               <span
-                className={`text-xs px-2 py-0.5 rounded-full ${bad ? 'bg-red-500/15 text-red-300' : 'bg-blue-500/15 text-blue-300'}`}
+                className={`text-xs px-2 py-0.5 rounded-full ${bad ? 'bg-negative/15 text-negative' : 'bg-info/15 text-info'}`}
               >
                 {r.action}
               </span>
@@ -195,9 +195,9 @@ function Audit() {
 
 function Stat({ title, value, sub }: { title: string; value: string; sub: string }) {
   return (
-    <div className="border border-midnight-700 rounded-xl p-3 bg-midnight-800/40">
+    <div className="border border-line-strong rounded-xl p-3 bg-midnight-800/40">
       <p className="text-xs text-midnight-400">{title}</p>
-      <p className="text-xl font-semibold text-white">{value}</p>
+      <p className="figure-sm">{value}</p>
       <p className="text-xs text-midnight-400">{sub}</p>
     </div>
   )

@@ -62,7 +62,7 @@ export default function SettingsPanel({ config, onSave, section: tab }: Settings
         )}
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t border-midnight-700">
+      <div className="flex justify-end gap-3 pt-4 border-t border-line-strong">
         <button onClick={handleSave} className="btn-primary flex items-center gap-2" disabled={saving || loading}>
           {saving ? (
             <>

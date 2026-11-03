@@ -17,9 +17,9 @@ export default function Modal({ title, onClose, children, width = 'max-w-md' }: 
         <Dialog.Overlay className="fixed inset-0 z-[70] bg-black/60" />
         <Dialog.Content
           aria-describedby={undefined}
-          className={`fixed left-1/2 top-1/2 z-[70] max-h-[90vh] w-[calc(100%-2rem)] ${width} -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-midnight-700 bg-midnight-900 p-6 shadow-2xl outline-none`}
+          className={`fixed left-1/2 top-1/2 z-[70] max-h-[90vh] w-[calc(100%-2rem)] ${width} -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-line-strong bg-surface p-6 shadow-2xl outline-none`}
         >
-          <Dialog.Title className="mb-1 text-lg font-semibold text-white">{title}</Dialog.Title>
+          <Dialog.Title className="mb-1 text-lg font-semibold text-ink">{title}</Dialog.Title>
           {children}
         </Dialog.Content>
       </Dialog.Portal>

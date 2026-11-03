@@ -64,7 +64,7 @@ export default function TransactionTableRow({
   return (
     <tr
       className={`
-                    group border-b border-midnight-800 hover:bg-midnight-800/50 transition-colors
+                    group border-b border-line hover:bg-midnight-800/50 transition-colors
                     max-md:grid max-md:grid-cols-[44px_minmax(0,1fr)_auto] max-md:items-center max-md:py-2
                     ${selectedIds.has(tx.id) ? 'bg-midnight-800/30' : ''}
                     ${tx.isExcluded ? 'opacity-50' : ''}
@@ -92,7 +92,7 @@ export default function TransactionTableRow({
       <td className="py-3 px-4 max-w-0 max-md:max-w-none max-md:col-start-2 max-md:row-start-1 max-md:py-1 max-md:px-3">
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0 overflow-hidden">
-            <p className="text-sm text-white truncate" title={displayNameOf(tx)}>
+            <p className="text-sm text-ink truncate" title={displayNameOf(tx)}>
               {displayNameOf(tx)}
             </p>
             <p className="text-xs text-midnight-500 truncate" title={tx.description}>
@@ -110,14 +110,14 @@ export default function TransactionTableRow({
           <div className="flex items-center gap-1 shrink-0">
             {tx.isExcluded && !tx.doubleBookingMatch && (
               <Tooltip label="Excluded from totals">
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-warning/20 text-warning border border-warning/30">
                   <span className="hidden sm:inline">Excluded</span>
                 </span>
               </Tooltip>
             )}
             {tx.doubleBookingMatch && (
               <Tooltip label={`Internal transfer - ${tx.isExcluded ? 'excluded from totals' : 'counted in totals'}`}>
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-info/20 text-info border border-info/30">
                   <ArrowLeftRight className="w-3 h-3" />
                   <span className="hidden sm:inline">Transfer</span>
                 </span>
@@ -129,7 +129,7 @@ export default function TransactionTableRow({
               <Tooltip label="Add a note">
                 <button
                   onClick={() => setNoteOpen(true)}
-                  className="p-1 rounded text-midnight-500 hover:text-white hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                  className="p-1 rounded text-midnight-500 hover:text-ink hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                   aria-label={`Add a note to ${displayNameOf(tx)}`}
                 >
                   <MessageSquarePlus className="w-3.5 h-3.5" />
@@ -150,7 +150,7 @@ export default function TransactionTableRow({
               <Tooltip label="Split across categories">
                 <button
                   onClick={() => onStartSplit(tx)}
-                  className="p-1 rounded text-midnight-500 hover:text-white hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                  className="p-1 rounded text-midnight-500 hover:text-ink hover:bg-midnight-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                   aria-label={`Split ${displayNameOf(tx)}`}
                 >
                   <Scissors className="w-3.5 h-3.5" />

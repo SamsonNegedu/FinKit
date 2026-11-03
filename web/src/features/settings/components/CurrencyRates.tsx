@@ -33,8 +33,8 @@ export default function CurrencyRates({ base, foreign, rates, onChange }: Curren
     <div
       className={`rounded-lg border p-3 text-sm ${
         missing.length
-          ? 'bg-orange-500/10 border-orange-500/30 text-orange-300'
-          : 'bg-midnight-900 border-midnight-700 text-midnight-300'
+          ? 'bg-warning/10 border-warning/30 text-warning'
+          : 'bg-surface border-line-strong text-midnight-300'
       }`}
     >
       <div className="flex items-center justify-between gap-3">

@@ -15,8 +15,8 @@ export default function ConfirmDialog({ title, description, confirmLabel, busy, 
     <AlertDialog.Root open onOpenChange={open => !open && onCancel()}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 z-[70] bg-black/60" />
-        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-[70] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-midnight-700 bg-midnight-900 p-6 shadow-2xl outline-none">
-          <AlertDialog.Title className="text-lg font-semibold text-white">{title}</AlertDialog.Title>
+        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-[70] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line-strong bg-surface p-6 shadow-2xl outline-none">
+          <AlertDialog.Title className="text-lg font-semibold text-ink">{title}</AlertDialog.Title>
           <AlertDialog.Description className="mt-2 text-sm text-midnight-300">{description}</AlertDialog.Description>
           <div className="mt-6 flex justify-end gap-2">
             <AlertDialog.Cancel className="btn-secondary">Cancel</AlertDialog.Cancel>

@@ -3,10 +3,10 @@ import Tooltip from '@/shared/components/Tooltip'
 type State = 'ok' | 'watch' | 'over' | 'goal'
 
 const FILL: Record<State, string> = {
-  ok: 'bg-emerald-500',
-  watch: 'bg-amber-500',
+  ok: 'bg-positive',
+  watch: 'bg-warning',
   // The part of an overspent bar that is still inside the limit: full, but calm, so the overshoot is what stands out
-  over: 'bg-rose-900',
+  over: 'bg-negative',
   // A target to reach, not a limit: it only fills up
   goal: 'bg-cyan-500',
 }
@@ -67,7 +67,7 @@ export default function BudgetBar({
         {over && <div className="absolute inset-y-0" style={{ left: `${limitAt}%`, right: 0, background: STRIPES }} />}
         {over && overLabel && limitAt >= 15 && (
           <span
-            className="absolute inset-y-0 flex items-center pr-2 text-[10px] font-semibold tabular-nums text-white"
+            className="absolute inset-y-0 flex items-center pr-2 text-[10px] font-semibold tabular-nums text-ink"
             style={{ right: `calc(${100 - limitAt}% + 3px)` }}
           >
             {overLabel}

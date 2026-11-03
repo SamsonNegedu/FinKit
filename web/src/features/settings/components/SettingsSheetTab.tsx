@@ -56,7 +56,7 @@ export default function SettingsSheetTab({
               </button>
             </Tooltip>
           </div>
-          {sheetError && <p className="text-xs text-red-400 mt-1">{sheetError}</p>}
+          {sheetError && <p className="text-xs text-negative mt-1">{sheetError}</p>}
           {!sheetError && sheetId && (
             <p className="text-xs text-midnight-500 mt-1">
               Sheet ID: <span className="font-mono text-midnight-400">{sheetId.slice(0, 20)}...</span>

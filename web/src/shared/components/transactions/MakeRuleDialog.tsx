@@ -40,7 +40,7 @@ export default function MakeRuleDialog({
         {seen.payee && (
           <label className="flex cursor-pointer items-center gap-3 text-sm text-midnight-100">
             <Checkbox checked={payee} onChange={setPayee} ariaLabel={`Payee is ${seen.payee}`} />
-            Payee is <span className="font-medium text-white">{seen.payee}</span>
+            Payee is <span className="font-medium text-ink">{seen.payee}</span>
           </label>
         )}
         {seen.words.map(word => (
@@ -50,13 +50,12 @@ export default function MakeRuleDialog({
               onChange={on => setWords(w => (on ? [...w, word] : w.filter(x => x !== word)))}
               ariaLabel={`Text has ${word}`}
             />
-            Text has <span className="font-medium text-white">{word}</span>
+            Text has <span className="font-medium text-ink">{word}</span>
           </label>
         ))}
         <label className="flex cursor-pointer items-center gap-3 text-sm text-midnight-100">
           <Checkbox checked={amount} onChange={setAmount} ariaLabel="Amount is the same" />
-          Amount is{' '}
-          <span className="font-medium text-white">{formatCurrency(seen.amount, tx.currency || currency)}</span>
+          Amount is <span className="font-medium text-ink">{formatCurrency(seen.amount, tx.currency || currency)}</span>
         </label>
       </div>
       <div className="mt-6 flex justify-end gap-2">

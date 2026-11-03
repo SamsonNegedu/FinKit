@@ -112,7 +112,7 @@ export default function SettingsColumnsTab({
         {!canAdd && (
           <p className="-mt-1 mb-3 text-xs text-midnight-400">
             Every category already has a column. To map another, add it first under{' '}
-            <Link to="/settings/categories" className="underline hover:text-white">
+            <Link to="/settings/categories" className="underline hover:text-ink">
               Categories
             </Link>
             .
@@ -151,7 +151,7 @@ export default function SettingsColumnsTab({
 
               <button
                 onClick={() => onRemoveMapping(index)}
-                className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-red-400"
+                className="p-2 hover:bg-midnight-800 rounded-lg text-midnight-400 hover:text-negative"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

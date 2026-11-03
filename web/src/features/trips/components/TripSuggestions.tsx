@@ -124,7 +124,7 @@ export default function TripSuggestions({ trip }: { trip: Trip }) {
             </button>
           </span>
         </div>
-        <ul className="mt-1 max-h-72 divide-y divide-midnight-800 overflow-y-auto">
+        <ul className="mt-1 max-h-72 divide-y divide-line overflow-y-auto">
           {rows.map(c => (
             <li key={c.ref} className="flex items-center gap-3 py-2">
               <Checkbox
@@ -133,7 +133,7 @@ export default function TripSuggestions({ trip }: { trip: Trip }) {
                 ariaLabel={`Add ${displayNameOf(c.t)} to the trip`}
               />
               <span className="w-14 shrink-0 text-sm text-midnight-400">{formatDay(c.t.date)}</span>
-              <span className="min-w-0 flex-1 truncate text-sm text-white">{displayNameOf(c.t)}</span>
+              <span className="min-w-0 flex-1 truncate text-sm text-ink">{displayNameOf(c.t)}</span>
               <span className="hidden text-xs text-midnight-400 sm:block">
                 {c.guess ? [c.guess.category, c.guess.subcategory].filter(Boolean).join(' · ') : 'Other'}
               </span>
@@ -150,7 +150,7 @@ export default function TripSuggestions({ trip }: { trip: Trip }) {
     <section className="card !p-4" aria-label="Add transactions to the trip">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-medium text-white">Add transactions</h2>
+          <h2 className="text-sm font-medium text-ink">Add transactions</h2>
           <p className="text-xs text-midnight-400">
             Everything in the range is ticked. Untick what was not part of the trip, then add the rest.
           </p>
@@ -179,7 +179,7 @@ export default function TripSuggestions({ trip }: { trip: Trip }) {
         ),
       )}
       {(inside.length > 0 || earlier.length > 0) && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-midnight-800 pt-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
           {unticked > 0 && (
             <button
               className="text-xs text-accent underline underline-offset-2 hover:no-underline"

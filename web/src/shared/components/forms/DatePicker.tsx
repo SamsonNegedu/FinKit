@@ -40,7 +40,7 @@ export default function DatePicker({ value, onChange, placeholder = 'Pick a date
         <Popover.Content
           align="start"
           sideOffset={8}
-          className="z-[80] rounded-xl border border-midnight-600 bg-midnight-800 p-3 shadow-2xl"
+          className="z-[80] rounded-xl border border-line-strong bg-midnight-800 p-3 shadow-2xl"
         >
           <DayPicker
             mode="single"
@@ -52,7 +52,7 @@ export default function DatePicker({ value, onChange, placeholder = 'Pick a date
               onChange(day ? toISODate(day) : '')
               setOpen(false)
             }}
-            classNames={{ ...DAY_CLASSES, selected: '[&>button]:bg-accent [&>button]:text-white' }}
+            classNames={{ ...DAY_CLASSES, selected: '[&>button]:bg-accent [&>button]:text-midnight-950' }}
             {...calendarJump()}
           />
         </Popover.Content>

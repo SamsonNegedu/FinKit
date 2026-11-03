@@ -49,7 +49,7 @@ export default function BudgetSetupDialog({
         Limits are what each category averaged per month over your last three months. Untick what you don't want to
         budget and change any amount.
       </p>
-      <ul className="mt-4 max-h-[50vh] divide-y divide-midnight-800 overflow-y-auto">
+      <ul className="mt-4 max-h-[50vh] divide-y divide-line overflow-y-auto">
         {suggestions.map(s => (
           <li key={s.category} className="flex items-center gap-3 py-2">
             <Checkbox
@@ -57,12 +57,12 @@ export default function BudgetSetupDialog({
               onChange={c => toggle(s.category, c)}
               ariaLabel={`Budget ${s.category}`}
             />
-            <span className="flex min-w-0 flex-1 items-center gap-2 text-sm text-white">
+            <span className="flex min-w-0 flex-1 items-center gap-2 text-sm text-ink">
               <CategoryIcon category={s.category} size="sm" />
               <span className="truncate">{s.category}</span>
             </span>
             <input
-              className={`input w-28 py-1 text-right text-sm ${on.has(s.category) && !valid(s.category) ? 'border-rose-500' : ''}`}
+              className={`input w-28 py-1 text-right text-sm ${on.has(s.category) && !valid(s.category) ? 'border-negative' : ''}`}
               inputMode="decimal"
               aria-label={`${s.category} limit in ${currency}`}
               value={amounts[s.category]}
@@ -71,7 +71,7 @@ export default function BudgetSetupDialog({
           </li>
         ))}
       </ul>
-      {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
+      {error && <p className="mt-3 text-sm text-negative">{error}</p>}
       <div className="mt-4 flex justify-end gap-2">
         <button className="btn-secondary" onClick={onClose}>
           Cancel

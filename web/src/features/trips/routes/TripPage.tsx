@@ -27,7 +27,7 @@ export default function TripPage() {
   if (error || !data) {
     return (
       <div className="card space-y-3">
-        <p className="text-white">That trip doesn't exist.</p>
+        <p className="text-ink">That trip doesn't exist.</p>
         <Link to="/trips" className="btn-secondary inline-block">
           All trips
         </Link>
