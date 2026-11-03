@@ -47,7 +47,7 @@ Self-hosted personal finance app. `api/` is NestJS + SQLite, `web/` is React + V
 
 ## New pages
 
-A page isn't done until it matches its siblings. Open an existing page (e.g. Contracts) and mirror all of it:
+A page isn't done until it matches its siblings. Open an existing page (e.g. Recurring payments, the `contracts` feature) and mirror all of it:
 
 - Route in `app/router.tsx` and a sidebar entry in `app/shell.tsx`.
 - Breadcrumb label in `shared/components/layout/Breadcrumbs.tsx`. Its fallback prints the raw path segment, so a missing entry shows a lowercase title.

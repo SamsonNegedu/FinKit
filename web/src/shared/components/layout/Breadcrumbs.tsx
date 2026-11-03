@@ -68,8 +68,9 @@ export default function Breadcrumbs() {
   } else {
     crumbs.push({
       label:
-        { review: 'Review', income: 'Income', export: 'Export', contracts: 'Contracts', budgets: 'Budgets' }[first] ??
-        first,
+        { review: 'Review', income: 'Income', export: 'Export', contracts: 'Recurring payments', budgets: 'Budgets' }[
+          first
+        ] ?? first,
     })
   }
 

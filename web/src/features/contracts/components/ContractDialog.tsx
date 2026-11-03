@@ -73,7 +73,7 @@ export default function ContractDialog({ contract, currency, busy, error, onSave
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD(prev => ({ ...prev, [k]: v }))
 
   return (
-    <Modal title={isNew ? 'Add a contract' : 'Edit contract'} onClose={onClose} width="max-w-xl">
+    <Modal title={isNew ? 'Add a recurring payment' : 'Edit recurring payment'} onClose={onClose} width="max-w-xl">
       {contract && contract.state !== 'manual' && (
         <p className="mt-1 text-sm text-midnight-400">
           Found from {contract.count} payments
@@ -98,11 +98,11 @@ export default function ContractDialog({ contract, currency, busy, error, onSave
             <>
               {contract.state !== 'confirmed' && (
                 <button className="btn-secondary" disabled={busy} onClick={() => onState('confirmed')}>
-                  This is a contract
+                  This is recurring
                 </button>
               )}
               <button className="btn-secondary" disabled={busy} onClick={() => onState('dismissed')}>
-                Not a contract
+                Not recurring
               </button>
             </>
           )}

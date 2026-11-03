@@ -1,6 +1,6 @@
 # FinKit
 
-Self-hosted personal finance for you and the people you share a server with. Sync your banks, categorize and review transactions, set budgets, track trips and recurring contracts, and optionally push monthly totals to your own Google Sheet.
+Self-hosted personal finance for you and the people you share a server with. Sync your banks, categorize and review transactions, set budgets, track trips and recurring payments, and optionally push monthly totals to your own Google Sheet.
 
 ## Privacy
 
@@ -20,7 +20,7 @@ Full copy: [privacy](./web/public/privacy.html) · [terms](./web/public/terms.ht
 - **Categorize**: rules, recurring detection and merchant rules learned from your edits
 - **Budgets**: monthly limit per category with rollover, an overall monthly cap and a month switcher
 - **Trips**: group flights, stays and other spending, split costs between travelers, and compare against a trip budget
-- **Contracts**: detects recurring payments and lets you add your own
+- **Recurring payments**: detects recurring payments and lets you add your own
 - **Income and analytics**: trends, category breakdowns and top expenses, computed in the browser
 - **Multi-user**: allowlist via `ALLOWED_USER_EMAILS`, each person sees only their own data
 - **Anonymize**: optionally mask names, IBANs and emails in the UI

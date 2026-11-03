@@ -68,13 +68,13 @@ export default function OverviewPage() {
   const contractLines = contracts
     ? [
         contracts.rises.length > 0 &&
-          `${contracts.rises.length} contract${contracts.rises.length === 1 ? '' : 's'} got more expensive`,
+          `${contracts.rises.length} recurring payment${contracts.rises.length === 1 ? '' : 's'} got more expensive`,
         contracts.fresh.length > 0 &&
-          `${contracts.fresh.length} new contract${contracts.fresh.length === 1 ? '' : 's'} found: confirm ${contracts.fresh.length === 1 ? 'it' : 'them'}`,
+          `${contracts.fresh.length} new recurring payment${contracts.fresh.length === 1 ? '' : 's'} found: confirm ${contracts.fresh.length === 1 ? 'it' : 'them'}`,
         contracts.ended.length > 0 &&
-          `${contracts.ended.length} contract${contracts.ended.length === 1 ? '' : 's'} stopped`,
+          `${contracts.ended.length} recurring payment${contracts.ended.length === 1 ? '' : 's'} stopped`,
         dueSoon.length > 0 &&
-          `${dueSoon.length} contract payment${dueSoon.length === 1 ? '' : 's'} due this week (${formatCurrency(dueSoonTotal, app.baseCurrency)})`,
+          `${dueSoon.length} recurring payment${dueSoon.length === 1 ? '' : 's'} due this week (${formatCurrency(dueSoonTotal, app.baseCurrency)})`,
       ].filter((l): l is string => !!l)
     : []
   // Always this month, like the Budgets page, whatever period is picked above

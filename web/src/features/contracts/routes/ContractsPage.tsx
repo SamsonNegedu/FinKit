@@ -63,7 +63,7 @@ export default function ContractsPage() {
         startDate: c.lastDate,
         note: 'Added from an uploaded file',
       },
-      { onSuccess: () => pushToast({ message: `Added ${c.name} to contracts`, tone: 'success' }) },
+      { onSuccess: () => pushToast({ message: `Added ${c.name} to recurring payments`, tone: 'success' }) },
     )
   const setState = (c: Contract, state: 'confirmed' | 'dismissed' | 'detected') =>
     update
@@ -79,10 +79,10 @@ export default function ContractsPage() {
         pushToast({
           message:
             state === 'confirmed'
-              ? 'Contract confirmed'
+              ? 'Marked as recurring'
               : state === 'dismissed'
-                ? 'Contract dismissed'
-                : 'Contract restored',
+                ? 'Marked as not recurring'
+                : 'Recurring payment restored',
           tone: 'success',
         })
         setDialog(null)
@@ -108,14 +108,14 @@ export default function ContractsPage() {
     } else {
       await create.mutateAsync(toNew(d, currency))
     }
-    pushToast({ message: dialog?.kind === 'edit' ? 'Contract saved' : 'Contract added', tone: 'success' })
+    pushToast({ message: dialog?.kind === 'edit' ? 'Saved' : 'Added', tone: 'success' })
     setDialog(null)
   }
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Contracts"
+        title="Recurring payments"
         description="Payments that repeat every month, quarter or year for at least three payments."
         actions={
           <button className="btn-primary flex items-center gap-2" onClick={() => setDialog({ kind: 'add' })}>
@@ -135,14 +135,14 @@ export default function ContractsPage() {
       )}
       {data && groups.length === 0 && (
         <p className="card text-midnight-300">
-          No contracts found yet. They show up once a payment has repeated at least three times; you can also add one by
-          hand.
+          No recurring payments found yet. They show up once a payment has repeated at least three times; you can also
+          add one by hand.
         </p>
       )}
       <ContractsFromUploads candidates={candidates} busy={create.isPending} onAdd={addFromUpload} />
       {suggested > 0 && (
         <p className="px-1 text-sm text-midnight-400">
-          {suggested} {suggested === 1 ? 'category is a suggestion' : 'categories are suggestions'}. Open a contract to
+          {suggested} {suggested === 1 ? 'category is a suggestion' : 'categories are suggestions'}. Open a payment to
           confirm or change it; FinKit remembers your answer for that payee.
         </p>
       )}
@@ -181,7 +181,7 @@ export default function ContractsPage() {
             dialog.kind === 'edit' && dialog.contract.state === 'manual'
               ? () =>
                   remove.mutateAsync(dialog.contract.id).then(() => {
-                    pushToast({ message: 'Contract deleted', tone: 'success' })
+                    pushToast({ message: 'Deleted', tone: 'success' })
                     setDialog(null)
                   })
               : undefined

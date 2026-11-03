@@ -167,6 +167,51 @@ describe('detecting contracts', () => {
     expect(c.detected).toMatchObject({ kind: 'fixed', amount: 1020, priceChange: { from: 950, to: 1020 } })
   })
 
+  it('does not wait for a big price rise to settle: a fixed payment that stepped up is still found', () => {
+    const [c] = detectContracts(months('Stadtwerke Strom', [50, 50, 50, 50, 50, 50, 95, 95]))
+
+    expect(c.detected).toMatchObject({ kind: 'fixed', amount: 95, priceChange: { from: 50, to: 95 } })
+    // Right after the rise, with only one new payment
+    expect(detectContracts(months('Stadtwerke Strom', [50, 50, 50, 50, 50, 95]))[0].detected.amount).toBe(95)
+  })
+
+  it('follows a payee whose text changes every month by its IBAN, so a new price does not start over', () => {
+    const strom = (date: string, amount: number, ref: string) => ({
+      ...pay(date, amount, ''),
+      recipient: undefined,
+      description: `S/836670615631/${ref} Abschlag`,
+      recipientIban: 'DE23420500010101191014',
+      externalId: ref,
+    })
+    const rows = [
+      ...['2026-03-08', '2026-04-08', '2026-05-07', '2026-06-08', '2026-07-30'].map((d, i) =>
+        strom(d, 73, `6012${i}13901868`),
+      ),
+      ...['2026-09-01', '2026-10-01'].map((d, i) => strom(d, 80, `6049${i}4061623`)),
+    ].map((r, i) => ({ ...r, description: `${r.description} ${i % 2 ? 'Monat' : 'Zeitraum'} ${i}x` }))
+    const found = detectContracts(rows)
+
+    expect(found).toHaveLength(1)
+    expect(found[0].detected).toMatchObject({ kind: 'fixed', amount: 80, count: 7 })
+  })
+
+  it('keeps shops apart that are paid through one shared IBAN', () => {
+    const via = (date: string, who: string, amount: number) => ({
+      ...pay(date, amount, who),
+      recipientIban: 'IE00PROCESSOR000000001',
+    })
+    const rows = [
+      ...months('Netflix', [12, 12, 12, 12]).map(r => ({ ...r, recipientIban: 'IE00PROCESSOR000000001' })),
+      ...['2026-01-09', '2026-02-09', '2026-03-09', '2026-04-09'].map(d => via(d, 'Spotify', 10)),
+    ]
+
+    expect(
+      detectContracts(rows)
+        .map(c => c.detected.name)
+        .toSorted(),
+    ).toEqual(['Netflix', 'Spotify'])
+  })
+
   it('flags a price change, and tells an ended contract from a running one', () => {
     const [c] = detectContracts(months('Netflix', [9.99, 9.99, 9.99, 12.99]))
 

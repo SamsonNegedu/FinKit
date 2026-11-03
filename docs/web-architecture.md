@@ -94,7 +94,7 @@ Most features are UI over **`AppState`** and **`shared/utils`**; they need only 
 
 - `shared/components/layout/Breadcrumbs.tsx` reads connection and trip names from the banking and trips hooks.
 - `app/shell.tsx` imports banking (nav badges) and review helpers for counts.
-- `overview` reads the contracts hook and its insights to show contract lines under "Needs attention".
+- `overview` reads the contracts hook and its insights to show recurring-payment lines under "Needs attention".
 - `transactions` imports the trips move dialog (the bulk bar's "Trip" action opens it), and `transactions` and `overview` show `TripsMovedNote`.
 - Settings back-office tab embeds a banking component when banking is enabled.
 - Settings sheet tab uses **`export/api`** for Google metadata (same backend routes as export).

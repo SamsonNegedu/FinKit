@@ -80,7 +80,7 @@ export default function AppShell() {
     { to: '/budgets', label: 'Budgets', icon: Target, group: INSIGHTS },
     {
       to: '/contracts',
-      label: 'Contracts',
+      label: 'Recurring payments',
       icon: Repeat,
       hidden: !banking?.enabled,
       group: INSIGHTS,

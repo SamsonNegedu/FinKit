@@ -81,12 +81,19 @@ export interface DetectedContract {
   detected: Detected
 }
 
+interface Group {
+  name: string
+  sample: string
+  currency: string
+  rows: Array<{ date: string; amount: number; ref?: string; name?: string }>
+}
+
 /** Money going out to the same payee on a steady rhythm, for long enough to count as a contract. */
 export function detectContracts(txs: Array<BankTransaction & { ref?: string }>): DetectedContract[] {
-  const groups = new Map<
-    string,
-    { name: string; sample: string; currency: string; rows: Array<{ date: string; amount: number; ref?: string }> }
-  >()
+  const groups = new Map<string, Group>()
+  // The same payee can be written differently every month (a reference number or a period in the text), which splits
+  // it into groups too small to count. Its IBAN does not change, so payments are also grouped by that.
+  const byIban = new Map<string, { names: Set<string>; group: Group }>()
 
   for (const tx of txs) {
     // Only money out; money moved between the person's own accounts is not a running cost
@@ -99,67 +106,114 @@ export function detectContracts(txs: Array<BankTransaction & { ref?: string }>):
     if (key.length < 2) {
       continue
     }
+    const row = { date: tx.date, amount: -tx.amount, ref: tx.ref, name }
     const id = `${key}|${tx.currency}`
     const group = groups.get(id) ?? { name, sample: tx.description, currency: tx.currency, rows: [] }
 
-    group.rows.push({ date: tx.date, amount: -tx.amount, ref: tx.ref })
+    group.rows.push(row)
     groups.set(id, group)
+
+    if (tx.recipientIban) {
+      const ibanId = `${tx.recipientIban.replace(/\s/g, '').toLowerCase()}|${tx.currency}`
+      const entry = byIban.get(ibanId) ?? {
+        names: new Set<string>(),
+        group: { name, sample: tx.description, currency: tx.currency, rows: [] },
+      }
+
+      entry.names.add(key)
+      entry.group.rows.push(row)
+      byIban.set(ibanId, entry)
+    }
   }
 
   const out: DetectedContract[] = []
+  const covered = new Set<string>()
 
-  for (const [id, g] of groups) {
-    const sorted = g.rows.toSorted((a, b) => a.date.localeCompare(b.date))
-
-    // A contract is paid about once per period. A shop or café visited several times a month is spending, not a contract.
-    if (typicalPaymentsPerMonth(sorted) > 1) {
+  // Only an IBAN that more than one spelling of the name was paid to can change anything. A payment processor's IBAN
+  // serves many shops, and those pay several times a month between them, so they fail the once-a-period test and
+  // stay apart.
+  for (const [ibanId, { names, group }] of byIban) {
+    if (names.size < 2) {
       continue
     }
-    const rows = collapseSameMonth(sorted)
-    const gaps = rows.slice(1).map((r, i) => (t(r.date) - t(rows[i].date)) / DAY)
-    // A paused or late month breaks the gap rhythm, so a monthly pattern is also accepted by how many months it covers
-    const frequency = frequencyOf(gaps) ?? (coversMonths(rows) ? 'monthly' : null)
-
-    if (!frequency || rows.length < PERIODS[frequency].minPayments) {
-      continue
-    }
-    const amounts = rows.map(r => r.amount)
-    const recent = amounts.slice(-RECENT)
-    const recentTypical = median(recent)
-
-    // Judged on the recent payments: a price that rose years ago should not rule a contract out
-    if (Math.max(...recent.map(a => Math.abs(a - recentTypical) / recentTypical)) > VARIABLE_BAND) {
-      continue
-    }
-    const steps = amounts.flatMap((a, i) => (i > 0 && Math.abs(a - amounts[i - 1]) / amounts[i - 1] > STEP ? [i] : []))
-    // Fixed = a price that stays put and now and then steps (rent, a ticket); variable = it moves most months
-    const fixed = steps.length <= Math.max(1, Math.floor((rows.length - 1) * 0.2))
-    const last = rows.at(-1)!
-    const lastStep = steps.at(-1)
-    const changed = fixed && lastStep !== undefined && lastStep >= rows.length - RECENT_STEP_PAYMENTS
-
-    out.push({
-      key: id.split('|')[0],
-      currency: g.currency,
-      detected: {
-        name: g.name,
-        sample: g.sample,
-        refs: sorted.flatMap(r => (r.ref ? [r.ref] : [])).slice(-MAX_REFS),
-        kind: fixed ? 'fixed' : 'variable',
-        frequency,
-        // What it costs now: the current price for a fixed one, a recent average for one that moves
-        amount: round2(fixed ? last.amount : recentTypical),
-        lastAmount: round2(last.amount),
-        firstDate: rows[0].date,
-        lastDate: last.date,
-        nextExpected: addMonths(last.date, MONTHS[frequency]),
-        count: rows.length,
-        priceChange: changed ? { from: round2(amounts[lastStep - 1]), to: round2(amounts[lastStep]) } : null,
-      },
+    // The newest text names it
+    const newest = group.rows.reduce((a, b) => (b.date > a.date ? b : a))
+    const found = evaluate(`iban ${ibanId.split('|')[0]}|${group.currency}`, {
+      ...group,
+      name: newest.name ?? group.name,
     })
+
+    if (found) {
+      out.push(found)
+      for (const [id, g] of groups) {
+        if (g.rows.every(r => group.rows.includes(r))) {
+          covered.add(id)
+        }
+      }
+    }
+  }
+  for (const [id, g] of groups) {
+    const found = covered.has(id) ? null : evaluate(id, g)
+
+    if (found) {
+      out.push(found)
+    }
   }
 
   return out
+}
+
+function evaluate(id: string, g: Group): DetectedContract | null {
+  const sorted = g.rows.toSorted((a, b) => a.date.localeCompare(b.date))
+
+  // A contract is paid about once per period. A shop or café visited several times a month is spending, not a contract.
+  if (typicalPaymentsPerMonth(sorted) > 1) {
+    return null
+  }
+  const rows = collapseSameMonth(sorted)
+  const gaps = rows.slice(1).map((r, i) => (t(r.date) - t(rows[i].date)) / DAY)
+  // A paused or late month breaks the gap rhythm, so a monthly pattern is also accepted by how many months it covers
+  const frequency = frequencyOf(gaps) ?? (coversMonths(rows) ? 'monthly' : null)
+
+  if (!frequency || rows.length < PERIODS[frequency].minPayments) {
+    return null
+  }
+  const amounts = rows.map(r => r.amount)
+  const steps = amounts.flatMap((a, i) => (i > 0 && Math.abs(a - amounts[i - 1]) / amounts[i - 1] > STEP ? [i] : []))
+  // Fixed = a price that stays put and now and then steps (rent, a ticket); variable = it moves most months
+  const fixed = steps.length <= Math.max(1, Math.floor((rows.length - 1) * 0.2))
+  const lastStep = steps.at(-1)
+  // A fixed price that just stepped up is judged on the price it has now, not against the old one: a big rise
+  // (an energy bill) would otherwise keep it out until the new price made up half of the recent payments
+  const recent = amounts.slice(fixed && lastStep !== undefined ? Math.max(lastStep, amounts.length - RECENT) : -RECENT)
+  const recentTypical = median(recent)
+
+  // Judged on the recent payments: a price that rose years ago should not rule a contract out
+  if (Math.max(...recent.map(a => Math.abs(a - recentTypical) / recentTypical)) > VARIABLE_BAND) {
+    return null
+  }
+  const last = rows.at(-1)!
+  const changed = fixed && lastStep !== undefined && lastStep >= rows.length - RECENT_STEP_PAYMENTS
+
+  return {
+    key: id.split('|')[0],
+    currency: g.currency,
+    detected: {
+      name: g.name,
+      sample: g.sample,
+      refs: sorted.flatMap(r => (r.ref ? [r.ref] : [])).slice(-MAX_REFS),
+      kind: fixed ? 'fixed' : 'variable',
+      frequency,
+      // What it costs now: the current price for a fixed one, a recent average for one that moves
+      amount: round2(fixed ? last.amount : recentTypical),
+      lastAmount: round2(last.amount),
+      firstDate: rows[0].date,
+      lastDate: last.date,
+      nextExpected: addMonths(last.date, MONTHS[frequency]),
+      count: rows.length,
+      priceChange: changed ? { from: round2(amounts[lastStep - 1]), to: round2(amounts[lastStep]) } : null,
+    },
+  }
 }
 
 function typicalPaymentsPerMonth(rows: Array<{ date: string }>): number {
