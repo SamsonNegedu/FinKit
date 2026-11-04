@@ -1,4 +1,5 @@
 import type { Transaction } from '@/shared/types'
+import { moneyMinor, fromMoneyMinor } from './money'
 
 const NET_EPS = 0.005
 
@@ -43,13 +44,17 @@ export function selectionTotals(transactions: Transaction[], selected: Set<strin
     }
     const currency = t.currency || base
     const total = totals.get(currency) ?? { currency, net: 0, incoming: 0, outgoing: 0 }
+    let incomingMinor = moneyMinor(total.incoming)
+    let outgoingMinor = moneyMinor(total.outgoing)
 
     if (t.type === 'income') {
-      total.incoming += t.amount
+      incomingMinor += moneyMinor(t.amount)
     } else {
-      total.outgoing += t.amount
+      outgoingMinor += moneyMinor(t.amount)
     }
-    total.net = total.incoming - total.outgoing
+    total.incoming = fromMoneyMinor(incomingMinor)
+    total.outgoing = fromMoneyMinor(outgoingMinor)
+    total.net = fromMoneyMinor(incomingMinor - outgoingMinor)
     totals.set(currency, total)
   }
 

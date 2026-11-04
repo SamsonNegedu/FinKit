@@ -1,5 +1,7 @@
 import type { Contract } from '../api/contracts.api'
 
+export { monthlyInBase } from '@/shared/utils/amountInBase'
+
 export interface ContractGroup {
   name: string
   contracts: Contract[]
@@ -42,21 +44,4 @@ export const FREQUENCY_TITLE: Record<keyof typeof FREQUENCY_LABEL, string> = {
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   yearly: 'Yearly',
-}
-
-/** Monthly cost in the base currency, or null when that currency has no rate. */
-export function monthlyInBase(
-  monthly: number,
-  from: string,
-  base: string,
-  rates: Record<string, number>,
-): number | null {
-  if (from === base) {
-    return monthly
-  }
-  if (rates[from] > 0) {
-    return monthly * rates[from]
-  }
-
-  return null
 }

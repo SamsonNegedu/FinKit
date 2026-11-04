@@ -5,8 +5,7 @@ import {
   SECONDS_PER_MINUTE,
   TIME_AGO_YESTERDAY_SECONDS,
 } from '@/shared/constants/time'
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+import { API_BASE, getHeaders } from '@/shared/services/http'
 
 interface BankingStatus {
   enabled: boolean
@@ -76,14 +75,14 @@ export class BankingError extends Error {
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   let res: Response
+  const method = init.method ?? 'GET'
+  const mutating = method !== 'GET'
 
   try {
     res = await fetch(`${API_BASE}/banking${path}`, {
       ...init,
       headers: {
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-        // A header other websites cannot send: the server requires it on every changing request
-        ...(init.method && init.method !== 'GET' ? { 'X-FinKit': '1' } : {}),
+        ...(init.body || mutating ? getHeaders(Boolean(init.body)) : {}),
         ...init.headers,
       },
       credentials: 'same-origin',

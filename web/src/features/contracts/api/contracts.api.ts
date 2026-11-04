@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+import { ApiError, apiJson, jsonRequest } from '@/shared/services/apiClient'
 
 export type Frequency = 'monthly' | 'quarterly' | 'yearly'
 export type ContractState = 'detected' | 'confirmed' | 'dismissed' | 'manual'
@@ -92,41 +92,26 @@ export interface ContractPayment {
   description: string
 }
 
-export class ContractsError extends Error {}
+export class ContractsError extends ApiError {}
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
-  let res: Response
-
   try {
-    res = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers: {
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-        // A header other websites cannot send: the server requires it on every changing request
-        ...(init.method && init.method !== 'GET' ? { 'X-FinKit': '1' } : {}),
-      },
-      credentials: 'same-origin',
-    })
-  } catch {
-    throw new ContractsError("Couldn't reach FinKit's server.")
-  }
-  const body = res.status === 204 ? {} : await res.json().catch(() => ({}))
+    return await apiJson<T>(path, init)
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ContractsError(e.message)
+    }
 
-  if (!res.ok) {
-    throw new ContractsError(typeof body.error === 'string' ? body.error : 'Something went wrong.')
+    throw e
   }
-
-  return body as T
 }
 
-const send = (method: string, body?: unknown) => ({ method, ...(body ? { body: JSON.stringify(body) } : {}) })
-
 export const listContracts = () => call<ContractsResult>('/contracts')
-export const createContract = (input: NewContract) => call<Contract>('/contracts', send('POST', input))
+export const createContract = (input: NewContract) => call<Contract>('/contracts', jsonRequest('POST', input))
 export const createContractFromPayments = (input: NewContractFromPayments) =>
-  call<Contract>('/contracts/from-payments', send('POST', input))
+  call<Contract>('/contracts/from-payments', jsonRequest('POST', input))
 export const updateContract = (id: string, changes: ContractChanges) =>
-  call<Contract>(`/contracts/${id}`, send('PATCH', changes))
-export const deleteContract = (id: string) => call<unknown>(`/contracts/${id}`, send('DELETE'))
+  call<Contract>(`/contracts/${id}`, jsonRequest('PATCH', changes))
+export const deleteContract = (id: string) => call<unknown>(`/contracts/${id}`, jsonRequest('DELETE'))
 export const listPayments = (id: string) =>
   call<{ payments: ContractPayment[] }>(`/contracts/${id}/payments`).then(r => r.payments)

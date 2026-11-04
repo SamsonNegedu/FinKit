@@ -176,12 +176,12 @@ describe('sheet export (/api/export)', () => {
     expect((await request(t.server).post('/api/export/sheets').set(json).send({}).expect(400)).body.error).toBe(
       'Invalid request body',
     )
-    expect((await request(t.server).post('/api/export/sheets/layout').set(json).send({}).expect(400)).body).toEqual({
-      error: 'Missing sheetId or tabName',
-    })
-    expect((await request(t.server).post('/api/export/sheets/metadata').set(json).send({}).expect(400)).body).toEqual({
-      error: 'Missing sheetId',
-    })
+    expect((await request(t.server).post('/api/export/sheets/layout').set(json).send({}).expect(400)).body.error).toBe(
+      'Invalid sheetId or tabName',
+    )
+    expect(
+      (await request(t.server).post('/api/export/sheets/metadata').set(json).send({}).expect(400)).body.error,
+    ).toBe('Invalid sheetId')
   })
   it('hides internal error details', async () => {
     delete process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH

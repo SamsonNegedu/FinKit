@@ -49,7 +49,7 @@ Self-hosted personal finance app. `api/` is NestJS + SQLite, `web/` is React + V
 
 A page isn't done until it matches its siblings. Open an existing page (e.g. Recurring payments, the `contracts` feature) and mirror all of it:
 
-- Route in `app/router.tsx` and a sidebar entry in `app/shell.tsx`.
+- Route in `app/routes/appRouteTree.tsx` (wired from `app/router.tsx`) and a sidebar entry in `app/shell.tsx`.
 - Breadcrumb label in `shared/components/layout/Breadcrumbs.tsx`. Its fallback prints the raw path segment, so a missing entry shows a lowercase title.
 - `PageHeader` for the title, sentence-case labels, and the same card, button and input classes as the other pages.
 - Look at the running page before finishing, not only the code.
@@ -61,6 +61,7 @@ A page isn't done until it matches its siblings. Open an existing page (e.g. Rec
 ## Read when relevant
 
 - Frontend work: `docs/web-architecture.md`
+- NestJS modules, stores, validation: `docs/api-architecture.md`
 - Auth, allowlist, per-user data, Sheets access: `docs/users-and-access.md`
 - Bank sync: `docs/enable-banking-setup.md`
 - Google Sheets export: `docs/google-sheets.md`

@@ -5,28 +5,16 @@ import { TransactionHooks } from '../transactions/transaction-hooks'
 import { breakdown, TripLine } from './trips.breakdown'
 import { CreateTripInput, EntryInput, TagItemsInput, UpdateTripInput } from './trips.schemas'
 import { TripsRepository } from './trips.repository'
-import { MANUAL_PREFIX, Trip, TripEntry, TripItem } from './trips.types'
-
-// Built in, so they exist for everyone and can't be removed. They are not the app's spending
-// categories and are never written to a sheet.
-const DEFAULT_TRIP_CATEGORIES = [
-  'Accommodation',
-  'Transport',
-  'Food & drink',
-  'Activities',
-  'Shopping',
-  'Souvenir',
-  'Other',
-]
-// Suggestions that come with a category. They are offered, never required, and a person can type their own.
-const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
-  Accommodation: ['Hotel', 'Hostel', 'Apartment', 'Campsite'],
-  Transport: ['Flight', 'Train', 'Bus', 'Metro & tram', 'Taxi & rides', 'Car hire', 'Ferry', 'Fuel & parking'],
-  'Food & drink': ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Coffee', 'Drinks', 'Groceries'],
-  Activities: ['Tours', 'Tickets', 'Nightlife'],
-}
-const FALLBACK = 'Other'
-const keyOf = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim()
+import {
+  DEFAULT_TRIP_CATEGORIES,
+  FALLBACK,
+  keyOf,
+  mergeDefaultSubcategories,
+  resolveSubcategoryName,
+  tripCategoryList,
+} from './trips.constants'
+import { assertTravelerPayer, mergeTagItem } from './trips.tagMerge'
+import { MANUAL_PREFIX, Trip, TripEntry } from './trips.types'
 
 /** A manual entry shown like a bank transaction, so totals and lists treat both the same way. */
 const asTransaction = (e: TripEntry): BankTransaction => ({
@@ -181,7 +169,16 @@ export class TripsService implements OnModuleInit {
       const same = before?.tripId === id ? before : undefined
       const kind = i.kind
 
-      return this.merge(userId, trip, known, i, kind, same, i.ref.startsWith(MANUAL_PREFIX))
+      return mergeTagItem({
+        userId,
+        trip,
+        known,
+        row: i,
+        kind,
+        before: same,
+        manual: i.ref.startsWith(MANUAL_PREFIX),
+        subcategoryOf: (uid, category, wanted) => this.subcategoryOf(uid, category, wanted),
+      })
     })
 
     this.trips.tag(userId, items)
@@ -195,7 +192,7 @@ export class TripsService implements OnModuleInit {
     if (!category) {
       throw new BadRequestException({ error: `Unknown trip category: ${input.category}` })
     }
-    this.checkPayer(trip, input.paidBy)
+    assertTravelerPayer(trip, input.paidBy)
 
     return {
       ref: this.trips.addEntry(
@@ -219,30 +216,12 @@ export class TripsService implements OnModuleInit {
   }
 
   categories(userId: string): string[] {
-    // A category someone made themselves before it became built in would otherwise be listed twice
-    const custom = this.trips
-      .customCategories(userId)
-      .filter(c => !DEFAULT_TRIP_CATEGORIES.some(d => keyOf(d) === keyOf(c)))
-
-    return [...DEFAULT_TRIP_CATEGORIES, ...custom]
+    return tripCategoryList(this.trips.customCategories(userId))
   }
 
   /** Per category: the built-in suggestions, then any the person typed themselves. */
   subcategories(userId: string): Record<string, string[]> {
-    const out: Record<string, string[]> = {}
-
-    for (const [category, names] of Object.entries(DEFAULT_SUBCATEGORIES)) {
-      out[category] = [...names]
-    }
-    for (const { category, subcategory } of this.trips.usedSubcategories(userId)) {
-      const list = (out[category] ??= [])
-
-      if (!list.some(s => keyOf(s) === keyOf(subcategory))) {
-        list.push(subcategory)
-      }
-    }
-
-    return out
+    return mergeDefaultSubcategories(this.trips.usedSubcategories(userId))
   }
 
   addCategory(userId: string, name: string) {
@@ -263,103 +242,9 @@ export class TripsService implements OnModuleInit {
     }
   }
 
-  private merge(
-    userId: string,
-    trip: Trip,
-    known: string[],
-    input: TagItemsInput['items'][number],
-    kind: TripItem['kind'],
-    before: TripItem | undefined,
-    manual: boolean,
-  ): TripItem {
-    const wanted = input.category ?? before?.category ?? FALLBACK
-    const category = kind === 'funding' ? null : (known.find(c => keyOf(c) === keyOf(wanted)) ?? null)
-
-    if (kind === 'cost' && !category) {
-      throw new BadRequestException({ error: `Unknown trip category: ${input.category}` })
-    }
-    const paidBy = this.resolvePaidBy(manual, kind, input, before)
-
-    this.checkPayer(trip, paidBy)
-    // A subcategory belongs to its category, so moving to another category clears it unless a new one is given
-    const kept = category && before?.category === category ? before.subcategory : null
-
-    return {
-      ref: input.ref,
-      tripId: trip.id,
-      kind,
-      category,
-      subcategory: this.resolveSubcategory(userId, kind, category, input, kept),
-      place: this.resolvePlace(kind, input, before),
-      shared: kind === 'funding' ? false : (input.shared ?? before?.shared ?? false),
-      paidBy,
-    }
-  }
-
-  private resolvePaidBy(
-    manual: boolean,
-    kind: TripItem['kind'],
-    input: TagItemsInput['items'][number],
-    before: TripItem | undefined,
-  ): string | null {
-    if (!manual || kind !== 'cost') {
-      return null
-    }
-    if (input.paidBy !== undefined) {
-      return input.paidBy
-    }
-
-    return before?.paidBy ?? null
-  }
-
-  private resolvePlace(
-    kind: TripItem['kind'],
-    input: TagItemsInput['items'][number],
-    before: TripItem | undefined,
-  ): string | null {
-    if (kind === 'funding') {
-      return null
-    }
-    if (input.place !== undefined) {
-      return input.place
-    }
-
-    return before?.place ?? null
-  }
-
-  private resolveSubcategory(
-    userId: string,
-    kind: TripItem['kind'],
-    category: string | null,
-    input: TagItemsInput['items'][number],
-    kept: string | null,
-  ): string | null {
-    if (kind === 'funding' || !category) {
-      return null
-    }
-    if (input.subcategory !== undefined) {
-      return this.subcategoryOf(userId, category, input.subcategory)
-    }
-
-    return kept
-  }
-
   /** The known spelling when it matches one (so "flight" and "Flight" are one), otherwise what was typed. */
   private subcategoryOf(userId: string, category: string, wanted: string | null | undefined): string | null {
-    const name = wanted?.trim()
-
-    if (!name) {
-      return null
-    }
-    const known = this.subcategories(userId)[category] ?? []
-
-    return known.find(s => keyOf(s) === keyOf(name)) ?? name
-  }
-
-  private checkPayer(trip: Trip, paidBy: string | null | undefined) {
-    if (paidBy && !trip.travelers.includes(paidBy)) {
-      throw new BadRequestException({ error: `${paidBy} is not a traveler on this trip` })
-    }
+    return resolveSubcategoryName(wanted, this.subcategories(userId)[category] ?? [])
   }
 
   private require(userId: string, id: string) {

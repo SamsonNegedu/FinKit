@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { MS_PER_DAY } from '@/shared/constants/time'
 import { formatCurrency } from '@/shared/utils/format'
-import { monthlyInBase } from '@/features/contracts/utils/contractGroups'
+import { monthlyInBase } from '@/shared/utils/amountInBase'
 import { timeAgo, type AccountBalance } from '@/features/banking/api/banking.api'
 
 /** What your accounts hold: each one, and a total in your base currency for those with a rate. */

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, useReducer } from 'react'
 import { Transaction } from '@/shared/types'
+import { addMoney } from '@/shared/utils/money'
 import { signedTransactionAmount } from '@/shared/utils/transactionAmount'
 import { getAvailableCategories, merchantKeyOf, sameMerchant } from '@/shared/utils/categorizer'
 import { parseLocalDate } from '@/shared/utils/dates'
@@ -175,7 +176,7 @@ export function useTransactionTableState(
 
       if (group) {
         group.items.push(tx)
-        group.total += signed
+        group.total = addMoney(group.total, signed)
         group.categories.add(tx.category || 'Other')
       } else {
         result.push({ key, items: [tx], total: signed, categories: new Set([tx.category || 'Other']) })

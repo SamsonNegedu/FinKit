@@ -1,6 +1,5 @@
 import type { RawTransaction } from '@/shared/types'
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+import { ApiError, apiJson, jsonRequest } from '@/shared/services/apiClient'
 
 export interface Trip {
   id: string
@@ -93,49 +92,36 @@ export interface EntryInput {
   paidBy?: string | null
 }
 
-export class TripsError extends Error {}
+export class TripsError extends ApiError {}
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
-  let res: Response
-
   try {
-    res = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers: {
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-        // A header other websites cannot send: the server requires it on every changing request
-        ...(init.method && init.method !== 'GET' ? { 'X-FinKit': '1' } : {}),
-      },
-      credentials: 'same-origin',
-    })
-  } catch {
-    throw new TripsError("Couldn't reach FinKit's server.")
-  }
-  const body = await res.json().catch(() => ({}))
+    return await apiJson<T>(path, init)
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new TripsError(e.message)
+    }
 
-  if (!res.ok) {
-    throw new TripsError(typeof body.error === 'string' ? body.error : 'Something went wrong.')
+    throw e
   }
-
-  return body as T
 }
-
-const send = (method: string, body?: unknown) => ({ method, ...(body ? { body: JSON.stringify(body) } : {}) })
 
 export const listTrips = () => call<{ trips: TripSummary[] }>('/trips').then(r => r.trips)
 export const getTrip = (id: string) => call<TripDetail>(`/trips/${id}`)
-export const createTrip = (input: TripInput) => call<Trip>('/trips', send('POST', input))
-export const updateTrip = (id: string, input: Partial<TripInput>) => call<Trip>(`/trips/${id}`, send('PATCH', input))
-export const deleteTrip = (id: string) => call<unknown>(`/trips/${id}`, send('DELETE'))
+export const createTrip = (input: TripInput) => call<Trip>('/trips', jsonRequest('POST', input))
+export const updateTrip = (id: string, input: Partial<TripInput>) =>
+  call<Trip>(`/trips/${id}`, jsonRequest('PATCH', input))
+export const deleteTrip = (id: string) => call<unknown>(`/trips/${id}`, jsonRequest('DELETE'))
 export const addEntry = (id: string, entry: EntryInput) =>
-  call<{ ref: string }>(`/trips/${id}/entries`, send('POST', entry))
-export const tagItems = (id: string, items: TagItem[]) => call<unknown>(`/trips/${id}/items`, send('POST', { items }))
+  call<{ ref: string }>(`/trips/${id}/entries`, jsonRequest('POST', entry))
+export const tagItems = (id: string, items: TagItem[]) =>
+  call<unknown>(`/trips/${id}/items`, jsonRequest('POST', { items }))
 export const untagItems = (id: string, refs: string[]) =>
-  call<unknown>(`/trips/${id}/items/remove`, send('POST', { refs }))
+  call<unknown>(`/trips/${id}/items/remove`, jsonRequest('POST', { refs }))
 export interface TripCategories {
   categories: string[]
   /** Suggestions per category: the built-in ones, then any the person typed before */
   subcategories: Record<string, string[]>
 }
 export const listTripCategories = () => call<TripCategories>('/trip-categories')
-export const addTripCategory = (name: string) => call<unknown>('/trip-categories', send('POST', { name }))
+export const addTripCategory = (name: string) => call<unknown>('/trip-categories', jsonRequest('POST', { name }))

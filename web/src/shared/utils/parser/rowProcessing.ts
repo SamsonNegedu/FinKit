@@ -1,4 +1,5 @@
 import type { RawTransaction } from '@/shared/types'
+import { roundMoney } from '../money'
 import { normalizeColumnName } from './columnMaps'
 
 function parseNumber(value: string): number {
@@ -12,7 +13,7 @@ function parseNumber(value: string): number {
   const lastComma = cleaned.lastIndexOf(',')
 
   if (lastDot === -1 && lastComma === -1) {
-    return parseFloat(cleaned.replace(/[^\d-]/g, '')) || 0
+    return roundMoney(parseFloat(cleaned.replace(/[^\d-]/g, '')) || 0)
   }
 
   if (lastDot > lastComma) {
@@ -31,7 +32,7 @@ function parseNumber(value: string): number {
 
   cleaned = cleaned.replace(/[^\d.-]/g, '')
 
-  return parseFloat(cleaned) || 0
+  return roundMoney(parseFloat(cleaned) || 0)
 }
 
 function parseDate(value: string): string {

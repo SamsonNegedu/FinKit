@@ -1,18 +1,10 @@
-import {
-  HttpCode,
-  BadRequestException,
-  Body,
-  Controller,
-  InternalServerErrorException,
-  Logger,
-  Post,
-  UseGuards,
-} from '@nestjs/common'
+import { HttpCode, Body, Controller, InternalServerErrorException, Logger, Post, UseGuards } from '@nestjs/common'
 import { AccessGuard } from '../access/access.guard'
 import { CsrfGuard } from '../access/csrf.guard'
 import { ZodValidationPipe } from '../shared/http/zod-validation.pipe'
 import { GoogleSheetsService } from './google-sheets.service'
 import { ExportRequest, ExportRequestSchema, LayoutRequestSchema, MetadataRequestSchema } from './sheet-export.schemas'
+import type { z } from 'zod'
 
 @Controller('api/export')
 @UseGuards(AccessGuard, CsrfGuard)
@@ -41,40 +33,26 @@ export class SheetExportController {
   // Read the sheet's header row so the app mirrors the real column layout
   @Post('sheets/layout')
   @HttpCode(200) // the previous API answered 200, not 201
-  async layout(@Body() body: { sheetId?: string; tabName?: string }) {
-    if (!body?.sheetId || !body?.tabName) {
-      throw new BadRequestException({ error: 'Missing sheetId or tabName' })
-    }
-
-    const ok = LayoutRequestSchema.safeParse(body)
-
-    if (!ok.success) {
-      throw new BadRequestException({ error: 'Invalid sheetId or tabName' })
-    }
-
+  async layout(
+    @Body(new ZodValidationPipe(LayoutRequestSchema, { message: 'Invalid sheetId or tabName' }))
+    body: z.infer<typeof LayoutRequestSchema>,
+  ) {
     return {
       success: true,
-      data: await this.run(() => this.sheets.layout(ok.data.sheetId, ok.data.tabName), 'Failed to read sheet layout'),
+      data: await this.run(() => this.sheets.layout(body.sheetId, body.tabName), 'Failed to read sheet layout'),
     }
   }
 
   // The tabs available in the sheet
   @Post('sheets/metadata')
   @HttpCode(200) // the previous API answered 200, not 201
-  async metadata(@Body() body: { sheetId?: string }) {
-    if (!body?.sheetId) {
-      throw new BadRequestException({ error: 'Missing sheetId' })
-    }
-
-    const ok = MetadataRequestSchema.safeParse(body)
-
-    if (!ok.success) {
-      throw new BadRequestException({ error: 'Invalid sheetId' })
-    }
-
+  async metadata(
+    @Body(new ZodValidationPipe(MetadataRequestSchema, { message: 'Invalid sheetId' }))
+    body: z.infer<typeof MetadataRequestSchema>,
+  ) {
     return {
       success: true,
-      data: await this.run(() => this.sheets.metadata(ok.data.sheetId), 'Failed to fetch sheet metadata'),
+      data: await this.run(() => this.sheets.metadata(body.sheetId), 'Failed to fetch sheet metadata'),
     }
   }
 

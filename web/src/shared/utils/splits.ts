@@ -1,4 +1,5 @@
 import { Transaction } from '@/shared/types'
+import { roundMoney, subtractMoney, sumMoney } from './money'
 
 export interface SplitPart {
   amount: number
@@ -14,10 +15,8 @@ export interface SplitRecord {
 
 export type SplitMap = Record<string, SplitRecord>
 
-const round2 = (n: number) => Math.round(n * 100) / 100
-
 export function remaining(total: number, parts: SplitPart[]): number {
-  return round2(total - parts.reduce((s, p) => s + (Number(p.amount) || 0), 0))
+  return subtractMoney(total, sumMoney(parts.map(p => Number(p.amount) || 0)))
 }
 
 export function isValidSplit(total: number, parts: SplitPart[]): boolean {
@@ -28,7 +27,7 @@ function childrenOf(parent: Transaction, parts: SplitPart[]): Transaction[] {
   return parts.map((p, i) => ({
     ...parent,
     id: `${parent.id}~${i + 1}`,
-    amount: round2(p.amount),
+    amount: roundMoney(p.amount),
     category: p.category,
     categorySource: 'manual' as const,
     isExcluded: p.isExcluded ?? parent.isExcluded,

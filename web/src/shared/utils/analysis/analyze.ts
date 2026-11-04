@@ -4,6 +4,7 @@ import { displayNameOf } from '@/shared/utils/aliases'
 import { isCashWithdrawal } from '@/shared/utils/cashWithdrawal'
 import { getCategoryColor, normalizeMerchant } from '@/shared/utils/categorizer'
 import { parseLocalDate } from '@/shared/utils/dates'
+import { addMoney, subtractMoney, sumMoney } from '@/shared/utils/money'
 import { detailsOf, merchantsOf, type DetailRow, type MerchantRow } from './detailBreakdown'
 
 export type { DetailRow, MerchantRow }
@@ -65,14 +66,16 @@ const spendingOf = (txs: Transaction[]) =>
 const untaggedCashOf = (spending: Transaction[]) => {
   const rows = spending.filter(t => isCashWithdrawal(t) && t.category === 'Cash' && t.categorySource !== 'manual')
 
-  return { count: rows.length, total: rows.reduce((sum, t) => sum + t.amount, 0) }
+  return { count: rows.length, total: sumMoney(rows.map(t => t.amount)) }
 }
 
 const totalBy = (txs: Transaction[], key: (t: Transaction) => string) => {
   const out = new Map<string, number>()
 
   for (const t of txs) {
-    out.set(key(t), (out.get(key(t)) ?? 0) + t.amount)
+    const k = key(t)
+
+    out.set(k, addMoney(out.get(k) ?? 0, t.amount))
   }
 
   return out
@@ -82,7 +85,7 @@ const totalBy = (txs: Transaction[], key: (t: Transaction) => string) => {
 export function analyze(rows: Transaction[], earlier: Transaction[] | null, days: number): Analysis {
   const all = spendingOf(rows)
   const spending = all.filter(t => !SET_ASIDE.has(t.category || ''))
-  const spent = spending.reduce((sum, t) => sum + t.amount, 0)
+  const spent = sumMoney(spending.map(t => t.amount))
   const before = earlier ? spendingOf(earlier).filter(t => !SET_ASIDE.has(t.category || '')) : null
   const prevByCategory = before ? totalBy(before, t => t.category || 'Other') : null
   const counts = new Map<string, number>()
@@ -118,7 +121,7 @@ export function analyze(rows: Transaction[], earlier: Transaction[] | null, days
     const key = normalizeMerchant(name) || name
     const m = merchants.get(key) ?? { merchant: name, total: 0, count: 0 }
 
-    merchants.set(key, { ...m, total: m.total + t.amount, count: m.count + 1 })
+    merchants.set(key, { ...m, total: addMoney(m.total, t.amount), count: m.count + 1 })
   }
   const putAway = [...SET_ASIDE].flatMap(category => {
     const rowsOf = all.filter(t => t.category === category)
@@ -133,41 +136,45 @@ export function analyze(rows: Transaction[], earlier: Transaction[] | null, days
       const key = normalizeMerchant(name) || name
       const m = byName.get(key) ?? { merchant: name, total: 0, count: 0 }
 
-      byName.set(key, { ...m, total: m.total + t.amount, count: m.count + 1 })
+      byName.set(key, { ...m, total: addMoney(m.total, t.amount), count: m.count + 1 })
     }
 
     return [
       {
         category,
-        total: rowsOf.reduce((sum, t) => sum + t.amount, 0),
+        total: sumMoney(rowsOf.map(t => t.amount)),
         count: rowsOf.length,
         color: getCategoryColor(category),
         merchants: [...byName.values()].sort((a, b) => b.total - a.total),
       },
     ]
   })
-  const repeatingTotal = spending.filter(t => t.isRecurring).reduce((sum, t) => sum + t.amount, 0)
+  const repeatingTotal = sumMoney(spending.filter(t => t.isRecurring).map(t => t.amount))
   const biggest = spending.reduce<Transaction | null>((best, t) => (!best || t.amount > best.amount ? t : best), null)
 
-  const income = rows
-    .filter(t => t.type === 'income' && t.category !== 'Transfer' && !t.isExcluded)
-    .reduce((sum, t) => sum + t.amount, 0)
+  const income = sumMoney(
+    rows.filter(t => t.type === 'income' && t.category !== 'Transfer' && !t.isExcluded).map(t => t.amount),
+  )
+  const setAsideTotal = sumMoney(all.filter(t => SET_ASIDE.has(t.category || '')).map(t => t.amount))
+  const invested = sumMoney(all.filter(t => t.category === 'Investment').map(t => t.amount))
+  const saved = sumMoney(all.filter(t => t.category === 'Savings').map(t => t.amount))
+  const everyday = subtractMoney(spent, repeatingTotal)
 
   return {
     income,
     spent,
     putAway,
-    setAside: all.filter(t => SET_ASIDE.has(t.category || '')).reduce((sum, t) => sum + t.amount, 0),
-    invested: all.filter(t => t.category === 'Investment').reduce((sum, t) => sum + t.amount, 0),
-    saved: all.filter(t => t.category === 'Savings').reduce((sum, t) => sum + t.amount, 0),
+    setAside: setAsideTotal,
+    invested,
+    saved,
     repeating: repeatingTotal,
-    everyday: spent - repeatingTotal,
-    everydayPerDay: days > 0 ? (spent - repeatingTotal) / days : 0,
+    everyday,
+    everydayPerDay: days > 0 ? everyday / days : 0,
     categories,
     merchants: [...merchants.values()].sort((a, b) => b.total - a.total),
     largest: biggest ? { tx: biggest, name: displayNameOf(biggest) } : null,
     untaggedCash: untaggedCashOf(spending),
-    previousSpent: before ? before.reduce((sum, t) => sum + t.amount, 0) : null,
+    previousSpent: before ? sumMoney(before.map(t => t.amount)) : null,
   }
 }
 

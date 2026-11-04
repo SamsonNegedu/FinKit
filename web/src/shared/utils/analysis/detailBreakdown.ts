@@ -1,6 +1,7 @@
 import type { Transaction } from '@/shared/types'
 import { displayNameOf } from '@/shared/utils/aliases'
 import { normalizeMerchant } from '@/shared/utils/categorizer'
+import { addMoney, sumMoney } from '@/shared/utils/money'
 
 export interface MerchantRow {
   merchant: string
@@ -25,7 +26,7 @@ export function merchantsOf(txs: Transaction[]): MerchantRow[] {
     const key = normalizeMerchant(name) || name
     const m = byName.get(key) ?? { merchant: name, total: 0, count: 0 }
 
-    byName.set(key, { ...m, total: m.total + t.amount, count: m.count + 1 })
+    byName.set(key, { ...m, total: addMoney(m.total, t.amount), count: m.count + 1 })
   }
 
   return [...byName.values()].sort((a, b) => b.total - a.total)
@@ -64,7 +65,7 @@ export function detailsOf(txs: Transaction[]): DetailRow[] {
   return [...groups]
     .map(([detail, rows]) => ({
       detail,
-      total: rows.reduce((sum, t) => sum + t.amount, 0),
+      total: sumMoney(rows.map(t => t.amount)),
       count: rows.length,
       merchants: merchantsOf(rows),
     }))

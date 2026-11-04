@@ -2,6 +2,7 @@ import { Fragment, useMemo } from 'react'
 import { merchantKeyOf, normalizeMerchant } from '@/shared/utils/categorizer'
 import type { Transaction } from '@/shared/types'
 import { selectionTotals } from '@/shared/utils/selectionTotal'
+import { addMoney } from '@/shared/utils/money'
 import { signedTransactionAmount } from '@/shared/utils/transactionAmount'
 import BulkActionBar from './BulkActionBar'
 import SplitDialog from './SplitDialog'
@@ -72,7 +73,7 @@ export default function TransactionTable({
       const m = byMonth.get(t.date.slice(0, 7)) ?? { count: 0, net: 0 }
 
       m.count += 1
-      m.net += signedTransactionAmount(t)
+      m.net = addMoney(m.net, signedTransactionAmount(t))
       byMonth.set(t.date.slice(0, 7), m)
     }
 

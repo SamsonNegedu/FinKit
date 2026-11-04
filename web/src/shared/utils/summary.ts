@@ -5,6 +5,7 @@ import { getCategoryColor } from './categorizer'
 import { DEFAULT_SUMMARY_PERIOD_DAYS } from '@/shared/constants/periods'
 import { MS_PER_DAY } from '@/shared/constants/time'
 import { parseLocalDate } from './dates'
+import { addMoney, subtractMoney, sumMoney } from './money'
 
 /** Transactions inside the chosen period (all of them when no period is set). */
 export function inPeriod(transactions: Transaction[], range: DateRange | null): Transaction[] {
@@ -24,8 +25,8 @@ export function summarize(transactions: Transaction[], range: DateRange | null, 
   const counted = transactions.filter(tx => tx.category !== 'Transfer' && !tx.isExcluded)
   const expenses = counted.filter(tx => tx.type === 'expense')
   const income = counted.filter(tx => tx.type === 'income')
-  const totalExpense = expenses.reduce((sum, tx) => sum + tx.amount, 0)
-  const totalIncome = income.reduce((sum, tx) => sum + tx.amount, 0)
+  const totalExpense = sumMoney(expenses.map(tx => tx.amount))
+  const totalIncome = sumMoney(income.map(tx => tx.amount))
 
   const byCategory = new Map<string, { total: number; count: number }>()
   const byMerchant = new Map<string, { total: number; count: number }>()
@@ -34,11 +35,11 @@ export function summarize(transactions: Transaction[], range: DateRange | null, 
     const category = tx.category || 'Other'
     const c = byCategory.get(category) ?? { total: 0, count: 0 }
 
-    byCategory.set(category, { total: c.total + tx.amount, count: c.count + 1 })
+    byCategory.set(category, { total: addMoney(c.total, tx.amount), count: c.count + 1 })
     const merchant = displayNameOf(tx)
     const m = byMerchant.get(merchant) ?? { total: 0, count: 0 }
 
-    byMerchant.set(merchant, { total: m.total + tx.amount, count: m.count + 1 })
+    byMerchant.set(merchant, { total: addMoney(m.total, tx.amount), count: m.count + 1 })
   }
 
   const days = range
@@ -48,7 +49,7 @@ export function summarize(transactions: Transaction[], range: DateRange | null, 
   return {
     totalIncome,
     totalExpense,
-    balance: totalIncome - totalExpense,
+    balance: subtractMoney(totalIncome, totalExpense),
     avgDailySpend: totalExpense / days,
     categorySummary: [...byCategory.entries()]
       .map(([category, d]) => ({

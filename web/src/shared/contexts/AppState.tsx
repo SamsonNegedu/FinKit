@@ -2,15 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import ImportConfirm from '@/features/import/components/ImportConfirm'
 import ToastHost from '@/shared/components/feedback/Toast'
 import type { DateRange, SheetConfig } from '@/shared/types'
-import {
-  applyRates,
-  baseCurrencyOf,
-  foreignCurrenciesOf,
-  loadRateStore,
-  saveRateStore,
-  type RateMap,
-  type RateStore,
-} from '@/shared/utils/rates'
+import { baseCurrencyOf, loadRateStore, saveRateStore, type RateMap, type RateStore } from '@/shared/utils/rates'
 import { getNumberFormat, setNumberFormat, type NumberFormat } from '@/shared/utils/format'
 import { useSaveCategories, useStoredCategories } from '@/features/settings/hooks/category-queries'
 import { withDetail } from '@/shared/utils/categorizer/categoryList'
@@ -24,6 +16,7 @@ import { useTripLinks } from './workspace/useTripLinks'
 import { useRememberPreference } from './workspace/useRememberPreference'
 import { useWorkspacePhase } from './workspace/useWorkspacePhase'
 import { useSheetBootstrapPhase } from './workspace/useSheetBootstrapPhase'
+import { useAppDerived } from './workspace/useAppDerived'
 import {
   importErrorFromPhase,
   isImportingPhase,
@@ -132,15 +125,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   })
 
   const { tripLinks, setTripLinks, withoutTrips } = useTripLinks(store.transactions)
-  const baseCurrency = useMemo(() => baseCurrencyOf(store.transactions), [store.transactions])
-  const foreignCurrencies = useMemo(
-    () => foreignCurrenciesOf(store.transactions, baseCurrency),
-    [store.transactions, baseCurrency],
+  const rateForBase = useMemo<RateMap>(
+    () => rateStore[baseCurrencyOf(store.transactions)] ?? {},
+    [rateStore, store.transactions],
   )
-  const rates = useMemo<RateMap>(() => rateStore[baseCurrency] ?? {}, [rateStore, baseCurrency])
-  const displayTransactions = useMemo(
-    () => applyRates(withoutTrips, baseCurrency, rates),
-    [withoutTrips, baseCurrency, rates],
+  const { baseCurrency, foreignCurrencies, rates, displayTransactions } = useAppDerived(
+    store.transactions,
+    withoutTrips,
+    rateForBase,
   )
 
   const toggleNumberFormat = () => {

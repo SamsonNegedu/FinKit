@@ -3,36 +3,11 @@ import type { Transaction } from '@/shared/types'
 import { parseLocalDate } from '@/shared/utils/dates'
 import { formatCurrency } from '@/shared/utils/format'
 import { SET_ASIDE } from '@/shared/utils/analysis/analyze'
+import { addMoney, subtractMoney } from '@/shared/utils/money'
+import type { BudgetLimit, BudgetRow, BudgetTotals, CapSummary } from './budgetProgress.types'
 
-export interface BudgetLimit {
-  category: string
-  currency: string
-  amount: number
-  /** Unspent money carries into the next month */
-  rollover?: boolean
-  /** The month ("2026-11") the budget began: carrying over counts from here */
-  startsMonth?: string | null
-}
-export interface BudgetRow extends BudgetLimit {
-  /** The limit set for each month. `amount` is this plus what was carried in */
-  base: number
-  /** Unspent money carried in from earlier months (0 unless rollover is on) */
-  carried: number
-  spent: number
-  left: number
-  /** Share of the limit used, uncapped so an overspend can be told from "exactly on budget" */
-  used: number
-  /** Where the month ends up if spending keeps its pace; null on the first day or when the month is over */
-  projected: number | null
-  /** How far through the month today is (0-1), for the "today" marker; null for a month that is over */
-  paceAt: number | null
-  state: 'ok' | 'watch' | 'over'
-  /**
-   * Money put away (Savings, Investment) is a target to reach, not a limit to stay under: it is never "over" or
-   * "close", and it is left out of what is left to spend.
-   */
-  goal: boolean
-}
+export type { BudgetLimit, BudgetRow, BudgetTotals, CapSummary } from './budgetProgress.types'
+export { budgetHistory, budgetLeftCaption, historyMonthState, type HistoryMonth } from './budgetHistory'
 
 /** A pace from the first days of a month is mostly noise (one shop on day 2 is not a trend), so none is shown before this day. */
 export const MIN_PACE_DAYS = 7
@@ -69,7 +44,7 @@ export function spentByCategory(transactions: Transaction[], year: number, month
     }
     const category = t.category || 'Other'
 
-    out.set(category, (out.get(category) ?? 0) + t.amount)
+    out.set(category, addMoney(out.get(category) ?? 0, t.amount))
   }
 
   return out
@@ -93,7 +68,7 @@ function spentByMonth(transactions: Transaction[]): Map<number, Map<string, numb
     const month = out.get(index) ?? new Map<string, number>()
     const category = t.category || 'Other'
 
-    month.set(category, (month.get(category) ?? 0) + t.amount)
+    month.set(category, addMoney(month.get(category) ?? 0, t.amount))
     out.set(index, month)
   }
 
@@ -166,14 +141,6 @@ export function budgetRows(
     .sort((a, b) => b.used - a.used)
 }
 
-export interface CapSummary {
-  cap: number
-  spent: number
-  left: number
-  used: number
-  state: 'ok' | 'watch' | 'over'
-}
-
 /**
  * The overall monthly cap against everything spent in the month. It counts spending as Analytics' "Spent" does,
  * so money put into Savings or Investment is not part of it, and it includes categories that have no budget.
@@ -194,7 +161,7 @@ export function capSummary(
 
   for (const [category, amount] of spentByCategory(transactions, year, month)) {
     if (!SET_ASIDE.has(category)) {
-      spent += amount
+      spent = addMoney(spent, amount)
     }
   }
   const used = spent / cap
@@ -202,30 +169,22 @@ export function capSummary(
   return {
     cap,
     spent,
-    left: cap - spent,
+    left: subtractMoney(cap, spent),
     used,
     state: budgetUsedState(used),
   }
 }
 
-export interface BudgetTotals {
-  budgeted: number
-  spent: number
-  left: number
-  over: number
-  watch: number
-}
-
 /** What is left to spend across the spending budgets. Put-away goals are not spending, so they are not in it. */
 export const totalsOf = (all: BudgetRow[]): BudgetTotals => {
   const rows = all.filter(r => !r.goal)
-  const budgeted = rows.reduce((n, r) => n + r.amount, 0)
-  const spent = rows.reduce((n, r) => n + r.spent, 0)
+  const budgeted = rows.reduce((n, r) => addMoney(n, r.amount), 0)
+  const spent = rows.reduce((n, r) => addMoney(n, r.spent), 0)
 
   return {
     budgeted,
     spent,
-    left: budgeted - spent,
+    left: subtractMoney(budgeted, spent),
     over: rows.filter(r => r.state === 'over').length,
     watch: rows.filter(r => r.state === 'watch').length,
   }
@@ -309,90 +268,4 @@ export function alertLine(rows: BudgetRow[], currency: string): string | null {
   const more = over.length > 1 ? ` (${over.length - 1} more over)` : ''
 
   return `${worst}${more}${watch > 0 ? ` · ${watch} close to the limit` : ''}`
-}
-
-export interface HistoryMonth {
-  /** "Sep" */
-  label: string
-  spent: number
-  limit: number
-  /** null when there was nothing to judge: before the data starts, or before the budget did and the category had no spending */
-  state: 'ok' | 'watch' | 'over' | 'met' | 'short' | null
-  /** The month still running: a goal not yet reached is not judged, there is time left */
-  ongoing?: boolean
-}
-
-export function budgetLeftCaption(row: Pick<BudgetRow, 'left' | 'goal' | 'currency'>): {
-  text: string
-  tone: string
-} {
-  if (row.left >= 0) {
-    const suffix = row.goal ? 'to go' : 'left'
-
-    return { text: `${formatCurrency(row.left, row.currency)} ${suffix}`, tone: 'text-midnight-300' }
-  }
-  if (row.goal) {
-    return { text: 'Goal reached', tone: 'text-cyan-400' }
-  }
-
-  return { text: `${formatCurrency(-row.left, row.currency)} over`, tone: 'text-negative' }
-}
-
-export function historyMonthState(row: BudgetRow | undefined, beforeBudget: boolean): HistoryMonth['state'] {
-  // Before the budget began, only spending in the category says anything: a month with none is not a pass
-  if (!row || (beforeBudget && row.spent === 0)) {
-    return null
-  }
-  if (row.goal) {
-    if (row.used >= 1) {
-      return 'met'
-    }
-
-    return 'short'
-  }
-
-  return row.state
-}
-
-/**
- * How each budget fared in the last few months up to and including the one on screen (still running if it is this month), oldest first, to show which ones keep going over.
- * It uses the limit as it is now, as rollover does, because limits are not kept per month. A put-away goal is
- * "met" once it reached its goal that month. Months before the first transaction are null, and so are months before the budget began that have no spending in the category.
- */
-export function budgetHistory(
-  limits: BudgetLimit[],
-  transactions: Transaction[],
-  currency: string,
-  today: Date,
-  year: number,
-  month: number,
-  earliest: { year: number; month: number },
-  count = 6,
-): Map<string, HistoryMonth[]> {
-  const out = new Map<string, HistoryMonth[]>()
-  const first = earliest.year * 12 + earliest.month
-
-  for (let back = count - 1; back >= 0; back--) {
-    const d = new Date(year, month - back, 1)
-    const index = d.getFullYear() * 12 + d.getMonth()
-    const label = d.toLocaleDateString('en-US', { month: 'short' })
-    const rows = index < first ? [] : budgetRows(limits, transactions, currency, today, d.getFullYear(), d.getMonth())
-    const byCategory = new Map(rows.map(r => [r.category, r]))
-
-    for (const l of limits.filter(x => x.currency === currency)) {
-      const row = byCategory.get(l.category)
-      const began = l.startsMonth ? l.startsMonth.split('-').map(Number) : null
-      const beforeBudget = began !== null && index < began[0] * 12 + (began[1] - 1)
-      const judged = historyMonthState(row, beforeBudget)
-      const ongoing = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth()
-      const state = ongoing && judged === 'short' ? null : judged
-
-      out.set(l.category, [
-        ...(out.get(l.category) ?? []),
-        { label, spent: row?.spent ?? 0, limit: row?.amount ?? l.amount, state, ...(ongoing ? { ongoing } : {}) },
-      ])
-    }
-  }
-
-  return out
 }

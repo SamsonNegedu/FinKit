@@ -6,6 +6,7 @@ import { ZodValidationPipe } from '../shared/http/zod-validation.pipe'
 import { CategoryList, CategoryListSchema } from './categories.schema'
 import { SettingsService } from './settings.service'
 import { SheetConfig, SheetConfigSchema } from './sheet-config.schema'
+import { SettingKeyParamSchema, SettingValueBodySchema } from './settings-key.schema'
 
 @Controller('api/settings')
 @UseGuards(AccessGuard, CsrfGuard)
@@ -73,10 +74,10 @@ export class SettingsController {
   @HttpCode(200) // the previous API answered 200, not 201
   set(
     @CurrentActor() actor: Actor,
-    @Param('key') key: string,
-    @Body() body: { value?: unknown } & Record<string, unknown>,
+    @Param('key', new ZodValidationPipe(SettingKeyParamSchema, { message: 'Invalid setting key' })) key: string,
+    @Body(new ZodValidationPipe(SettingValueBodySchema)) value: unknown,
   ) {
-    this.service.set(actor.userId, key, body?.value ?? body)
+    this.service.set(actor.userId, key, value)
 
     return { success: true }
   }

@@ -1,11 +1,11 @@
 import type { Transaction } from '@/shared/types'
-import { signedTransactionAmount } from '@/shared/utils/transactionAmount'
+import { sumSignedTransactionAmounts } from '@/shared/utils/transactionAmount'
 import { merchantKeyOf, normalizeMerchant } from '@/shared/utils/categorizer'
 import { displayNameOf } from '@/shared/utils/aliases'
 
 /** Income minus spending of the rows that count: excluded ones are left out, as in the totals elsewhere. */
 export function netOf(rows: Transaction[]): number {
-  return rows.reduce((sum, t) => sum + signedTransactionAmount(t), 0)
+  return sumSignedTransactionAmounts(rows)
 }
 
 // The payee, not the shop behind it: "from PayPal" is true of every PayPal row whatever it bought

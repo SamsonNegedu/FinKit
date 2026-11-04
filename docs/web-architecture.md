@@ -16,8 +16,9 @@ Multi-step UI and async flows use **discriminated unions + reducers** (not scatt
 | Empty-state file upload UI | `features/import/components/fileUploadPhase.ts`: `FileUploadUiPhase` |
 | Review triage | `features/review/components/reviewQueuePhase.ts`: discriminated `ReviewQueuePhase` + session reducer |
 | Transaction table modals | `features/transactions/components/tableInteraction.ts`: `TableInteraction` |
-| Settings sheet async | `features/settings/components/settingsAsyncPhase.ts`: `SettingsAsyncOperation` |
-| Bank OAuth return & card busy | `features/banking/bankingUiPhase.ts`: `BankConnectReturnPhase`, `ConnectionCardOperation` |
+| Settings sheet async | `features/settings/components/settingsAsyncPhase.ts`: `SettingsAsyncOperation` (save/reset sheet config only; not workspace restore) |
+| Sheet bootstrap after restore | `shared/contexts/workspace/workspacePhase.ts`: `SheetBootstrapPhase` via `useSheetBootstrapPhase` / `sheetBootstrapReducer` (layout metadata for export; separate from settings async) |
+| Bank OAuth return & card busy | `features/banking/bankingUiPhase.ts`: `BankConnectReturnPhase`; `ConnectionCardOperation` is **derived** from React Query mutation state on each card, not a global reducer |
 
 `AppState` still exposes `isLoading`, `isRestoring`, and `error` as **derived** from `workspacePhase` for existing callers; prefer `workspacePhase` for new code.
 
@@ -27,7 +28,8 @@ Multi-step UI and async flows use **discriminated unions + reducers** (not scatt
 web/src/
 ├── app/                    # wiring only
 │   ├── main.tsx            # entry, providers
-│   ├── router.tsx          # composes feature routes
+│   ├── router.tsx          # router instance, search serialization
+│   ├── routes/appRouteTree.tsx  # route definitions and `requireBanking`
 │   ├── shell.tsx           # root layout (nav, outlets; may import features for badges)
 │   └── AppShellSidebar.tsx
 ├── features/
@@ -50,7 +52,7 @@ web/src/
 │   │                       #   forms/ also has SegmentedControl, TabLinks and DatePicker; Tooltip wraps the app once (`TooltipProvider` in `main.tsx`)
 │   ├── contexts/           # AppState provider
 │   │   └── workspace/      # session store, import, mutations, bootstrap
-│   ├── services/           # HTTP helpers (`API_BASE`, headers)
+│   ├── services/           # HTTP helpers (`API_BASE`, headers) and `apiClient.ts` (`apiJson`, `ApiError`)
 │   ├── types/              # shared TS types
 │   └── utils/              # parsing, categorization, dates, storage, etc.
 │       ├── parser/         # CSV/XLSX/OFX import (import via `@/shared/utils/parser`: thin `.ts` shim re-exports the folder)
