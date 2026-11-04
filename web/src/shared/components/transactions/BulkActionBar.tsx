@@ -1,7 +1,7 @@
 import Tooltip from '@/shared/components/Tooltip'
 import { useState, type ReactNode } from 'react'
 import CategoryPopover from './CategoryPopover'
-import { X, ChevronDown, Tag, EyeOff, Eye, Plane } from 'lucide-react'
+import { X, ChevronDown, Tag, EyeOff, Eye, Plane, Repeat } from 'lucide-react'
 import { getAvailableCategories, getCategoryColor } from '@/shared/utils/categorizer'
 import { formatCurrency } from '@/shared/utils/format'
 import type { SelectionTotal } from '@/shared/utils/selectionTotal'
@@ -16,6 +16,7 @@ interface BulkActionBarProps {
   onExclude?: () => void
   onInclude?: () => void
   onMoveToTrip?: () => void
+  onAddToContracts?: () => void
   /** Offer the Shift-click tip: only where a range can be selected, and only once there is a first row to start from */
   rangeHint?: boolean
   /** For touch screens: the next tap selects everything from the selected row to the tapped one */
@@ -41,6 +42,7 @@ export default function BulkActionBar({
   onExclude,
   onInclude,
   onMoveToTrip,
+  onAddToContracts,
   rangeHint = false,
   rangeArmed = false,
   onArmRange,
@@ -145,6 +147,18 @@ export default function BulkActionBar({
             >
               <Plane className="w-4 h-4" />
               <span className="text-sm">Trip</span>
+            </button>
+          </Tooltip>
+        )}
+
+        {onAddToContracts && (
+          <Tooltip label="Add to recurring payments">
+            <button
+              onClick={onAddToContracts}
+              className="flex items-center gap-2 px-3 py-1.5 bg-accent/20 hover:bg-accent/30 text-accent rounded-lg transition-colors"
+            >
+              <Repeat className="w-4 h-4" />
+              <span className="text-sm">Recurring</span>
             </button>
           </Tooltip>
         )}

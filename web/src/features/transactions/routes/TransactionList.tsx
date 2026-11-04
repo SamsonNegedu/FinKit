@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AddToContractsDialog from '@/features/contracts/components/AddToContractsDialog'
 import MoveToTripDialog from '@/features/trips/components/MoveToTripDialog'
 import TransactionTable from '@/shared/components/transactions/TransactionTable'
 import { Transaction } from '@/shared/types'
@@ -16,6 +17,7 @@ export default function TransactionList({ transactions, viewMode, onViewModeChan
   const app = useApp()
   const selection = useSelection(transactions, app.bulkUpdate)
   const [movingToTrip, setMovingToTrip] = useState(false)
+  const [addingContract, setAddingContract] = useState(false)
 
   return (
     <>
@@ -34,6 +36,8 @@ export default function TransactionList({ transactions, viewMode, onViewModeChan
         onBulkInclude={selection.include}
         // Only bank-synced transactions can join a trip, so the action is offered once some exist
         onMoveToTrip={app.tripLinks.refByKey.size > 0 ? () => setMovingToTrip(true) : undefined}
+        // Same rule as trips: only synced rows have a server reference to link
+        onAddToContracts={app.tripLinks.refByKey.size > 0 ? () => setAddingContract(true) : undefined}
         onSplit={app.split}
         onUnsplit={app.unsplit}
         onRenameMerchant={app.renameMerchant}
@@ -51,6 +55,16 @@ export default function TransactionList({ transactions, viewMode, onViewModeChan
           onClose={() => setMovingToTrip(false)}
           onDone={() => {
             setMovingToTrip(false)
+            selection.setSelectedIds(new Set())
+          }}
+        />
+      )}
+      {addingContract && (
+        <AddToContractsDialog
+          transactions={transactions.filter(t => selection.selectedIds.has(t.id))}
+          onClose={() => setAddingContract(false)}
+          onDone={() => {
+            setAddingContract(false)
             selection.setSelectedIds(new Set())
           }}
         />

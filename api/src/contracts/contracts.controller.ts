@@ -7,6 +7,8 @@ import { ZodValidationPipe } from '../shared/http/zod-validation.pipe'
 import {
   CreateContractInput,
   CreateContractSchema,
+  CreateFromPaymentsInput,
+  CreateFromPaymentsSchema,
   IdParamSchema,
   UpdateContractInput,
   UpdateContractSchema,
@@ -35,6 +37,14 @@ export class ContractsController {
   @Post()
   create(@CurrentActor() actor: Actor, @Body(new ZodValidationPipe(CreateContractSchema)) body: CreateContractInput) {
     return this.contracts.create(actor.userId, body)
+  }
+
+  @Post('from-payments')
+  createFromPayments(
+    @CurrentActor() actor: Actor,
+    @Body(new ZodValidationPipe(CreateFromPaymentsSchema)) body: CreateFromPaymentsInput,
+  ) {
+    return this.contracts.createFromPayments(actor.userId, body)
   }
 
   @Patch(':id')

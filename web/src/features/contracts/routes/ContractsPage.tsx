@@ -15,6 +15,9 @@ import { combineTotals, insightsOf } from '../utils/contractInsights'
 import { groupContracts, monthlyInBase } from '../utils/contractGroups'
 import { uploadCandidates, type UploadCandidate } from '../utils/uploadCandidates'
 
+// Only found payments can be marked as not recurring; ones you added are deleted from their own dialog
+const pickable = (c: Contract) => c.state !== 'manual' && c.state !== 'dismissed'
+
 type Dialog = { kind: 'add' } | { kind: 'edit'; contract: Contract } | null
 
 /** Payments that repeat on a steady rhythm: the monthly costs you cannot easily skip. */
@@ -26,6 +29,24 @@ export default function ContractsPage() {
   const remove = useDeleteContract()
   const [dialog, setDialog] = useState<Dialog>(null)
   const [showEnded, setShowEnded] = useState(false)
+  const [selecting, setSelecting] = useState(false)
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
+  const stopSelecting = () => {
+    setSelecting(false)
+    setPicked(new Set())
+  }
+  const pick = (id: string, on: boolean) =>
+    setPicked(prev => {
+      const next = new Set(prev)
+
+      if (on) {
+        next.add(id)
+      } else {
+        next.delete(id)
+      }
+
+      return next
+    })
   // Fixed for the visit: "coming up" is measured from when the page opened
   const [today] = useState(() => new Date().toISOString().slice(0, 10))
 
@@ -39,7 +60,14 @@ export default function ContractsPage() {
   const suggested = groups.flatMap(g => g.contracts).filter(c => c.groupSource === 'suggested').length
   const max = Math.max(1, ...(data?.contracts ?? []).map(c => c.monthly))
   const row = (c: Contract) => (
-    <ContractRow key={c.id} contract={c} max={max} onOpen={() => setDialog({ kind: 'edit', contract: c })} />
+    <ContractRow
+      key={c.id}
+      contract={c}
+      max={max}
+      onOpen={() => setDialog({ kind: 'edit', contract: c })}
+      selected={picked.has(c.id)}
+      onSelect={selecting && pickable(c) ? on => pick(c.id, on) : undefined}
+    />
   )
   // The server keeps the category as your rule for the payee. The transaction list follows through the same
   // path as recategorizing there (it spares anything you categorized by hand, says what changed, offers Undo)
@@ -99,6 +127,7 @@ export default function ContractsPage() {
           ...(d.group !== c.group ? { group: d.group } : {}),
           note: d.note.trim() || null,
           kmPerYear: d.kmPerYear ? Number(d.kmPerYear) : null,
+          ...(c.state === 'manual' ? { amount: Number(d.amount), frequency: d.frequency, kind: d.kind } : {}),
         },
       })
       if (d.group !== c.group) {
@@ -117,9 +146,16 @@ export default function ContractsPage() {
         title="Recurring payments"
         description="Payments that repeat every month, quarter or year for at least three payments."
         actions={
-          <button className="btn-primary flex items-center gap-2" onClick={() => setDialog({ kind: 'add' })}>
-            <Plus className="w-4 h-4" /> Add
-          </button>
+          <div className="flex items-center gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
+            {(data?.contracts ?? []).some(pickable) && (
+              <button className="btn-secondary" onClick={selecting ? stopSelecting : () => setSelecting(true)}>
+                {selecting ? 'Done' : 'Select'}
+              </button>
+            )}
+            <button className="btn-primary flex items-center gap-2" onClick={() => setDialog({ kind: 'add' })}>
+              <Plus className="w-4 h-4" /> Add
+            </button>
+          </div>
         }
       />
       {isLoading && <p className="text-midnight-400">Looking through your payments…</p>}
@@ -144,6 +180,25 @@ export default function ContractsPage() {
           {suggested} {suggested === 1 ? 'category is a suggestion' : 'categories are suggestions'}. Open a payment to
           confirm or change it; FinKit remembers your answer for that payee.
         </p>
+      )}
+      {selecting && (
+        <div className="flex items-center gap-3 px-1 text-sm text-midnight-300">
+          <span>{picked.size} selected</span>
+          <button
+            className="btn-secondary disabled:opacity-50"
+            disabled={picked.size === 0 || update.isPending}
+            onClick={() =>
+              void Promise.all([...picked].map(id => update.mutateAsync({ id, changes: { state: 'dismissed' } })))
+                .then(() => {
+                  pushToast({ message: `Marked ${picked.size} as not recurring`, tone: 'success' })
+                  stopSelecting()
+                })
+                .catch(() => undefined)
+            }
+          >
+            Not recurring
+          </button>
+        </div>
       )}
       {groups.length > 0 && (
         <section className="card !p-3 sm:!p-4">
@@ -175,6 +230,11 @@ export default function ContractsPage() {
           busy={create.isPending || update.isPending || remove.isPending}
           error={(create.error ?? update.error ?? remove.error)?.message}
           onSave={save}
+          onUnlink={
+            dialog.kind === 'edit'
+              ? ref => update.mutate({ id: dialog.contract.id, changes: { unlink: [ref] } })
+              : undefined
+          }
           onState={dialog.kind === 'edit' ? state => setState(dialog.contract, state) : undefined}
           onDelete={
             dialog.kind === 'edit' && dialog.contract.state === 'manual'

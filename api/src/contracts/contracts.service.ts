@@ -6,9 +6,9 @@ import { MerchantRulesService } from '../merchant-rules/merchant-rules.service'
 import { SettingsService } from '../settings/settings.service'
 import { FALLBACK, suggestCategory } from './contracts.category'
 import { merchantName, normalizeMerchant, referencesOf } from './merchant-key'
-import { detectContracts, isActive, monthlyEquivalent, nextDue } from './contracts.detector'
+import { detectContracts, isActive, monthlyEquivalent, nextDue, summarize } from './contracts.detector'
 import { ContractRow, ContractsRepository } from './contracts.repository'
-import type { CreateContractInput, UpdateContractInput } from './contracts.schemas'
+import type { CreateContractInput, CreateFromPaymentsInput, UpdateContractInput } from './contracts.schemas'
 import type { ContractView, Detected, Frequency, Kind, UserData } from './contracts.types'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
@@ -22,11 +22,15 @@ const toPayment = (ref: string, tx: BankTransaction) => ({
   description: tx.description,
 })
 
+type Payment = ReturnType<typeof toPayment>
+
 interface Context {
   today: string
   available: ReadonlySet<string>
   /** Normalized merchant → the category the person gave it */
   rules: ReadonlyMap<string, string>
+  /** Payments behind each contract the person made from selected payments, by contract id */
+  linked: ReadonlyMap<string, Payment[]>
 }
 
 @Injectable()
@@ -66,20 +70,21 @@ export class ContractsService implements OnModuleInit {
   /** Looks for contracts in the person's synced payments, then returns every contract with totals. */
   list(userId: string, today = new Date().toISOString().slice(0, 10)) {
     const signature = this.txs.signature(userId)
+    const covers = coverage(this.repo.list(userId))
 
     if (this.worked.get(userId) !== signature) {
       for (const found of detectContracts(this.txs.listWithRefs(userId).map(r => ({ ...r.tx, ref: r.ref })))) {
-        this.repo.saveDetected(userId, found.key, found.currency, found.detected)
+        if (!covers(found.key, found.detected)) {
+          this.repo.saveDetected(userId, found.key, found.currency, found.detected)
+        }
       }
       this.worked.set(userId, signature)
     }
-    const ctx: Context = {
-      today,
-      available: this.categories(userId),
-      rules: new Map(this.rules.list(userId).map(r => [r.merchant, r.category])),
-    }
-    const contracts = this.repo
-      .list(userId)
+    const rows = this.repo.list(userId)
+    const ctx = this.context(userId, rows, today)
+    const contracts = rows
+      // A payee the person added by hand is shown as their contract, not also as a found one
+      .filter(r => r.state === 'manual' || !r.detected || !covers(r.detected.name, r.detected))
       .map(r => this.view(r, ctx))
       .filter((c): c is ContractView => c !== null)
       .toSorted((a, b) => b.monthly - a.monthly)
@@ -99,6 +104,11 @@ export class ContractsService implements OnModuleInit {
     const row = this.require(userId, id)
     const d = row.detected
 
+    if (row.user.linked) {
+      return {
+        payments: (this.linkedPayments(userId, [row]).get(id) ?? []).toSorted((a, b) => b.date.localeCompare(a.date)),
+      }
+    }
     if (!d) {
       return { payments: [] }
     }
@@ -122,6 +132,80 @@ export class ContractsService implements OnModuleInit {
       payments: all
         .filter(({ tx }) => valid(tx) && normalizeMerchant(merchantName(tx, references)) === key)
         .map(({ ref, tx }) => toPayment(ref, tx)),
+    }
+  }
+
+  /**
+   * A contract the person made from payments they selected, for what detection misses (a bill whose text keeps
+   * changing). The payments are linked to it, so it has a history and a next due date, and later payments to the
+   * same payee join it.
+   */
+  createFromPayments(userId: string, input: CreateFromPaymentsInput) {
+    this.requireCategory(userId, input.group)
+    const refs = [...new Set(input.refs)]
+    // Scoped to this person: a ref that is unknown or someone else's is simply not found
+    const found = this.txs.findByRefs(userId, refs)
+    const picked = refs.flatMap(ref => (found.has(ref) ? [{ ref, tx: found.get(ref)! }] : []))
+
+    if (picked.length !== refs.length || picked.some(({ tx }) => tx.amount >= 0)) {
+      throw new BadRequestException({ error: 'Only payments you have made can be added' })
+    }
+    const currencies = new Set(picked.map(({ tx }) => tx.currency))
+
+    if (currencies.size !== 1) {
+      throw new BadRequestException({ error: 'The payments must all be in one currency' })
+    }
+    const references = referencesOf(this.txs.listWithRefs(userId).map(r => r.tx))
+    const id = this.repo.createManual(userId, [...currencies][0], {
+      name: input.name,
+      group: input.group,
+      note: input.note,
+      linked: { refs, payee: commonPayee(picked.map(({ tx }) => normalizeMerchant(merchantName(tx, references)))) },
+      manual: { amount: input.amount, frequency: input.frequency, kind: input.kind, startDate: null },
+    })
+
+    return this.one(userId, id)
+  }
+
+  /** The payments behind contracts made from selected ones: those picked, and later ones to the same payee. */
+  private linkedPayments(userId: string, rows: ContractRow[]) {
+    const out = new Map<string, Payment[]>()
+    const linked = rows.filter(r => r.user.linked)
+
+    if (linked.length === 0) {
+      return out
+    }
+    const all = this.txs.listWithRefs(userId)
+    const references = referencesOf(all.map(r => r.tx))
+    const payees = all.map(({ tx }) => normalizeMerchant(merchantName(tx, references)))
+
+    for (const row of linked) {
+      const { refs, payee, excluded = [] } = row.user.linked!
+      const picked = new Set(refs)
+      const removed = new Set(excluded)
+
+      out.set(
+        row.id,
+        all.flatMap(({ ref, tx }, i) =>
+          tx.amount < 0 &&
+          tx.currency === row.currency &&
+          !removed.has(ref) &&
+          (picked.has(ref) || (payee !== '' && payees[i] === payee))
+            ? [toPayment(ref, tx)]
+            : [],
+        ),
+      )
+    }
+
+    return out
+  }
+
+  private context(userId: string, rows: ContractRow[], today: string): Context {
+    return {
+      today,
+      available: this.categories(userId),
+      rules: new Map(this.rules.list(userId).map(r => [r.merchant, r.category])),
+      linked: this.linkedPayments(userId, rows),
     }
   }
 
@@ -164,6 +248,23 @@ export class ContractsService implements OnModuleInit {
         Object.assign(user, { [field]: input[field] })
       }
     }
+    if (row.state === 'manual' && user.manual) {
+      user.manual = {
+        ...user.manual,
+        ...(input.amount !== undefined ? { amount: input.amount } : {}),
+        ...(input.frequency ? { frequency: input.frequency } : {}),
+        ...(input.kind ? { kind: input.kind } : {}),
+      }
+    }
+    if (user.linked && input.unlink?.length) {
+      const gone = new Set(input.unlink)
+
+      user.linked = {
+        ...user.linked,
+        refs: user.linked.refs.filter(ref => !gone.has(ref)),
+        excluded: [...new Set([...(user.linked.excluded ?? []), ...gone])],
+      }
+    }
     // A manual contract stays manual: it has no payments that could be detected again
     const state = row.state === 'manual' ? 'manual' : (input.state ?? row.state)
 
@@ -196,11 +297,9 @@ export class ContractsService implements OnModuleInit {
   }
 
   private one(userId: string, id: string) {
-    return this.view(this.require(userId, id), {
-      today: new Date().toISOString().slice(0, 10),
-      available: this.categories(userId),
-      rules: new Map(this.rules.list(userId).map(r => [r.merchant, r.category])),
-    })
+    const row = this.require(userId, id)
+
+    return this.view(row, this.context(userId, [row], new Date().toISOString().slice(0, 10)))
   }
 
   /** The person's own word first, then their merchant rules, then a guess, then Other. */
@@ -233,9 +332,28 @@ export class ContractsService implements OnModuleInit {
       : { group: FALLBACK, groupSource: 'none' as const }
   }
 
-  private view(row: ContractRow, ctx: Context): ContractView | null {
-    const d: Detected | null = row.detected
+  /** What detection would have recorded, worked out from the payments linked to a contract. */
+  private fromLinked(row: ContractRow, ctx: Context): Detected | null {
+    const payments = ctx.linked.get(row.id)
     const m = row.user.manual
+
+    if (!m || !payments || payments.length === 0) {
+      return null
+    }
+
+    return {
+      name: row.user.name ?? 'Contract',
+      sample: '',
+      kind: m.kind,
+      frequency: m.frequency,
+      amount: m.amount,
+      ...summarize(payments, m.frequency, m.kind),
+    }
+  }
+
+  private view(row: ContractRow, ctx: Context): ContractView | null {
+    const m = row.user.manual
+    const d = row.detected ?? this.fromLinked(row, ctx)
 
     if (!d && !m) {
       return null
@@ -265,12 +383,39 @@ export class ContractsService implements OnModuleInit {
       active: d ? isActive(d.lastDate, frequency, ctx.today) : true,
       priceChange: d?.priceChange ?? null,
       note: row.user.note ?? null,
+      linked: !!row.user.linked,
       kmPerYear,
       costPerKm: kmPerYear ? round2((monthly * 12) / kmPerYear) : null,
       foundAt: row.createdAt,
       isNew: false,
     }
   }
+}
+
+/** The most common payee among the picked payments; empty if none of them has a usable name. */
+function commonPayee(payees: string[]): string {
+  const counts = new Map<string, number>()
+
+  for (const payee of payees.filter(name => name.length >= 2)) {
+    counts.set(payee, (counts.get(payee) ?? 0) + 1)
+  }
+
+  return [...counts].toSorted((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+}
+
+/**
+ * Whether a found contract is one the person already added from their own picks: the same payee, or any of the
+ * same payments.
+ */
+function coverage(rows: ContractRow[]) {
+  const linked = rows.flatMap(r => (r.user.linked ? [r.user.linked] : []))
+  const payees = new Set(linked.map(l => l.payee).filter(p => p !== ''))
+  const refs = new Set(linked.flatMap(l => l.refs))
+
+  return (key: string, d: Detected) =>
+    payees.has(normalizeMerchant(key)) ||
+    payees.has(normalizeMerchant(d.name)) ||
+    (d.refs ?? []).some(ref => refs.has(ref))
 }
 
 /** Monthly cost of what is still running, per currency: nothing is converted between currencies. */

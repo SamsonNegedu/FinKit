@@ -30,6 +30,17 @@ export interface UserData {
   note?: string
   /** A car lease or similar: used to show a cost per km. Entered by hand, never read from the bank. */
   kmPerYear?: number
+  /**
+   * Payments the person picked in the transaction list. Their history and next due date come from these (plus later
+   * payments to the same payee), and detection leaves that payee alone so it is not listed twice.
+   */
+  linked?: {
+    refs: string[]
+    /** Normalized payee of the picked payments; empty when none could be worked out */
+    payee: string
+    /** Payments the person removed: a later payment to the same payee must not bring them back */
+    excluded?: string[]
+  }
   /** For manual contracts, which have no payments to detect */
   manual?: {
     amount: number
@@ -63,6 +74,8 @@ export interface ContractView {
   active: boolean
   priceChange: { from: number; to: number } | null
   note: string | null
+  /** Made from payments the person picked: its payments can be removed again */
+  linked: boolean
   kmPerYear: number | null
   costPerKm: number | null
   /** When it was first found or added */

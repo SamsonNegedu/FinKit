@@ -1,3 +1,4 @@
+import Checkbox from '@/shared/components/forms/Checkbox'
 import Tooltip from '@/shared/components/Tooltip'
 import { ChevronRight, Check } from 'lucide-react'
 import { formatCurrency } from '@/shared/utils/format'
@@ -10,6 +11,9 @@ interface Props {
   /** The dearest contract in view: every row's bar is drawn against it */
   max: number
   onOpen: () => void
+  /** Given only while picking several to mark as not recurring; the row then ticks instead of opening */
+  selected?: boolean
+  onSelect?: (checked: boolean) => void
 }
 
 const shortDate = (d: string) =>
@@ -28,14 +32,19 @@ function subtitle(c: Contract) {
 }
 
 /** One contract as a quiet line: a tile, its name, how big it is next to the others, and what it costs. */
-export default function ContractRow({ contract: c, max, onOpen }: Props) {
+export default function ContractRow({ contract: c, max, onOpen, selected, onSelect }: Props) {
   const color = getCategoryColor(c.group)
   const rise = c.priceChange ? c.priceChange.to - c.priceChange.from : 0
 
   return (
-    <li>
+    <li className={onSelect ? 'flex items-center gap-1' : undefined}>
+      {onSelect && (
+        <span className="pl-2">
+          <Checkbox checked={!!selected} onChange={onSelect} ariaLabel={`Select ${c.name}`} />
+        </span>
+      )}
       <button
-        onClick={onOpen}
+        onClick={onSelect ? () => onSelect(!selected) : onOpen}
         className="group flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-accent/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
       >
         <span

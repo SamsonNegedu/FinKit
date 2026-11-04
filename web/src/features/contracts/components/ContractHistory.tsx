@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
 import { formatCurrency } from '@/shared/utils/format'
 import type { ContractPayment } from '../api/contracts.api'
 
@@ -7,6 +8,8 @@ interface Props {
   payments: ContractPayment[]
   currency: string
   color: string
+  /** Given for a contract made from picked payments: each row can be taken out */
+  onRemove?: (ref: string) => void
 }
 
 const W = 560
@@ -18,7 +21,7 @@ const niceDate = (d: string) =>
 const SHOWN = 6
 
 /** What was paid and when, as a price line that holds until the next payment, with the payments listed under it. */
-export default function ContractHistory({ payments, currency, color }: Props) {
+export default function ContractHistory({ payments, currency, color, onRemove }: Props) {
   const [all, setAll] = useState(false)
   const [hover, setHover] = useState<number | null>(null)
   const points = payments.map((_, i) => payments[payments.length - 1 - i]) // oldest first for drawing
@@ -121,6 +124,17 @@ export default function ContractHistory({ payments, currency, color }: Props) {
               <td className="whitespace-nowrap py-1.5 text-right tabular-nums text-ink">
                 {formatCurrency(p.amount, currency)}
               </td>
+              {onRemove && (
+                <td className="py-1.5 pl-2 text-right">
+                  <button
+                    className="text-midnight-500 hover:text-negative"
+                    aria-label={`Remove the payment of ${niceDate(p.date)}`}
+                    onClick={() => onRemove(p.ref)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

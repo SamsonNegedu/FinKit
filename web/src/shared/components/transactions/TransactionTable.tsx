@@ -27,6 +27,7 @@ export default function TransactionTable({
   onBulkExclude,
   onBulkInclude,
   onMoveToTrip,
+  onAddToContracts,
   onSplit = noop,
   onUnsplit = noop,
   onRenameMerchant = noop,
@@ -108,6 +109,7 @@ export default function TransactionTable({
           onExclude={onBulkExclude}
           onInclude={onBulkInclude}
           onMoveToTrip={onMoveToTrip}
+          onAddToContracts={onAddToContracts}
           categories={behaviour.categories}
           colorOf={behaviour.colorOf}
           detailsOf={behaviour.detailsOf}

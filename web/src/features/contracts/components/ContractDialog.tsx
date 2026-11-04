@@ -21,6 +21,8 @@ interface Props {
   error?: string
   onSave: (draft: Draft) => void
   onDelete?: () => void
+  /** Takes a payment out of a contract made from picked payments */
+  onUnlink?: (ref: string) => void
   /** Confirm it, say it is not a contract, or bring a dismissed one back */
   onState?: (state: 'confirmed' | 'dismissed' | 'detected') => void
   onClose: () => void
@@ -42,8 +44,8 @@ const FREQUENCIES = [
   { value: 'yearly', label: 'Every year' },
 ]
 
-const isDraftValid = (d: Draft, isNew: boolean) =>
-  text(d.name) !== '' && (!isNew || Number(d.amount) > 0) && (d.kmPerYear === '' || Number(d.kmPerYear) > 0)
+const isDraftValid = (d: Draft, isNew: boolean, manual: boolean) =>
+  text(d.name) !== '' && (!(isNew || manual) || Number(d.amount) > 0) && (d.kmPerYear === '' || Number(d.kmPerYear) > 0)
 
 /** What the contract's payments cannot tell: its name, group, a note, and the kilometres a car is driven. */
 export function toNew(d: Draft, currency: string): NewContract {
@@ -59,18 +61,31 @@ export function toNew(d: Draft, currency: string): NewContract {
   }
 }
 
-export default function ContractDialog({ contract, currency, busy, error, onSave, onDelete, onState, onClose }: Props) {
+export default function ContractDialog({
+  contract,
+  currency,
+  busy,
+  error,
+  onSave,
+  onDelete,
+  onUnlink,
+  onState,
+  onClose,
+}: Props) {
   const isNew = !contract
   const [d, setD] = useState<Draft>({
     name: contract?.name ?? '',
     group: contract?.group ?? 'Other',
     note: contract?.note ?? '',
     kmPerYear: contract?.kmPerYear ? String(contract.kmPerYear) : '',
-    amount: '',
-    frequency: 'monthly',
-    kind: 'fixed',
+    amount: contract?.state === 'manual' ? String(contract.amount) : '',
+    frequency: contract?.state === 'manual' ? contract.frequency : 'monthly',
+    kind: contract?.state === 'manual' ? contract.kind : 'fixed',
   })
-  const payments = useContractPayments(contract?.id ?? '', !!contract && contract.state !== 'manual')
+  const payments = useContractPayments(
+    contract?.id ?? '',
+    !!contract && (contract.state !== 'manual' || contract.linked),
+  )
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD(prev => ({ ...prev, [k]: v }))
 
   return (
@@ -87,6 +102,7 @@ export default function ContractDialog({ contract, currency, busy, error, onSave
           payments={payments.data}
           currency={contract!.currency}
           color={getCategoryColor(contract!.group)}
+          onRemove={contract!.linked ? onUnlink : undefined}
         />
       )}
       {contract && onState && contract.state !== 'manual' && (
@@ -132,7 +148,7 @@ export default function ContractDialog({ contract, currency, busy, error, onSave
             className="mt-1"
           />
         </div>
-        {isNew && (
+        {(isNew || contract?.state === 'manual') && (
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-sm text-midnight-300">
               Amount ({currency})
@@ -193,7 +209,7 @@ export default function ContractDialog({ contract, currency, busy, error, onSave
           </button>
           <button
             className="btn-primary disabled:opacity-50"
-            disabled={busy || !isDraftValid(d, isNew)}
+            disabled={busy || !isDraftValid(d, isNew, contract?.state === 'manual')}
             onClick={() => onSave(d)}
           >
             Save

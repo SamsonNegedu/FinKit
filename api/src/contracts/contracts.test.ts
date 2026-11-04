@@ -376,6 +376,80 @@ describe('contracts API', () => {
     await request(t.server).delete(`/api/contracts/${created.id}`).set(as('me')).expect(204)
   })
 
+  describe('made from selected payments', () => {
+    // The refs the web app would hold; read from the found contract, since stored keys are not readable
+    const refsOf = async (t: Awaited<ReturnType<typeof withHistory>>, who: string) => {
+      const found = (await request(t.server).get('/api/contracts').set(as('me'))).body.contracts.find(
+        (c: { name: string }) => c.name === who,
+      )
+      const { payments } = (await request(t.server).get(`/api/contracts/${found.id}/payments`).set(as('me'))).body
+
+      return payments.map((p: { ref: string }) => p.ref) as string[]
+    }
+    const body = (refs: string[]) => ({
+      name: 'Rent',
+      group: 'Rent',
+      amount: 950,
+      frequency: 'monthly',
+      refs,
+    })
+
+    it('links the payments, shows their history, and is not listed twice with the found one', async () => {
+      const t = await withHistory(history())
+      const refs = await refsOf(t, 'Vermieter Meier')
+
+      expect(refs.length).toBeGreaterThan(0)
+      const made = (
+        await request(t.server).post('/api/contracts/from-payments').set(as('me')).send(body(refs)).expect(201)
+      ).body
+
+      expect(made).toMatchObject({ state: 'manual', count: 5, monthly: 950, currency: 'EUR', active: true })
+      expect(made.nextExpected).toBeTruthy()
+      const list = (await request(t.server).get('/api/contracts').set(as('me'))).body.contracts
+
+      expect(list.map((c: { name: string }) => c.name).toSorted()).toEqual(['Netflix', 'Rent'])
+      const payments = (await request(t.server).get(`/api/contracts/${made.id}/payments`).set(as('me'))).body.payments
+
+      expect(payments).toHaveLength(5)
+    })
+
+    it('lets amount and rhythm be changed, and a payment be taken out for good', async () => {
+      const t = await withHistory(history())
+      const refs = await refsOf(t, 'Vermieter Meier')
+      const made = (
+        await request(t.server).post('/api/contracts/from-payments').set(as('me')).send(body(refs)).expect(201)
+      ).body
+
+      const changed = (
+        await request(t.server)
+          .patch(`/api/contracts/${made.id}`)
+          .set(as('me'))
+          .send({ amount: 1000, frequency: 'quarterly', unlink: [refs[0]] })
+          .expect(200)
+      ).body
+
+      expect(changed).toMatchObject({ amount: 1000, frequency: 'quarterly', count: 4, linked: true })
+      // The same payee matches it again by name, but the removed payment stays out
+      const payments = (await request(t.server).get(`/api/contracts/${made.id}/payments`).set(as('me'))).body.payments
+
+      expect(payments.map((p: { ref: string }) => p.ref)).not.toContain(refs[0])
+      expect(payments).toHaveLength(4)
+    })
+
+    it('refuses another person’s payments, income, and mixed currencies', async () => {
+      const t = await withHistory(history())
+      const refs = await refsOf(t, 'Vermieter Meier')
+
+      await request(t.server).post('/api/contracts/from-payments').set(as('other')).send(body(refs)).expect(400)
+      await request(t.server)
+        .post('/api/contracts/from-payments')
+        .set(as('me'))
+        .send(body(['nope']))
+        .expect(400)
+      await request(t.server).post('/api/contracts/from-payments').set(as('me')).send(body([])).expect(400)
+    })
+  })
+
   it('rejects malformed requests', async () => {
     const t = await withHistory(history())
 

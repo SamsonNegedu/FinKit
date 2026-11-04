@@ -42,6 +42,7 @@ export interface TransactionTableProps {
   onBulkExclude?: () => void
   onBulkInclude?: () => void
   onMoveToTrip?: () => void
+  onAddToContracts?: () => void
   onSplit?: (id: string, parts: SplitPart[]) => void
   onUnsplit?: (parentId: string) => void
   onRenameMerchant?: (merchantKey: string, name: string) => void

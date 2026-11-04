@@ -28,5 +28,23 @@ export const UpdateContractSchema = z.object({
   group: group.nullable().optional(),
   note: text(300).nullable().optional(),
   kmPerYear: z.number().int().positive().max(1_000_000).nullable().optional(),
+  /** Only for contracts added by hand; a found one gets these from its payments */
+  amount: z.number().positive().max(1e7).optional(),
+  frequency: frequency.optional(),
+  kind: z.enum(['fixed', 'variable']).optional(),
+  /** Payments to take out of a contract made from selected payments */
+  unlink: z.array(z.string().min(1).max(200)).max(500).optional(),
 })
 export type UpdateContractInput = z.infer<typeof UpdateContractSchema>
+
+/** A contract made from payments the person selected; only synced payments have a ref. */
+export const CreateFromPaymentsSchema = z.object({
+  name: text(80),
+  group,
+  amount: z.number().positive().max(1e7),
+  frequency,
+  kind: z.enum(['fixed', 'variable']).default('fixed'),
+  note: text(300).optional(),
+  refs: z.array(z.string().min(1).max(200)).min(1).max(500),
+})
+export type CreateFromPaymentsInput = z.infer<typeof CreateFromPaymentsSchema>

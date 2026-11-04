@@ -29,6 +29,8 @@ export interface Contract {
   active: boolean
   priceChange: { from: number; to: number } | null
   note: string | null
+  /** Made from payments you picked: they can be taken out again */
+  linked: boolean
   kmPerYear: number | null
   costPerKm: number | null
   foundAt: string | null
@@ -58,6 +60,16 @@ export interface NewContract {
   note?: string
   kmPerYear?: number
 }
+/** A contract made from synced payments picked in the transaction list */
+export interface NewContractFromPayments {
+  name: string
+  group: string
+  amount: number
+  frequency: Frequency
+  kind: 'fixed' | 'variable'
+  note?: string
+  refs: string[]
+}
 /** `null` clears what was set before. */
 export interface ContractChanges {
   state?: 'detected' | 'confirmed' | 'dismissed'
@@ -65,6 +77,12 @@ export interface ContractChanges {
   group?: string | null
   note?: string | null
   kmPerYear?: number | null
+  /** Only for contracts you added */
+  amount?: number
+  frequency?: Frequency
+  kind?: 'fixed' | 'variable'
+  /** Payments to take out of a contract made from picked payments */
+  unlink?: string[]
 }
 
 export interface ContractPayment {
@@ -105,6 +123,8 @@ const send = (method: string, body?: unknown) => ({ method, ...(body ? { body: J
 
 export const listContracts = () => call<ContractsResult>('/contracts')
 export const createContract = (input: NewContract) => call<Contract>('/contracts', send('POST', input))
+export const createContractFromPayments = (input: NewContractFromPayments) =>
+  call<Contract>('/contracts/from-payments', send('POST', input))
 export const updateContract = (id: string, changes: ContractChanges) =>
   call<Contract>(`/contracts/${id}`, send('PATCH', changes))
 export const deleteContract = (id: string) => call<unknown>(`/contracts/${id}`, send('DELETE'))

@@ -264,3 +264,24 @@ export function nextDue(start: string, f: Frequency, today: string): string {
 
   return next
 }
+
+/** History worked out from payments the person picked: the same facts detection records for a found contract. */
+export function summarize(
+  payments: Array<{ date: string; amount: number }>,
+  frequency: Frequency,
+  kind: 'fixed' | 'variable',
+) {
+  const rows = collapseSameMonth(payments.toSorted((a, b) => a.date.localeCompare(b.date)))
+  const last = rows.at(-1)!
+  const before = rows.at(-2)
+  const stepped = !!before && Math.abs(last.amount - before.amount) / before.amount > STEP
+
+  return {
+    firstDate: rows[0].date,
+    lastDate: last.date,
+    lastAmount: round2(last.amount),
+    nextExpected: addMonths(last.date, MONTHS[frequency]),
+    count: rows.length,
+    priceChange: kind === 'fixed' && stepped ? { from: round2(before.amount), to: round2(last.amount) } : null,
+  }
+}

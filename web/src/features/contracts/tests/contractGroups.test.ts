@@ -22,6 +22,7 @@ const make = (over: Partial<Contract>): Contract => ({
   active: true,
   priceChange: null,
   note: null,
+  linked: false,
   kmPerYear: null,
   costPerKm: null,
   foundAt: null,

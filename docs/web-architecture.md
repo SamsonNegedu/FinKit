@@ -42,7 +42,7 @@ web/src/
 │   ├── banking/            # open banking UI, API hooks, admin back-office
 │   ├── trips/              # trips: tag bank transactions, per-trip breakdown
 │   ├── budgets/            # monthly limit per category; spending is worked out in the browser
-│   └── contracts/          # recurring payments found in synced history, plus ones added by hand
+│   └── contracts/          # recurring payments found in synced history, plus ones added by hand, or made from rows picked in Transactions ("Recurring" in the bulk bar; synced rows only)
 ├── shared/
 │   ├── components/         # layout (header, breadcrumbs), feedback (toast, errors), forms (Radix-based inputs, dialogs),
 │   │                       #   transactions (the one transaction table, used by Transactions and Trips),

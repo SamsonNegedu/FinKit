@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createContract,
+  createContractFromPayments,
   deleteContract,
   listContracts,
   listPayments,
   updateContract,
   type ContractChanges,
   type NewContract,
+  type NewContractFromPayments,
 } from '../api/contracts.api'
 
 const key = ['contracts'] as const
@@ -24,6 +26,8 @@ function useRefreshing<A, R>(fn: (arg: A) => Promise<R>) {
 }
 
 export const useCreateContract = () => useRefreshing((input: NewContract) => createContract(input))
+export const useCreateContractFromPayments = () =>
+  useRefreshing((input: NewContractFromPayments) => createContractFromPayments(input))
 export const useUpdateContract = () =>
   useRefreshing(({ id, changes }: { id: string; changes: ContractChanges }) => updateContract(id, changes))
 export const useDeleteContract = () => useRefreshing((id: string) => deleteContract(id))
