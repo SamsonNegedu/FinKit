@@ -30,9 +30,9 @@ export default function AppShellHeader({
   followsPeriod: boolean
   hasData: boolean
   pendingSaves: number
-  dateRange: DateRange
+  dateRange: DateRange | null
   transactions: Transaction[]
-  onDateRangeChange: (range: DateRange) => void
+  onDateRangeChange: (range: DateRange | null) => void
   anonymizationEnabled: boolean
   onToggleAnonymization: () => void
   onAddFileClick: () => void
