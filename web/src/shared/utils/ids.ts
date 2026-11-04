@@ -22,6 +22,14 @@ export function rawKey(raw: RawTransaction): string {
 }
 
 /**
+ * The key that ties a workspace transaction to its server copy (its trip, its ref). A processed row has an absolute
+ * amount and maybe anonymized text, so for a bank that sends no transaction id the key cannot be rebuilt from it.
+ */
+export function linkKey(tx: Transaction): string {
+  return tx.sourceKey ?? rawKey(tx)
+}
+
+/**
  * Ids come from the transaction's content (not the time or position), so re-processing the
  * same data gives the same ids and manual edits can be carried over by id.
  * Identical rows get a counter so they stay distinct.
@@ -35,7 +43,7 @@ export function assignStableIds(processed: Transaction[], raw: RawTransaction[])
 
     seen.set(key, n)
 
-    return { ...tx, id: `tx_${hashKey(key)}_${n}` }
+    return { ...tx, id: `tx_${hashKey(key)}_${n}`, sourceKey: key }
   })
 }
 

@@ -4,7 +4,7 @@ import { useApp } from '@/shared/contexts/AppState'
 import { displayNameOf } from '@/shared/utils/aliases'
 import { formatDay } from '@/shared/utils/dates'
 import { formatCurrency } from '@/shared/utils/format'
-import { rawKey } from '@/shared/utils/ids'
+import { linkKey } from '@/shared/utils/ids'
 import { loadSkipped, saveSkipped } from '../utils/skippedSuggestions'
 import { isTravelBooking, guessTripItem } from '../utils/tripGuess'
 import type { Candidate } from '../utils/tripCandidates'
@@ -26,7 +26,7 @@ export default function TripStarters({ onStart }: { onStart: (seed: Candidate) =
   const all = useMemo(() => {
     return app.displayTransactions
       .flatMap(t => {
-        const ref = app.tripLinks.refByKey.get(rawKey(t))
+        const ref = app.tripLinks.refByKey.get(linkKey(t))
         const text = `${displayNameOf(t)} ${t.description}`
 
         return ref && !skipped.has(ref) && t.type === 'expense' && isTravelBooking(text)

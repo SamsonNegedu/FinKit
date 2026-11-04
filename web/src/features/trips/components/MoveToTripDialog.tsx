@@ -4,7 +4,7 @@ import { useApp } from '@/shared/contexts/AppState'
 import { displayNameOf } from '@/shared/utils/aliases'
 import { formatDay } from '@/shared/utils/dates'
 import { formatCurrency } from '@/shared/utils/format'
-import { rawKey } from '@/shared/utils/ids'
+import { linkKey } from '@/shared/utils/ids'
 import { useCreateTrip, useTagItems, useTrips } from '../hooks/trips-queries'
 import type { Trip, TripItemKind } from '../api/trips.api'
 import { guessTripItem } from '../utils/tripGuess'
@@ -57,7 +57,7 @@ export default function MoveToTripDialog({ transactions, onClose, onDone }: Prop
 
   // Only transactions the bank synced exist on the server; imported files stay in the browser
   const rows = transactions.flatMap(t => {
-    const ref = app.tripLinks.refByKey.get(rawKey(t))
+    const ref = app.tripLinks.refByKey.get(linkKey(t))
 
     return ref ? [{ t, ref, guess: guessTripItem(`${displayNameOf(t)} ${t.description}`) }] : []
   })

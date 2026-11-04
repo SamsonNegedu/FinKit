@@ -21,6 +21,8 @@ export interface RawTransaction {
 
 export interface Transaction extends RawTransaction {
   id: string
+  /** The key of the raw row this came from. The row itself loses its sign and may be anonymized, so it cannot be recomputed. */
+  sourceKey?: string
   /** A line of your own about what this was for, searchable; unrelated to the category and the sheet */
   note?: string
   type: 'income' | 'expense'

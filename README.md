@@ -1,6 +1,6 @@
 # FinKit
 
-Self-hosted personal finance for you and the people you share a server with. Sync your banks, categorize and review transactions, set budgets, track trips and recurring payments, and optionally push monthly totals to your own Google Sheet.
+A private money app you run on your own server. Bring the transactions from all your bank accounts into one place (read-only, it can never move money), sort your spending into categories, set monthly budgets, and keep track of trips and recurring payments. Everyone on the server gets their own separate data, and you can send monthly totals to your own Google Sheet if you want.
 
 ## Privacy
 

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { Transaction } from '@/shared/types'
-import { rawKey } from '@/shared/utils/ids'
+import { linkKey } from '@/shared/utils/ids'
 
 export interface TripLinks {
   /** Server ref of each synced transaction, by the app's own transaction key: what a trip points at */
@@ -16,7 +16,7 @@ export function useTripLinks(transactions: Transaction[]) {
   const setTripLinks = useCallback((next: TripLinks) => setLinks(next), [])
   // The workspace also holds copies saved from earlier syncs, so hiding happens here and not on the server
   const withoutTrips = useMemo(
-    () => (links.tripKeys.size ? transactions.filter(t => !links.tripKeys.has(rawKey(t))) : transactions),
+    () => (links.tripKeys.size ? transactions.filter(t => !links.tripKeys.has(linkKey(t))) : transactions),
     [transactions, links],
   )
 

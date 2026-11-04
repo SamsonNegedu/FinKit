@@ -4,7 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { Plane } from 'lucide-react'
 import { useApp } from '@/shared/contexts/AppState'
 import { formatCurrency } from '@/shared/utils/format'
-import { rawKey } from '@/shared/utils/ids'
+import { linkKey } from '@/shared/utils/ids'
 import { applyRates } from '@/shared/utils/rates'
 import { inPeriod } from '@/shared/utils/summary'
 import { useTrips } from '../hooks/trips-queries'
@@ -18,14 +18,14 @@ export default function TripsMovedNote() {
   const { data: trips = [] } = useTrips(app.tripLinks.tripKeys.size > 0)
 
   const moved = useMemo(() => {
-    const inTrips = app.transactions.filter(t => app.tripLinks.tripKeys.has(rawKey(t)))
+    const inTrips = app.transactions.filter(t => app.tripLinks.tripKeys.has(linkKey(t)))
     const here = applyRates(inPeriod(inTrips, app.dateRange), app.baseCurrency, app.rates).filter(
       t => t.currency === app.baseCurrency,
     )
     const perTrip = new Map<string, number>()
 
     for (const t of here) {
-      const id = app.tripLinks.tripKeys.get(rawKey(t))!
+      const id = app.tripLinks.tripKeys.get(linkKey(t))!
 
       perTrip.set(id, (perTrip.get(id) ?? 0) + t.amount)
     }

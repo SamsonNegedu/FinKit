@@ -5,7 +5,7 @@ import DateRangePicker from '@/shared/components/forms/DateRangePicker'
 import { displayNameOf } from '@/shared/utils/aliases'
 import { formatDay } from '@/shared/utils/dates'
 import { formatCurrency } from '@/shared/utils/format'
-import { rawKey } from '@/shared/utils/ids'
+import { linkKey } from '@/shared/utils/ids'
 import type { Trip } from '../api/trips.api'
 import { useTagItems } from '../hooks/trips-queries'
 import { loadSkipped, saveSkipped } from '../utils/skippedSuggestions'
@@ -47,7 +47,7 @@ export default function TripSuggestions({ trip }: { trip: Trip }) {
       complete
         ? tripCandidates(
             app.displayTransactions,
-            t => app.tripLinks.refByKey.get(rawKey(t)),
+            t => app.tripLinks.refByKey.get(linkKey(t)),
             dismissed,
             range.start,
             range.end,
