@@ -52,8 +52,8 @@ export default function IncomeReview({ transactions, onUpdateTransaction, curren
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-income/20 flex items-center justify-center">
+        <div className="flex items-start gap-3 sm:items-center">
+          <div className="w-10 h-10 shrink-0 rounded-lg bg-income/20 flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-income" />
           </div>
           <div>
@@ -63,8 +63,8 @@ export default function IncomeReview({ transactions, onUpdateTransaction, curren
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="card !p-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className="card !p-4 col-span-2 sm:col-span-1">
           <p className="text-sm text-midnight-400 mb-1">Counted Income</p>
           <p className="figure-sm text-income">{formatCurrency(totalIncome, currency)}</p>
           <p className="text-xs text-midnight-500 mt-1">
@@ -93,7 +93,7 @@ export default function IncomeReview({ transactions, onUpdateTransaction, curren
       />
 
       <section className="space-y-4">
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="space-y-2 sm:max-h-[400px] sm:overflow-y-auto">
           {filteredTransactions.length === 0 ? (
             <div className="text-center py-8 text-midnight-400">No transactions match this filter</div>
           ) : (

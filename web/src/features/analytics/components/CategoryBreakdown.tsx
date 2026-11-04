@@ -74,8 +74,19 @@ export default function CategoryBreakdown({
                           }}
                         />
                       </span>
+                      {/* On a phone the share and change sit under the bar, so the name and amount keep the width */}
+                      <span className="mt-1 flex justify-between gap-2 text-xs tabular-nums text-midnight-300 sm:hidden">
+                        <span>
+                          {Math.round(r.share)}% · {r.count}×
+                        </span>
+                        {delta !== null && Math.abs(delta) >= 1 && (
+                          <span className={delta > 0 ? 'text-warning' : 'text-accent'}>
+                            {delta > 0 ? '▲' : '▼'} {formatCurrency(Math.abs(delta), currency)}
+                          </span>
+                        )}
+                      </span>
                     </span>
-                    <span className="flex w-24 shrink-0 flex-col text-right text-xs sm:w-52 sm:flex-row sm:items-baseline sm:justify-end sm:gap-3">
+                    <span className="hidden w-52 shrink-0 flex-row items-baseline justify-end gap-3 text-right text-xs sm:flex">
                       <span className="tabular-nums text-midnight-300">
                         {Math.round(r.share)}% · {r.count}×
                       </span>

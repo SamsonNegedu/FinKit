@@ -54,7 +54,10 @@ export default function AppShellHeader({
         <div className="flex-1 min-w-0">
           <Breadcrumbs />
         </div>
-        <div className="flex items-center gap-2 max-md:order-last max-md:w-full max-md:justify-end">
+        {/* With a period picker the controls take their own row on a phone; without one they stay beside the title */}
+        <div
+          className={`flex items-center gap-2 ${hasData && followsPeriod ? 'max-md:order-last max-md:w-full max-md:justify-end' : ''}`}
+        >
           {pendingSaves > 0 && (
             <span className="hidden sm:flex items-center gap-1.5 text-xs text-midnight-400" aria-live="polite">
               <Loader2 className="w-3 h-3 animate-spin" /> Saving…

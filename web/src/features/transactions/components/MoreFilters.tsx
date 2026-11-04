@@ -31,9 +31,9 @@ export default function MoreFilters({
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <button className="input flex items-center gap-2 text-sm" aria-label="More filters">
+        <button className="input flex items-center gap-2 text-sm max-sm:order-2" aria-label="More filters">
           <SlidersHorizontal className="h-4 w-4 text-midnight-400" aria-hidden="true" />
-          Filters
+          <span className="max-sm:hidden">Filters</span>
           {active > 0 && (
             <span className="rounded-full bg-accent px-1.5 text-xs font-semibold text-midnight-950">{active}</span>
           )}

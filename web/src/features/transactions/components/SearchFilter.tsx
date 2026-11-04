@@ -38,9 +38,10 @@ export default function SearchFilter({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
       {/* Search Input */}
-      <div className="relative min-w-[220px] flex-1 max-sm:basis-full">
+      {/* On a phone: search and Filters share the first row, the category and the view switch the second */}
+      <div className="relative min-w-[220px] flex-1 max-sm:order-1 max-sm:min-w-0 max-sm:basis-0">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-midnight-400" />
         <input
           type="text"
@@ -59,10 +60,15 @@ export default function SearchFilter({
         )}
       </div>
 
+      <div className="hidden basis-full max-sm:order-3 max-sm:block" aria-hidden="true" />
+
       {/* Category filter: a Radix popover, so Escape, outside clicks and focus are handled for us */}
       <Popover.Root onOpenChange={open => !open && setCategoryQuery('')}>
         <Popover.Trigger asChild>
-          <button className="input flex w-full items-center justify-between gap-2 sm:w-48" aria-label="Categories">
+          <button
+            className="input flex items-center justify-between gap-2 max-sm:order-4 max-sm:min-w-0 max-sm:flex-1 sm:w-48"
+            aria-label="Categories"
+          >
             {/* A fixed width: "All Categories" and "2 selected" differ in length, and the search box beside it would shift */}
             <span className="truncate text-sm">
               {selectedCategories.length === 0 ? 'All Categories' : `${selectedCategories.length} selected`}

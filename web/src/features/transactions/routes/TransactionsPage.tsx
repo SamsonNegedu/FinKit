@@ -124,9 +124,10 @@ export default function TransactionsPage() {
           </span>
         }
         actions={
-          <div className="text-right">
+          // One line on a phone ("Net  €3,797.79") so it does not take a row of its own
+          <div className="flex items-baseline gap-3 max-sm:!justify-between sm:block sm:text-right">
             <p className="text-xs text-midnight-400">Net</p>
-            <p className={`text-2xl font-semibold tabular-nums ${net < 0 ? 'text-expense' : 'text-ink'}`}>
+            <p className={`text-xl font-semibold tabular-nums sm:text-2xl ${net < 0 ? 'text-expense' : 'text-ink'}`}>
               {net < 0 ? '-' : ''}
               {formatCurrency(Math.abs(net), app.baseCurrency)}
             </p>
@@ -134,9 +135,12 @@ export default function TransactionsPage() {
         }
       />
 
-      <PeriodTabs />
+      {/* The top bar's picker already sets the period, so on a phone this row only repeats it */}
+      <div className="max-md:hidden">
+        <PeriodTabs />
+      </div>
 
-      <div className="mb-4 space-y-3">
+      <div className="mb-4 space-y-2 sm:space-y-3">
         <SearchFilter
           searchQuery={search.q ?? ''}
           onSearchChange={q => set({ q: q || undefined })}
@@ -163,7 +167,7 @@ export default function TransactionsPage() {
                 onTransfersChange={transfers => set({ transfers: transfers || undefined })}
                 onClear={() => set({ bank: undefined, account: undefined, transfers: undefined })}
               />
-              <div className="ml-auto">
+              <div className="ml-auto max-sm:order-5">
                 <ViewToggle
                   value={search.view === 'merchants' ? 'merchant' : 'list'}
                   onChange={mode => set({ view: mode === 'merchant' ? 'merchants' : undefined })}

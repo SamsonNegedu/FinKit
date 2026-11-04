@@ -14,7 +14,7 @@ export default function IncomeTransactionRow({ tx, currency, onToggleExclude }: 
   return (
     <div
       className={`
-                flex items-center gap-4 p-4 rounded-lg border transition-all
+                flex items-center gap-3 p-3 sm:gap-4 sm:p-4 rounded-lg border transition-all
                 ${
                   tx.isExcluded
                     ? 'bg-midnight-800/50 border-line-strong opacity-60'
@@ -38,7 +38,7 @@ export default function IncomeTransactionRow({ tx, currency, onToggleExclude }: 
         </button>
       </Tooltip>
 
-      <div className="w-16 shrink-0">
+      <div className="w-12 shrink-0 sm:w-16">
         <span className="text-sm text-midnight-300">{formatDay(tx.date)}</span>
       </div>
 
@@ -47,7 +47,7 @@ export default function IncomeTransactionRow({ tx, currency, onToggleExclude }: 
         <p className="text-xs text-midnight-500 truncate">{tx.description}</p>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="hidden items-center gap-2 shrink-0 sm:flex">
         {tx.doubleBookingMatch && (
           <span className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-info/20 text-info">
             <ArrowLeftRight className="w-3 h-3" />
@@ -68,7 +68,7 @@ export default function IncomeTransactionRow({ tx, currency, onToggleExclude }: 
         )}
       </div>
 
-      <div className="w-28 text-right shrink-0">
+      <div className="text-right shrink-0 sm:w-28">
         <span className={`text-sm font-medium ${tx.isExcluded ? 'text-midnight-400 line-through' : 'text-income'}`}>
           +{formatCurrency(tx.amount, currency)}
         </span>

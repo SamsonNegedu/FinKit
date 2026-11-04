@@ -12,8 +12,8 @@ export default function ViewToggle({ value, onChange }: { value: Mode; onChange:
       value={value}
       onChange={onChange}
       options={[
-        { value: 'list', label: 'List', icon: <List className="h-3.5 w-3.5" /> },
-        { value: 'merchant', label: 'By merchant', icon: <Layers className="h-3.5 w-3.5" /> },
+        { value: 'list', label: 'List', icon: <List className="h-3.5 w-3.5" />, iconOnlyOnPhone: true },
+        { value: 'merchant', label: 'By merchant', icon: <Layers className="h-3.5 w-3.5" />, iconOnlyOnPhone: true },
       ]}
     />
   )

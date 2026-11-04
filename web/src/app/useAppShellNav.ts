@@ -44,7 +44,6 @@ export function useAppShellNav(bankingEnabled: boolean, attention: number, revie
       group: BALANCE,
     },
     { to: '/income', label: 'Income', icon: Wallet, group: BALANCE },
-    { to: '/analytics', label: 'Analytics', icon: PieChart, group: INSIGHTS },
     { to: '/budgets', label: 'Budgets', icon: Target, group: INSIGHTS },
     {
       to: '/contracts',
@@ -53,6 +52,7 @@ export function useAppShellNav(bankingEnabled: boolean, attention: number, revie
       hidden: !bankingEnabled,
       group: INSIGHTS,
     },
+    { to: '/analytics', label: 'Analytics', icon: PieChart, group: INSIGHTS },
     { to: '/guide/start', label: 'Guide', icon: BookOpen, group: 'Setup' },
     { to: '/settings', label: 'Settings', icon: Settings, group: 'Setup' },
   ]

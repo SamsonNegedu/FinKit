@@ -5,6 +5,8 @@ export interface SegmentOption<T extends string> {
   value: T
   label: string
   icon?: ReactNode
+  /** On a phone only the icon shows (the label stays for screen readers) */
+  iconOnlyOnPhone?: boolean
 }
 
 interface Props<T extends string> {
@@ -54,7 +56,7 @@ export default function SegmentedControl<T extends string>({
           }
         >
           {o.icon}
-          {o.label}
+          <span className={o.iconOnlyOnPhone ? 'max-sm:sr-only' : undefined}>{o.label}</span>
         </RadixRadio.Item>
       ))}
     </RadixRadio.Root>
