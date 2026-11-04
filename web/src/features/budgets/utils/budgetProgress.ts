@@ -231,12 +231,21 @@ export const totalsOf = (all: BudgetRow[]): BudgetTotals => {
   }
 }
 
-/** This month's spending in categories that have no budget yet, biggest first. */
-export function unbudgeted(transactions: Transaction[], limits: BudgetLimit[], year: number, month: number) {
+/**
+ * This month's spending in categories that have no budget yet, biggest first. `scheduled` are categories paid on a
+ * schedule (recurring payments): a limit on a bill that is the same every month says nothing, so they are left out.
+ */
+export function unbudgeted(
+  transactions: Transaction[],
+  limits: BudgetLimit[],
+  year: number,
+  month: number,
+  scheduled: ReadonlySet<string> = new Set(),
+) {
   const budgeted = new Set(limits.map(l => l.category))
 
   return [...spentByCategory(transactions, year, month)]
-    .filter(([category, spent]) => !budgeted.has(category) && spent > 0)
+    .filter(([category, spent]) => !budgeted.has(category) && !scheduled.has(category) && spent > 0)
     .map(([category, spent]) => ({ category, spent }))
     .sort((a, b) => b.spent - a.spent)
 }
@@ -260,7 +269,13 @@ export function suggestLimit(
 export const NOT_BUDGETABLE = new Set(['Transfer', 'Income'])
 
 /** Categories you spent in over the last three months with no budget yet, each with a starting limit. */
-export function setupSuggestions(transactions: Transaction[], limits: BudgetLimit[], year: number, month: number) {
+export function setupSuggestions(
+  transactions: Transaction[],
+  limits: BudgetLimit[],
+  year: number,
+  month: number,
+  scheduled: ReadonlySet<string> = new Set(),
+) {
   const budgeted = new Set(limits.map(l => l.category))
   const seen = new Set<string>()
 
@@ -273,7 +288,7 @@ export function setupSuggestions(transactions: Transaction[], limits: BudgetLimi
   }
 
   return [...seen]
-    .filter(c => !budgeted.has(c) && !NOT_BUDGETABLE.has(c))
+    .filter(c => !budgeted.has(c) && !NOT_BUDGETABLE.has(c) && !scheduled.has(c))
     .flatMap(category => {
       const amount = suggestLimit(transactions, category, year, month)
 
@@ -301,8 +316,10 @@ export interface HistoryMonth {
   label: string
   spent: number
   limit: number
-  /** null when there was nothing to judge: before the data starts, or before the budget did */
+  /** null when there was nothing to judge: before the data starts, or before the budget did and the category had no spending */
   state: 'ok' | 'watch' | 'over' | 'met' | 'short' | null
+  /** The month still running: a goal not yet reached is not judged, there is time left */
+  ongoing?: boolean
 }
 
 export function budgetLeftCaption(row: Pick<BudgetRow, 'left' | 'goal' | 'currency'>): {
@@ -322,7 +339,8 @@ export function budgetLeftCaption(row: Pick<BudgetRow, 'left' | 'goal' | 'curren
 }
 
 export function historyMonthState(row: BudgetRow | undefined, beforeBudget: boolean): HistoryMonth['state'] {
-  if (!row || beforeBudget) {
+  // Before the budget began, only spending in the category says anything: a month with none is not a pass
+  if (!row || (beforeBudget && row.spent === 0)) {
     return null
   }
   if (row.goal) {
@@ -337,9 +355,9 @@ export function historyMonthState(row: BudgetRow | undefined, beforeBudget: bool
 }
 
 /**
- * How each budget fared in the months before the one on screen, oldest first, to show which ones keep going over.
+ * How each budget fared in the last few months up to and including the one on screen (still running if it is this month), oldest first, to show which ones keep going over.
  * It uses the limit as it is now, as rollover does, because limits are not kept per month. A put-away goal is
- * "met" once it reached its goal that month. Months before the first transaction, or before the budget began, are null.
+ * "met" once it reached its goal that month. Months before the first transaction are null, and so are months before the budget began that have no spending in the category.
  */
 export function budgetHistory(
   limits: BudgetLimit[],
@@ -354,7 +372,7 @@ export function budgetHistory(
   const out = new Map<string, HistoryMonth[]>()
   const first = earliest.year * 12 + earliest.month
 
-  for (let back = count; back >= 1; back--) {
+  for (let back = count - 1; back >= 0; back--) {
     const d = new Date(year, month - back, 1)
     const index = d.getFullYear() * 12 + d.getMonth()
     const label = d.toLocaleDateString('en-US', { month: 'short' })
@@ -365,11 +383,13 @@ export function budgetHistory(
       const row = byCategory.get(l.category)
       const began = l.startsMonth ? l.startsMonth.split('-').map(Number) : null
       const beforeBudget = began !== null && index < began[0] * 12 + (began[1] - 1)
-      const state = historyMonthState(row, beforeBudget)
+      const judged = historyMonthState(row, beforeBudget)
+      const ongoing = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth()
+      const state = ongoing && judged === 'short' ? null : judged
 
       out.set(l.category, [
         ...(out.get(l.category) ?? []),
-        { label, spent: row?.spent ?? 0, limit: row?.amount ?? l.amount, state },
+        { label, spent: row?.spent ?? 0, limit: row?.amount ?? l.amount, state, ...(ongoing ? { ongoing } : {}) },
       ])
     }
   }

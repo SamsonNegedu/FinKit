@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Check, MoreHorizontal, Repeat } from 'lucide-react'
+import Checkbox from '@/shared/components/forms/Checkbox'
 import Tooltip from '@/shared/components/Tooltip'
 import { formatCurrency } from '@/shared/utils/format'
 import CategoryIcon from '@/shared/components/CategoryIcon'
@@ -26,6 +27,8 @@ export default function BudgetRowCard({
   onRemove,
   onToggleRollover,
   history,
+  selected,
+  onSelect,
 }: {
   row: BudgetRow
   busy: boolean
@@ -33,8 +36,11 @@ export default function BudgetRowCard({
   onChange: (amount: number) => void
   onRemove: () => void
   onToggleRollover: () => void
-  /** The months before this one, oldest first, as small dots */
+  /** The last months up to and including the one shown, oldest first, as small dots */
   history?: HistoryMonth[]
+  /** Given only while picking several budgets to remove together */
+  selected?: boolean
+  onSelect?: (checked: boolean) => void
 }) {
   const [draft, setDraft] = useState<string | null>(null)
   const commit = () => {
@@ -53,18 +59,20 @@ export default function BudgetRowCard({
     <li
       className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-2.5 text-sm ${BUDGET_COLUMNS}`}
     >
-      <button
-        className="col-start-1 row-start-1 flex min-w-0 items-center gap-2.5 font-medium text-ink hover:underline"
-        onClick={onOpen}
-      >
-        <CategoryIcon category={row.category} size="sm" />
-        <span className="truncate">{row.category}</span>
-        {row.rollover && !row.goal && (
-          <Tooltip label="Unspent money carries into the next month">
-            <Repeat className="h-3 w-3 shrink-0 text-accent" aria-label="Carries over" />
-          </Tooltip>
+      <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-2.5">
+        {onSelect && (
+          <Checkbox checked={!!selected} onChange={onSelect} ariaLabel={`Select the ${row.category} budget`} />
         )}
-      </button>
+        <button className="flex min-w-0 items-center gap-2.5 font-medium text-ink hover:underline" onClick={onOpen}>
+          <CategoryIcon category={row.category} size="sm" />
+          <span className="truncate">{row.category}</span>
+          {row.rollover && !row.goal && (
+            <Tooltip label="Unspent money carries into the next month">
+              <Repeat className="h-3 w-3 shrink-0 text-accent" aria-label="Carries over" />
+            </Tooltip>
+          )}
+        </button>
+      </div>
       <div className="col-span-2 row-start-2 flex items-center gap-2 sm:col-span-1 sm:col-start-2 sm:row-start-1">
         <div className="min-w-0 flex-1">
           <BudgetBar

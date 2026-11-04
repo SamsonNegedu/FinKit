@@ -12,7 +12,9 @@ const DOT: Record<NonNullable<HistoryMonth['state']>, string> = {
 
 function dotLabel(m: HistoryMonth, currency: string, goal: boolean): string {
   if (m.state === null) {
-    return `${m.label}: nothing to compare`
+    return m.ongoing
+      ? `${m.label}: ${formatCurrency(m.spent, currency)} of ${formatCurrency(m.limit, currency)} so far`
+      : `${m.label}: nothing to compare`
   }
   const figures = `${formatCurrency(m.spent, currency)} of ${formatCurrency(m.limit, currency)}`
   const verdict = {

@@ -3,6 +3,7 @@ import type { Transaction } from '@/shared/types'
 import { formatCurrency } from '@/shared/utils/format'
 import { parseLocalDate } from '@/shared/utils/dates'
 import { getAvailableCategories } from '@/shared/utils/categorizer/categoryMeta'
+import { useContracts } from '@/features/contracts/hooks/contracts-queries'
 import type { MonthPick } from '../components/MonthSwitcher'
 import {
   NOT_BUDGETABLE,
@@ -81,18 +82,26 @@ export function useBudgetsPageData(
     () => budgetHistory(limits, displayTransactions, baseCurrency, today, year, month, earliest),
     [limits, displayTransactions, baseCurrency, today, year, month, earliest],
   )
+  // Without banking there are no recurring payments, and the call just fails: nothing is left out then
+  const contracts = useContracts().data?.contracts
+  const scheduled = useMemo(
+    () => new Set((contracts ?? []).filter(c => c.state !== 'dismissed').map(c => c.group)),
+    [contracts],
+  )
   const open = useMemo(
-    () => unbudgeted(displayTransactions, limits, year, month).slice(0, 6),
-    [displayTransactions, limits, year, month],
+    () => unbudgeted(displayTransactions, limits, year, month, scheduled).slice(0, 6),
+    [displayTransactions, limits, year, month, scheduled],
   )
   const suggestions = useMemo(
-    () => setupSuggestions(displayTransactions, limits, year, month),
-    [displayTransactions, limits, year, month],
+    () => setupSuggestions(displayTransactions, limits, year, month, scheduled),
+    [displayTransactions, limits, year, month, scheduled],
   )
   const taken = new Set(rows.map(r => r.category))
   const choices = getAvailableCategories().filter(c => !taken.has(c) && !NOT_BUDGETABLE.has(c))
   const spendRows = rows.filter(r => !r.goal)
   const goalRows = rows.filter(r => r.goal)
+  // Budgets already set on a category that is paid on a schedule
+  const scheduledRows = rows.filter(r => scheduled.has(r.category))
   const many = spendRows.length > BUDGET_MANY
   const query = search.trim().toLowerCase()
   const shown = spendRows.filter(
@@ -121,6 +130,7 @@ export function useBudgetsPageData(
     choices,
     spendRows,
     goalRows,
+    scheduledRows,
     many,
     search,
     setSearch,

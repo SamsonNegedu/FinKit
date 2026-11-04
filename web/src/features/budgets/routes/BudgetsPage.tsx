@@ -77,11 +77,13 @@ export default function BudgetsPage() {
         onTrack={model.onTrack}
         shown={model.shown}
         goalRows={model.goalRows}
+        scheduledRows={model.scheduledRows}
         history={model.history}
         removePending={remove.isPending}
         onOpenCategory={toCategory}
         onChangeAmount={(row, amount) => void put(row.category, amount).catch(() => undefined)}
         onRemove={row => remove.mutate(row)}
+        onRemoveMany={rows => Promise.all(rows.map(r => remove.mutateAsync(r)))}
         onToggleRollover={row => void put(row.category, row.base, !row.rollover).catch(() => undefined)}
       />
     )
@@ -93,7 +95,7 @@ export default function BudgetsPage() {
         title="Budgets"
         description="A monthly limit per category. Spending is counted from your transactions, the same way as in Analytics."
         actions={
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
             <MonthSwitcher value={model.view} min={model.earliest} max={model.thisMonth} onChange={model.setView} />
             <button className="btn-primary flex items-center gap-1.5" onClick={() => setAdding('')}>
               <Plus className="h-4 w-4" /> Add budget

@@ -8,7 +8,7 @@ interface Suggestion {
   amount: number
 }
 
-/** First setup in one go: every category you spend in, with a limit from your recent months. Untick or edit, then save. */
+/** First setup in one go: the categories you spend in, with a limit from your recent months. Categories paid on a schedule are not offered; the caller leaves them out. */
 export default function BudgetSetupDialog({
   suggestions,
   currency,
@@ -45,10 +45,7 @@ export default function BudgetSetupDialog({
 
   return (
     <Modal title="Set up budgets" onClose={onClose} width="max-w-lg">
-      <p className="text-sm text-midnight-400">
-        Limits are what each category averaged per month over your last three months. Untick what you don't want to
-        budget and change any amount.
-      </p>
+      <p className="text-sm text-midnight-400">Based on your last three months. Recurring payments are left out.</p>
       <ul className="mt-4 max-h-[50vh] divide-y divide-line overflow-y-auto">
         {suggestions.map(s => (
           <li key={s.category} className="flex items-center gap-3 py-2">

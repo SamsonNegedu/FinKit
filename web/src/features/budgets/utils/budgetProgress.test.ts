@@ -129,6 +129,13 @@ describe('budget progress', () => {
     ])
   })
 
+  it('leaves out categories paid on a schedule', () => {
+    const spend = [tx('2026-08-08', 100, 'Car'), tx('2026-08-08', 50, 'Cash')]
+
+    expect(setupSuggestions(spend, limits, 2026, 9, new Set(['Car']))).toEqual([{ category: 'Cash', amount: 50 }])
+    expect(unbudgeted([tx('2026-10-02', 90, 'Car')], limits, 2026, 9, new Set(['Car']))).toEqual([])
+  })
+
   it('words one alert for the Overview, or none when all is well', () => {
     const at = (spend: Transaction[]) => budgetRows(limits, spend, 'EUR', OCT_10, 2026, 9)
 
@@ -235,28 +242,43 @@ describe('budget progress', () => {
       tx('2026-07-06', 200, 'Investment'),
       tx('2026-08-06', 50, 'Investment'),
     ]
-    // Data starts in May, so April has nothing to judge; the budgets began in July
+    // Data starts in May, so earlier months have nothing to judge; the budgets began in July
     const history = budgetHistory(limitsH, spend, 'EUR', OCT_10, 2026, 9, { year: 2026, month: 4 }, 6)
 
     it('judges each earlier month the way the row is, oldest first', () => {
       expect(history.get('Groceries')?.map(m => [m.label, m.state])).toEqual([
-        ['Apr', null],
         ['May', null],
         ['Jun', null],
         ['Jul', 'over'],
         ['Aug', 'watch'],
         ['Sep', 'ok'],
+        ['Oct', 'ok'],
       ])
+    })
+
+    it('shows spending from before the budget began, and leaves months without any hollow', () => {
+      const fresh = [{ category: 'Groceries', currency: 'EUR', amount: 100, startsMonth: '2026-10' }]
+      const got = budgetHistory(fresh, spend, 'EUR', OCT_10, 2026, 9, { year: 2026, month: 4 }, 6)
+
+      expect(got.get('Groceries')?.map(m => m.state)).toEqual([null, null, 'over', 'watch', 'ok', 'ok'])
+    })
+
+    it('does not call a goal short while its month is still running', () => {
+      const octoberSpend = [...spend, tx('2026-10-03', 20, 'Investment')]
+      const got = budgetHistory(limitsH, octoberSpend, 'EUR', OCT_10, 2026, 9, { year: 2026, month: 4 }, 6)
+      const last = got.get('Investment')?.slice(-1)[0]
+
+      expect(last).toMatchObject({ state: null, ongoing: true, spent: 20 })
     })
 
     it('calls a put-away goal met or short, and keeps the figures for the tooltip', () => {
       expect(
         history
           .get('Investment')
-          ?.slice(3)
+          ?.slice(2)
           .map(m => m.state),
-      ).toEqual(['met', 'short', 'short'])
-      expect(history.get('Groceries')?.[3]).toMatchObject({ spent: 120, limit: 100 })
+      ).toEqual(['met', 'short', 'short', null])
+      expect(history.get('Groceries')?.[2]).toMatchObject({ spent: 120, limit: 100 })
     })
   })
 
