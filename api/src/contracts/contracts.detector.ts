@@ -1,5 +1,5 @@
 import type { BankTransaction } from '../bank-connections/providers/bank-provider'
-import { merchantName, normalizeMerchant } from './merchant-key'
+import { merchantName, normalizeMerchant, referencesOf } from './merchant-key'
 import type { Detected, Frequency } from './contracts.types'
 
 const DAY = 86_400_000
@@ -90,6 +90,7 @@ interface Group {
 
 /** Money going out to the same payee on a steady rhythm, for long enough to count as a contract. */
 export function detectContracts(txs: Array<BankTransaction & { ref?: string }>): DetectedContract[] {
+  const references = referencesOf(txs)
   const groups = new Map<string, Group>()
   // The same payee can be written differently every month (a reference number or a period in the text), which splits
   // it into groups too small to count. Its IBAN does not change, so payments are also grouped by that.
@@ -100,7 +101,7 @@ export function detectContracts(txs: Array<BankTransaction & { ref?: string }>):
     if (tx.amount >= 0 || (tx.recipientIban && tx.recipientIban === tx.referenceAccount)) {
       continue
     }
-    const name = merchantName(tx)
+    const name = merchantName(tx, references)
     const key = normalizeMerchant(name)
 
     if (key.length < 2) {

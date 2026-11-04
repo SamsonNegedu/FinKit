@@ -85,6 +85,19 @@ describe('detecting contracts', () => {
     expect(detectContracts(months('Shell', [20, 90, 35, 140]))).toEqual([])
   })
 
+  it('groups payments whose bank text carries a changing reference and no payee', () => {
+    const ids = ['603114414455', '602814292001', '604914061623', '604314058364']
+    const rows = ids.map((id, i) => ({
+      ...pay(`2026-0${i + 1}-02`, 60 + i, 'x'),
+      recipient: undefined,
+      description: `S/836670615631/${id} Strom Abschlag`,
+    }))
+    const [found] = detectContracts(rows)
+
+    expect(found.detected.count).toBe(4)
+    expect(found.detected.frequency).toBe('monthly')
+  })
+
   it('needs a steady rhythm: irregular dates are not a contract', () => {
     const rows = ['2026-01-02', '2026-01-20', '2026-03-29', '2026-04-04'].map(d => pay(d, 30, 'Cafe'))
 

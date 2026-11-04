@@ -1,3 +1,5 @@
+import { referenceTokens, withoutReferences } from './merchant-references'
+
 // Mirrors web/src/shared/utils/merchantFromDescription.ts and merchantKeyOf in
 // web/src/shared/utils/categorizer/learnedMappings.ts, so a contract is named and grouped the way the
 // transaction list names its merchant. The two copies must match: change one, change the other.
@@ -44,8 +46,21 @@ function shopBehindProcessor(tx: { recipient?: string; description: string }): s
 }
 
 /** The merchant's name as shown to people. */
-export function merchantName(tx: { recipient?: string; description: string }): string {
-  return shopBehindProcessor(tx) || tx.recipient || descriptionKey(tx.description)
+export function merchantName(
+  tx: { recipient?: string; description: string },
+  references: ReadonlySet<string> = new Set(),
+): string {
+  return (
+    shopBehindProcessor(tx) ||
+    (tx.recipient
+      ? withoutReferences(tx.recipient, references)
+      : descriptionKey(withoutReferences(tx.description, references)))
+  )
+}
+
+/** What the transactions show to be references: tokens with a digit that occur in only one of them. */
+export function referencesOf(txs: Array<{ recipient?: string; description: string }>): Set<string> {
+  return referenceTokens(txs.map(tx => `${tx.recipient ?? ''} ${tx.description}`))
 }
 
 /** Same normalizer as merchant-rules and the web app. They MUST match. */

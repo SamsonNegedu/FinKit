@@ -5,8 +5,10 @@ export {
   sameMerchant,
   setLocalLearnedMapping,
   normalizeMerchant,
-  stripReference,
+  setReferenceTokens,
+  cleanPayee,
 } from './learnedMappings'
+export { referenceTokens } from './merchantReferences'
 export { addLocalRule, findRule, removeLocalRule, setTransactionRules, suggestRule } from './transactionRules'
 export type { RuleMatch, TransactionRule } from './transactionRules'
 export {

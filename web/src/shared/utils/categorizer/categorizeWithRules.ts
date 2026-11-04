@@ -2,7 +2,8 @@ import type { Transaction } from '@/shared/types'
 import { MERCHANT_RULES, TRANSFER_PATTERNS } from './merchantRules'
 import { mapGermanCategory } from './germanCategoryMap'
 import { isCashWithdrawal } from '@/shared/utils/cashWithdrawal'
-import { findLearned } from './learnedMappings'
+import { findLearned, setReferenceTokens } from './learnedMappings'
+import { referenceTokens } from './merchantReferences'
 import { findRule } from './transactionRules'
 
 function extractMerchant(text: string, pattern: RegExp): string | undefined {
@@ -16,6 +17,11 @@ function extractMerchant(text: string, pattern: RegExp): string | undefined {
 }
 
 export function categorizeWithRules(transactions: Transaction[]): Transaction[] {
+  // What repeats is a name and what never does is a reference, so this has to see the whole set before any row is keyed
+  setReferenceTokens(
+    referenceTokens(transactions.map(t => `${t.merchant ?? ''} ${t.recipient ?? ''} ${t.description}`)),
+  )
+
   return transactions.map(tx => {
     if (tx.isTransfer) {
       return { ...tx, category: 'Transfer', categorySource: 'rule' as const }

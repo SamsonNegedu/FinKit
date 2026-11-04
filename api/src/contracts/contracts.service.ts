@@ -5,7 +5,7 @@ import { TransactionHooks } from '../transactions/transaction-hooks'
 import { MerchantRulesService } from '../merchant-rules/merchant-rules.service'
 import { SettingsService } from '../settings/settings.service'
 import { FALLBACK, suggestCategory } from './contracts.category'
-import { merchantName, normalizeMerchant } from './merchant-key'
+import { merchantName, normalizeMerchant, referencesOf } from './merchant-key'
 import { detectContracts, isActive, monthlyEquivalent, nextDue } from './contracts.detector'
 import { ContractRow, ContractsRepository } from './contracts.repository'
 import type { CreateContractInput, UpdateContractInput } from './contracts.schemas'
@@ -115,11 +115,12 @@ export class ContractsService implements OnModuleInit {
       }
     }
     const key = normalizeMerchant(d.name)
+    const all = this.txs.listWithRefs(userId)
+    const references = referencesOf(all.map(r => r.tx))
 
     return {
-      payments: this.txs
-        .listWithRefs(userId)
-        .filter(({ tx }) => valid(tx) && normalizeMerchant(merchantName(tx)) === key)
+      payments: all
+        .filter(({ tx }) => valid(tx) && normalizeMerchant(merchantName(tx, references)) === key)
         .map(({ ref, tx }) => toPayment(ref, tx)),
     }
   }

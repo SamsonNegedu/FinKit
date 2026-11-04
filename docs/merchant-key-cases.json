@@ -1,0 +1,269 @@
+{
+  "about": "Payees we already know. Every implementation of the merchant key (api and web) must group the rows of a 'same' case together and keep the rows of a 'distinct' case apart. The rows are one dataset, so a reference only counts as one when it does not repeat across them.",
+  "cases": [
+    {
+      "name": "Amazon marketplace orders",
+      "same": true,
+      "rows": [
+        {
+          "description": "AMZN Mktp DE*BT7WM55K4",
+          "recipient": "AMZN Mktp DE*BT7WM55K4"
+        },
+        {
+          "description": "AMZN Mktp DE*NK8IZ4414",
+          "recipient": "AMZN Mktp DE*NK8IZ4414"
+        },
+        {
+          "description": "AMZN Mktp DE*VX5WC49S5",
+          "recipient": "AMZN Mktp DE*VX5WC49S5"
+        },
+        {
+          "description": "AMZN Mktp DE*6S5757HX5",
+          "recipient": "AMZN Mktp DE*6S5757HX5"
+        }
+      ]
+    },
+    {
+      "name": "Strom with a changing reference and no payee",
+      "same": true,
+      "rows": [
+        {
+          "description": "S/836670615631/603114414455 Strom Abschlag"
+        },
+        {
+          "description": "S/836670615631/602814292001 Strom Abschlag"
+        },
+        {
+          "description": "S/836670615631/604914061623 Strom Abschlag"
+        },
+        {
+          "description": "S/836670615631/604314058364 Strom Abschlag"
+        }
+      ]
+    },
+    {
+      "name": "Strom with a named payee",
+      "same": true,
+      "rows": [
+        {
+          "description": "Lastschrift Vattenfall Strom",
+          "recipient": "Vattenfall Strom"
+        },
+        {
+          "description": "Lastschrift Vattenfall Strom",
+          "recipient": "Vattenfall Strom"
+        },
+        {
+          "description": "Lastschrift Vattenfall Strom",
+          "recipient": "Vattenfall Strom"
+        }
+      ]
+    },
+    {
+      "name": "MILES behind PayPal, ids change",
+      "same": true,
+      "rows": [
+        {
+          "description": "1053665350900/PP.5490.PP/. MILES Mobility GmbH, Ihr Einkauf bei MILES Mobility GmbH",
+          "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A"
+        },
+        {
+          "description": "1052965441994/PP.5490.PP/. MILES Mobility GmbH, Ihr Einkauf bei MILES Mobility GmbH",
+          "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A"
+        },
+        {
+          "description": "1052966366446/PP.5490.PP/. MILES Mobility GmbH, Ihr Einkauf bei MILES Mobility GmbH",
+          "recipient": "PayPal (Europe) S.a r.l. et Cie, S.C.A."
+        }
+      ]
+    },
+    {
+      "name": "Apple behind PayPal",
+      "same": true,
+      "rows": [
+        {
+          "description": "1053488003915/PP.5490.PP/. Apple Services, Ihr Einkauf bei Apple Services",
+          "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A"
+        },
+        {
+          "description": "1053322316182/PP.5490.PP/. Apple Services, Ihr Einkauf bei Apple Services",
+          "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A"
+        }
+      ]
+    },
+    {
+      "name": "PayPal shops stay apart",
+      "distinct": true,
+      "rows": [
+        {
+          "description": "1053665350900/PP.5490.PP/. MILES Mobility GmbH, Ihr Einkauf bei MILES Mobility GmbH",
+          "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A"
+        },
+        {
+          "description": "1053488003915/PP.5490.PP/. Apple Services, Ihr Einkauf bei Apple Services",
+          "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A"
+        },
+        {
+          "description": "1053354018515/. Rebtel Networks AB, Ihr Einkauf bei Rebtel Networks AB",
+          "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A"
+        }
+      ]
+    },
+    {
+      "name": "PayPal payments with no shop",
+      "same": true,
+      "rows": [
+        {
+          "description": "10519091516422/PP.5490.PP/. Ihre Zahlung",
+          "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A"
+        },
+        {
+          "description": "10519081516342/PP.5490.PP/. Ihre Zahlung",
+          "recipient": "PayPal Europe S.a.r.l. et Cie S.C.A"
+        }
+      ]
+    },
+    {
+      "name": "Klarna shop",
+      "same": true,
+      "rows": [
+        {
+          "description": "Purchase at Back Market",
+          "recipient": "Klarna Bank AB"
+        },
+        {
+          "description": "Purchase at Back Market",
+          "recipient": "Klarna Bank AB"
+        }
+      ]
+    },
+    {
+      "name": "SumUp shops stay apart",
+      "distinct": true,
+      "rows": [
+        {
+          "description": "SumUp *Banh Mi Trang",
+          "recipient": "SumUp *Banh Mi Trang"
+        },
+        {
+          "description": "SumUp *Pizza Roma",
+          "recipient": "SumUp *Pizza Roma"
+        }
+      ]
+    },
+    {
+      "name": "SumUp shop visited twice",
+      "same": true,
+      "rows": [
+        {
+          "description": "SumUp *Banh Mi Trang",
+          "recipient": "SumUp *Banh Mi Trang"
+        },
+        {
+          "description": "SumUp *Banh Mi Trang",
+          "recipient": "SumUp *Banh Mi Trang"
+        }
+      ]
+    },
+    {
+      "name": "Google services stay apart",
+      "distinct": true,
+      "rows": [
+        {
+          "description": "GOOGLE *YouTube",
+          "recipient": "GOOGLE *YouTube"
+        },
+        {
+          "description": "GOOGLE *Drive",
+          "recipient": "GOOGLE *Drive"
+        }
+      ]
+    },
+    {
+      "name": "Card text names the shop after issued by",
+      "same": true,
+      "rows": [
+        {
+          "description": "CARD-4239332286 Card transaction of 5.50 GBP issued by Cooplands Bakery"
+        },
+        {
+          "description": "CARD-4239332286 Card transaction of 3.20 GBP issued by Cooplands Bakery"
+        }
+      ]
+    },
+    {
+      "name": "Bei marker with a trailing number",
+      "same": true,
+      "rows": [
+        {
+          "description": "Zahlung bei REWE 123456 Köln"
+        },
+        {
+          "description": "Zahlung bei REWE 654321 Köln"
+        }
+      ]
+    },
+    {
+      "name": "Kartenzahlung with changing numbers",
+      "same": true,
+      "rows": [
+        {
+          "description": "KARTENZAHLUNG REWE SAGT DANKE 4711"
+        },
+        {
+          "description": "KARTENZAHLUNG REWE SAGT DANKE 4712"
+        }
+      ]
+    },
+    {
+      "name": "Plain payees",
+      "same": true,
+      "rows": [
+        {
+          "description": "Kartenzahlung ALDI",
+          "recipient": "Aldi"
+        },
+        {
+          "description": "Kartenzahlung ALDI",
+          "recipient": "Aldi"
+        }
+      ]
+    },
+    {
+      "name": "Different payees stay apart",
+      "distinct": true,
+      "rows": [
+        {
+          "description": "x",
+          "recipient": "Aldi"
+        },
+        {
+          "description": "x",
+          "recipient": "Rewe"
+        },
+        {
+          "description": "x",
+          "recipient": "Vermieter Meier"
+        },
+        {
+          "description": "x",
+          "recipient": "Stadtwerke Strom"
+        }
+      ]
+    },
+    {
+      "name": "SumUp shop with a digit in its name, visited twice",
+      "same": true,
+      "rows": [
+        {
+          "description": "SumUp *Shop2Go",
+          "recipient": "SumUp *Shop2Go"
+        },
+        {
+          "description": "SumUp *Shop2Go",
+          "recipient": "SumUp *Shop2Go"
+        }
+      ]
+    }
+  ]
+}

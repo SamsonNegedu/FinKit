@@ -1,5 +1,5 @@
 import { Transaction } from '@/shared/types'
-import { merchantKeyOf, normalizeMerchant, stripReference } from './categorizer'
+import { merchantKeyOf, normalizeMerchant, cleanPayee } from './categorizer'
 import { merchantFromDescription, shopBehindProcessor } from './merchantFromDescription'
 
 // User-chosen display names for merchants, e.g. "AMZN Mktp DE*2K4" -> "Amazon".
@@ -56,5 +56,5 @@ export function displayNameOf(t: Pick<Transaction, 'displayName' | 'merchant' | 
 
   const payee = t.merchant || t.recipient
 
-  return t.displayName || fromText || (payee ? stripReference(payee) : t.description.slice(0, 40))
+  return t.displayName || fromText || (payee ? cleanPayee(payee) : t.description.slice(0, 40))
 }
