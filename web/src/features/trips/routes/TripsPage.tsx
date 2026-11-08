@@ -26,6 +26,7 @@ function TripMoneyLine({ trip }: { trip: TripSummary }) {
     return <span className="mt-auto block pt-3 text-sm text-midnight-500">Nothing spent yet</span>
   }
   const over = budget !== undefined && money.spent > budget
+  const overFunds = budget === undefined && money.funded > 0 && money.remaining < 0
   const caption = tripBudgetCaption({
     budget,
     over,
@@ -42,7 +43,9 @@ function TripMoneyLine({ trip }: { trip: TripSummary }) {
         <span className="text-lg font-semibold text-ink tabular-nums">
           {fmt(money.spent)} <span className="text-sm font-normal text-midnight-400">spent</span>
         </span>
-        <span className={`text-sm tabular-nums ${over ? 'text-expense' : 'text-midnight-300'}`}>{caption}</span>
+        <span className={`text-sm tabular-nums ${over || overFunds ? 'text-expense' : 'text-midnight-300'}`}>
+          {caption}
+        </span>
       </span>
       {budget !== undefined && budget > 0 && (
         <span className="mt-1.5 block h-1.5 rounded bg-midnight-800" aria-hidden>

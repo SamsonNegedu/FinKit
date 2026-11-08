@@ -23,21 +23,25 @@ export function categorizeWithRules(transactions: Transaction[]): Transaction[] 
   )
 
   return transactions.map(tx => {
-    if (tx.isTransfer) {
+    // The person's own rule outranks the transfer guess: that is how a credit to your savings account becomes Savings
+    const custom = findRule(tx)
+
+    if (!custom && tx.isTransfer) {
       return { ...tx, category: 'Transfer', categorySource: 'rule' as const }
     }
 
-    for (const pattern of TRANSFER_PATTERNS) {
-      if (pattern.test(tx.description)) {
-        return { ...tx, category: 'Transfer', isTransfer: true, categorySource: 'rule' as const }
+    if (!custom) {
+      for (const pattern of TRANSFER_PATTERNS) {
+        if (pattern.test(tx.description)) {
+          return { ...tx, category: 'Transfer', isTransfer: true, categorySource: 'rule' as const }
+        }
       }
     }
 
     const learned = findLearned(tx)
+
     // A rule the person made from a transaction is more specific than a merchant rule, so it goes first.
     // A rule without a subcategory leaves it to the merchant rule when both agree on the category.
-    const custom = findRule(tx)
-
     if (custom) {
       let categoryDetail = custom.detail
 
