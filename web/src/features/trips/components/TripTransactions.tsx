@@ -1,10 +1,11 @@
 import Tooltip from '@/shared/components/Tooltip'
 import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Pencil, Trash2, X } from 'lucide-react'
+import { Pencil, Search, Trash2, X } from 'lucide-react'
 import TransactionTable from '@/shared/components/transactions/TransactionTable'
 import type { TableBehaviour } from '@/shared/components/transactions/transactionTableTypes'
 import { useApp } from '@/shared/contexts/AppState'
+import { matchesAmountQuery } from '@/shared/utils/amountQuery'
 import type { Trip, TripTransaction } from '../api/trips.api'
 import { useTagItems, useTripCategories, useTripSubcategories, useUntagItems } from '../hooks/trips-queries'
 import { FUNDING_COLOR, tripCategoryColor } from '../utils/tripCategoryColor'
@@ -25,12 +26,15 @@ export default function TripTransactions({
   rows: all,
   cat,
   sub,
+  q,
 }: {
   trip: Trip
   rows: TripTransaction[]
   /** Narrow to one category (and one subcategory of it), as picked in the breakdown */
   cat?: string
   sub?: string
+  /** Narrow to rows whose text or amount matches */
+  q?: string
 }) {
   const navigate = useNavigate()
   const { baseCurrency, pushToast } = useApp()
@@ -40,18 +44,32 @@ export default function TripTransactions({
   const untag = useUntagItems()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [editing, setEditing] = useState<TripTransaction | null>(null)
-  const rows = useMemo(
-    () =>
-      cat
-        ? all.filter(
-            r =>
-              r.kind === 'cost' &&
-              (r.tripCategory ?? 'Other') === cat &&
-              (sub === undefined || (sub === NOT_SPECIFIED ? !r.tripSubcategory : r.tripSubcategory === sub)),
-          )
-        : all,
-    [all, cat, sub],
-  )
+  const rows = useMemo(() => {
+    const text = q?.trim().toLowerCase()
+
+    return all.filter(r => {
+      if (cat) {
+        const inCategory =
+          r.kind === 'cost' &&
+          (r.tripCategory ?? 'Other') === cat &&
+          (sub === undefined || (sub === NOT_SPECIFIED ? !r.tripSubcategory : r.tripSubcategory === sub))
+
+        if (!inCategory) {
+          return false
+        }
+      }
+
+      return (
+        !text ||
+        matchesAmountQuery(r.amount, text) ||
+        [r.description, r.recipient, r.tripCategory, r.tripSubcategory, r.place, r.paidBy]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(text)
+      )
+    })
+  }, [all, cat, sub, q])
   const table = useMemo(() => rows.map(toTableRow), [rows])
   const byRef = useMemo(() => new Map(rows.map(r => [r.ref, r])), [rows])
 
@@ -160,8 +178,36 @@ export default function TripTransactions({
     ),
   }
 
+  const setQuery = (next: string) =>
+    navigate({
+      to: '/trips/$tripId',
+      params: { tripId: trip.id },
+      search: { tab: 'transactions', cat, sub, q: next || undefined },
+      replace: true,
+    })
+
   return (
     <>
+      <div className="relative mb-3">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-midnight-400" aria-hidden="true" />
+        <input
+          type="text"
+          placeholder="Search transactions or amounts..."
+          aria-label="Search this trip's transactions"
+          value={q ?? ''}
+          onChange={e => setQuery(e.target.value)}
+          className="input w-full pl-10 pr-8"
+        />
+        {q && (
+          <button
+            aria-label="Clear search"
+            onClick={() => setQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-midnight-400 hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
       {cat && (
         <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-midnight-300">
           <span>Showing</span>
@@ -176,7 +222,7 @@ export default function TripTransactions({
           </button>
         </div>
       )}
-      {cat && rows.length === 0 && <p className="card text-midnight-300">Nothing here any more.</p>}
+      {(cat || q) && rows.length === 0 && <p className="card text-midnight-300">Nothing matches.</p>}
       <TransactionTable
         transactions={table}
         selectedIds={selected}

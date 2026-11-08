@@ -28,7 +28,8 @@ export function tripBudgetCaption(options: {
     return `${money(budget - spent)} left of ${money(budget)}`
   }
   if (funded > 0) {
-    return `${money(remaining)} left`
+    // A negative "left" reads like a typo; say it plainly, the same as the breakdown's "Overspent by"
+    return remaining < 0 ? `${money(-remaining)} over what was put in` : `${money(remaining)} left`
   }
 
   return ''

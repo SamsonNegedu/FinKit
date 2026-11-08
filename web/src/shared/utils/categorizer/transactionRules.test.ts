@@ -83,6 +83,35 @@ describe('transaction rules', () => {
       payee: 'Aldi',
       words: ['Gebuehr', 'Kombi-Paket', 'Prepaid-Konto'],
       amount: 8.99,
+      iban: '',
     })
+  })
+
+  it('matches the other account whatever the spacing or case', () => {
+    const credit = {
+      recipient: 'Me',
+      recipientIban: 'de89 3704 0044 0532 0130 00',
+      description: 'Umbuchung',
+      amount: 200,
+    }
+
+    setTransactionRules([{ id: '1', category: 'Savings', match: { iban: 'DE89370400440532013000' } }])
+
+    expect(findRule(credit)?.category).toBe('Savings')
+    expect(findRule({ ...credit, recipientIban: 'DE00000000000000000000' })).toBeNull()
+    expect(findRule({ ...credit, recipientIban: undefined })).toBeNull()
+  })
+
+  it('lets a rule turn a transfer into Savings, but leaves other transfers alone', () => {
+    const base = { date: '2026-01-01', currency: 'EUR', rawData: {}, id: 'a', amount: 200, isTransfer: true }
+    const own = { ...base, description: 'Umbuchung', recipientIban: 'DE89370400440532013000' }
+    const other = { ...base, id: 'b', description: 'Umbuchung', recipientIban: 'DE00000000000000000000' }
+
+    setTransactionRules([{ id: '1', category: 'Savings', match: { iban: 'DE89370400440532013000' } }])
+
+    const [a, b] = categorizeWithRules([own, other] as never)
+
+    expect(a.category).toBe('Savings')
+    expect(b.category).toBe('Transfer')
   })
 })

@@ -45,7 +45,7 @@ export default function SearchFilter({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-midnight-400" />
         <input
           type="text"
-          placeholder="Search transactions..."
+          placeholder="Search transactions or amounts..."
           value={searchQuery}
           onChange={e => onSearchChange(e.target.value)}
           className="input w-full pl-10 pr-8"

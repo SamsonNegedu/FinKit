@@ -69,7 +69,7 @@ export default function TripPage() {
             label: 'Transactions',
             count: transactions.length,
             content: transactions.length ? (
-              <TripTransactions trip={trip} rows={transactions} cat={search.cat} sub={search.sub} />
+              <TripTransactions trip={trip} rows={transactions} cat={search.cat} sub={search.sub} q={search.q} />
             ) : (
               empty
             ),

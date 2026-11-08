@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { transferDetail } from '@/shared/utils/transferDetail'
 import { ChevronDown } from 'lucide-react'
 import Tooltip from '@/shared/components/Tooltip'
 import { Transaction } from '@/shared/types'
@@ -55,6 +56,7 @@ export default function TransactionTableRow({
   behaviour = {},
 }: TransactionTableRowProps) {
   const platform = shopBehindProcessor(tx) ? tx.recipient : undefined
+  const transfer = transferDetail(tx)
   const colorOf = behaviour.colorOf ?? getCategoryColor
   const [noteOpen, setNoteOpen] = useState(false)
   const [ruleFor, setRuleFor] = useState<{ category: string; detail?: string } | null>(null)
@@ -108,6 +110,7 @@ export default function TransactionTableRow({
               onClose={() => setNoteOpen(false)}
               onSave={note => onUpdateTransaction(tx.id, { note })}
             />
+            {transfer && <span className="block truncate text-xs text-midnight-500">{transfer}</span>}
             {behaviour.meta?.(tx)}
           </div>
           <div className="flex items-center gap-1 shrink-0">

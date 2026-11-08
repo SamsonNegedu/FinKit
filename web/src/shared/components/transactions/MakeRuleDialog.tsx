@@ -6,7 +6,7 @@ import { formatCurrency } from '@/shared/utils/format'
 import type { Transaction } from '@/shared/types'
 
 /**
- * Turns one transaction into a rule: it offers what was seen (payee, distinctive words, amount) and the person keeps
+ * Turns one transaction into a rule: it offers what was seen (payee, distinctive words, amount, the other account) and the person keeps
  * only what makes rows "like this". More ticks means a narrower rule, so a phone plan can be told from groceries.
  */
 export default function MakeRuleDialog({
@@ -28,10 +28,12 @@ export default function MakeRuleDialog({
   const [payee, setPayee] = useState(Boolean(seen.payee))
   const [words, setWords] = useState<string[]>(seen.words.slice(0, 1))
   const [amount, setAmount] = useState(false)
+  const [iban, setIban] = useState(false)
   const match: RuleMatch = {
     ...(payee && seen.payee ? { payee: seen.payee } : {}),
     ...(words.length > 0 ? { words } : {}),
     ...(amount ? { amount: seen.amount } : {}),
+    ...(iban && seen.iban ? { iban: seen.iban } : {}),
   }
   const valid = Object.keys(match).length > 0
 
@@ -59,6 +61,12 @@ export default function MakeRuleDialog({
           <Checkbox checked={amount} onChange={setAmount} ariaLabel="Amount is the same" />
           Amount is <span className="font-medium text-ink">{formatCurrency(seen.amount, tx.currency || currency)}</span>
         </label>
+        {seen.iban && (
+          <label className="flex cursor-pointer items-center gap-3 text-sm text-midnight-100">
+            <Checkbox checked={iban} onChange={setIban} ariaLabel="Other account is the same" />
+            Other account is <span className="font-medium text-ink">{`…${seen.iban.slice(-4)}`}</span>
+          </label>
+        )}
       </div>
       <div className="mt-6 flex justify-end gap-2">
         <button className="btn-secondary text-sm" onClick={onClose}>

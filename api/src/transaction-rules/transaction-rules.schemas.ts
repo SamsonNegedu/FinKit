@@ -12,8 +12,15 @@ const RuleMatchSchema = z
     words: words.optional(),
     /** The size of the payment, ignoring its sign */
     amount: z.number().positive().max(1e9).optional(),
+    /** The other side's account number, spaces and case ignored (IBAN lengths run from 15 to 34) */
+    iban: z
+      .string()
+      .trim()
+      .transform(v => v.replace(/\s+/g, '').toUpperCase())
+      .pipe(z.string().regex(/^[A-Z0-9]{8,34}$/))
+      .optional(),
   })
-  .refine(m => Boolean(m.payee) || (m.words?.length ?? 0) > 0 || m.amount !== undefined, {
+  .refine(m => Boolean(m.payee) || (m.words?.length ?? 0) > 0 || m.amount !== undefined || Boolean(m.iban), {
     message: 'A rule needs at least one condition',
   })
 

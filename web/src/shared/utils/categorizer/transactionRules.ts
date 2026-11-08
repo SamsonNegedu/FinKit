@@ -7,6 +7,8 @@ export interface RuleMatch {
   words?: string[]
   /** The size of the payment, ignoring its sign */
   amount?: number
+  /** The other side's account number: the one thing that tells your own savings account from any other transfer */
+  iban?: string
 }
 export interface TransactionRule {
   id: string
@@ -29,9 +31,17 @@ export function removeLocalRule(id: string): void {
   rules = rules.filter(r => r.id !== id)
 }
 
-const conditionCount = (m: RuleMatch) => (m.payee ? 1 : 0) + (m.words?.length ?? 0) + (m.amount === undefined ? 0 : 1)
+const normalizeIban = (v: string) => v.replace(/\s+/g, '').toUpperCase()
 
-function matches(m: RuleMatch, tx: Pick<Transaction, 'recipient' | 'description' | 'amount'>): boolean {
+type RuleInput = Pick<Transaction, 'recipient' | 'description' | 'amount' | 'recipientIban'>
+
+const conditionCount = (m: RuleMatch) =>
+  (m.payee ? 1 : 0) + (m.words?.length ?? 0) + (m.amount === undefined ? 0 : 1) + (m.iban ? 1 : 0)
+
+function matches(m: RuleMatch, tx: RuleInput): boolean {
+  if (m.iban && normalizeIban(tx.recipientIban ?? '') !== normalizeIban(m.iban)) {
+    return false
+  }
   if (m.payee && !` ${normalizeMerchant(tx.recipient ?? '')} `.includes(` ${normalizeMerchant(m.payee)} `)) {
     return false
   }
@@ -49,7 +59,7 @@ function matches(m: RuleMatch, tx: Pick<Transaction, 'recipient' | 'description'
  * The most specific rule the transaction fits: more conditions beat fewer, and the newest wins a tie.
  * "Aldi + Prepaid-Konto" therefore beats "Aldi", and the person's rules beat the built-in ones.
  */
-export function findRule(tx: Pick<Transaction, 'recipient' | 'description' | 'amount'>): TransactionRule | null {
+export function findRule(tx: RuleInput): TransactionRule | null {
   let best: TransactionRule | null = null
 
   for (const rule of rules) {
@@ -75,8 +85,8 @@ const FILLER = new Set([
   'purchase',
 ])
 
-/** The conditions worth offering for a rule made from this transaction: its payee, a few distinctive words, its amount. */
-export function suggestRule(tx: Pick<Transaction, 'recipient' | 'description' | 'amount'>): Required<RuleMatch> {
+/** The conditions worth offering for a rule made from this transaction: its payee, a few distinctive words, its amount, the other account. */
+export function suggestRule(tx: RuleInput): Required<RuleMatch> {
   const words = [
     ...new Set(
       tx.description
@@ -85,5 +95,10 @@ export function suggestRule(tx: Pick<Transaction, 'recipient' | 'description' | 
     ),
   ].slice(0, 5)
 
-  return { payee: tx.recipient?.trim() ?? '', words, amount: Math.abs(tx.amount) }
+  return {
+    payee: tx.recipient?.trim() ?? '',
+    words,
+    amount: Math.abs(tx.amount),
+    iban: normalizeIban(tx.recipientIban ?? ''),
+  }
 }

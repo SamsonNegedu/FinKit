@@ -14,6 +14,7 @@ import { inPeriod } from '@/shared/utils/summary'
 import { isLeftOutTransfer } from '@/shared/utils/transfers'
 import TransactionList from './TransactionList'
 import { commonTraits, netOf } from '../utils/listSummary'
+import { matchesAmountQuery } from '@/shared/utils/amountQuery'
 import { formatCurrency } from '@/shared/utils/format'
 
 export default function TransactionsPage() {
@@ -64,6 +65,7 @@ export default function TransactionsPage() {
       }
       if (
         q &&
+        !matchesAmountQuery(tx.amount, q) &&
         !`${tx.description} ${tx.displayName || ''} ${tx.merchant || ''} ${tx.category || ''} ${tx.recipient || ''} ${tx.note || ''}`
           .toLowerCase()
           .includes(q)
